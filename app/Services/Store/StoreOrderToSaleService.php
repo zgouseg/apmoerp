@@ -41,6 +41,24 @@ class StoreOrderToSaleService
                     case 'currency':
                         $data[$field] = $order->currency;
                         break;
+                        // FIX N-05: Add mappings for current Sale schema column names
+                    case 'total_amount':
+                        $data[$field] = $order->total ?? $order->total_amount ?? 0;
+                        break;
+                    case 'discount_amount':
+                        $data[$field] = $order->discount_total ?? $order->discount_amount ?? 0;
+                        break;
+                    case 'shipping_amount':
+                        $data[$field] = $order->shipping_total ?? $order->shipping_amount ?? 0;
+                        break;
+                    case 'tax_amount':
+                        $data[$field] = $order->tax_total ?? $order->tax_amount ?? 0;
+                        break;
+                    case 'subtotal':
+                        // Calculate subtotal: total - tax - shipping + discount (if not directly available)
+                        $data[$field] = $order->subtotal ?? $this->calculateSubtotal($order);
+                        break;
+                        // Legacy field names for backward compatibility
                     case 'total':
                         $data[$field] = $order->total;
                         break;
@@ -206,5 +224,19 @@ class StoreOrderToSaleService
 
             $saleItemModel->newQuery()->create($data);
         }
+    }
+
+    /**
+     * Calculate subtotal from order when not directly available.
+     * Formula: total - tax - shipping + discount
+     */
+    protected function calculateSubtotal(StoreOrder $order): float
+    {
+        $total = (float) ($order->total ?? 0);
+        $tax = (float) ($order->tax_total ?? 0);
+        $shipping = (float) ($order->shipping_total ?? 0);
+        $discount = (float) ($order->discount_total ?? 0);
+
+        return $total - $tax - $shipping + $discount;
     }
 }
