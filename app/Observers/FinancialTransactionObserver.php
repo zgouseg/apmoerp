@@ -42,11 +42,12 @@ class FinancialTransactionObserver
 
     /**
      * Handle Sale updated event.
+     * STILL-HIGH-08 FIX: Use wasChanged() instead of isDirty() after model is saved
      */
     public function updated(Sale|Purchase $model): void
     {
-        // Check if total_amount changed
-        if ($model->isDirty('total_amount')) {
+        // STILL-HIGH-08 FIX: Use wasChanged() in updated event - isDirty is unreliable after save
+        if ($model->wasChanged('total_amount')) {
             $oldTotal = $model->getOriginal('total_amount');
             $newTotal = $model->total_amount;
             $difference = $newTotal - $oldTotal;
@@ -66,10 +67,13 @@ class FinancialTransactionObserver
             }
         }
 
-        $this->updatePaymentStatus($model);
+        // Only update payment status if relevant fields changed
+        if ($model->wasChanged(['total_amount', 'paid_amount', 'status'])) {
+            $this->updatePaymentStatus($model);
+        }
 
         // Track status changes
-        if ($model->isDirty('status')) {
+        if ($model->wasChanged('status')) {
             Log::info('Financial transaction status changed', [
                 'type' => get_class($model),
                 'id' => $model->id,
@@ -89,6 +93,24 @@ class FinancialTransactionObserver
         $this->updateRelatedBalance($model, 'subtract');
 
         Log::warning('Financial transaction deleted', [
+            'type' => get_class($model),
+            'id' => $model->id,
+            'code' => $model->code,
+            'amount' => $model->total_amount,
+            'user_id' => auth()->id(),
+        ]);
+    }
+
+    /**
+     * Handle Sale/Purchase restored event.
+     * STILL-HIGH-08 FIX: Add restored handler to recalculate payment status when soft-deleted records are restored
+     */
+    public function restored(Sale|Purchase $model): void
+    {
+        $this->updateRelatedBalance($model, 'add');
+        $this->updatePaymentStatus($model);
+
+        Log::info('Financial transaction restored', [
             'type' => get_class($model),
             'id' => $model->id,
             'code' => $model->code,

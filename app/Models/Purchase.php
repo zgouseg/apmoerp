@@ -59,6 +59,8 @@ class Purchase extends BaseModel
         'created_by',
         'approved_by',
         'approved_at',
+        // Accounting linkage
+        'journal_entry_id',
         // For BaseModel compatibility
         'extra_attributes',
     ];

@@ -69,6 +69,8 @@ class Sale extends BaseModel
         // POS specific
         'pos_session_id',
         'is_pos_sale',
+        // Accounting linkage
+        'journal_entry_id',
         // For BaseModel compatibility
         'extra_attributes',
     ];
@@ -199,7 +201,10 @@ class Sale extends BaseModel
 
     public function getTotalPaidAttribute(): float
     {
-        return (float) $this->payments()->sum('amount');
+        // STILL-MEDIUM-09 FIX: Only count completed/posted payments, exclude pending/failed/cancelled
+        return (float) $this->payments()
+            ->whereIn('status', ['completed', 'posted', 'paid'])
+            ->sum('amount');
     }
 
     public function getRemainingAmountAttribute(): float

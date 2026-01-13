@@ -48,7 +48,7 @@ class StockTransferService
         ])->validate();
 
         return $this->handleServiceOperation(
-            callback: fn() => DB::transaction(function () use ($validated) {
+            callback: fn () => DB::transaction(function () use ($validated) {
                 // Validate different warehouses
                 abort_if(
                     $validated['from_warehouse_id'] === $validated['to_warehouse_id'],
@@ -57,7 +57,16 @@ class StockTransferService
                 );
 
                 // Create transfer
+                // NEW-HIGH-08 FIX: Set branch_id from from_branch_id or from_warehouse's branch
+                $branchId = $validated['from_branch_id'] ?? null;
+                if (! $branchId) {
+                    // Try to get branch from the source warehouse
+                    $fromWarehouse = \App\Models\Warehouse::find($validated['from_warehouse_id']);
+                    $branchId = $fromWarehouse?->branch_id;
+                }
+
                 $transfer = StockTransfer::create([
+                    'branch_id' => $branchId,
                     'from_warehouse_id' => $validated['from_warehouse_id'],
                     'to_warehouse_id' => $validated['to_warehouse_id'],
                     'from_branch_id' => $validated['from_branch_id'] ?? null,
@@ -85,7 +94,7 @@ class StockTransferService
                         $validated['from_warehouse_id']
                     );
 
-                    $requestedQty = (float)($itemData['qty'] ?? 0);
+                    $requestedQty = (float) ($itemData['qty'] ?? 0);
 
                     abort_if(
                         $availableStock < $requestedQty,
@@ -129,12 +138,12 @@ class StockTransferService
     public function approveTransfer(int $transferId, ?int $userId = null): StockTransfer
     {
         return $this->handleServiceOperation(
-            callback: fn() => DB::transaction(function () use ($transferId, $userId) {
+            callback: fn () => DB::transaction(function () use ($transferId, $userId) {
                 $transfer = StockTransfer::with(['items.product'])->findOrFail($transferId);
                 $userId = $userId ?? auth()->id();
 
                 abort_if(
-                    !$transfer->canBeApproved(),
+                    ! $transfer->canBeApproved(),
                     422,
                     "Transfer {$transfer->transfer_number} cannot be approved in {$transfer->status} status"
                 );
@@ -185,12 +194,12 @@ class StockTransferService
         ])->validate();
 
         return $this->handleServiceOperation(
-            callback: fn() => DB::transaction(function () use ($transferId, $validated) {
+            callback: fn () => DB::transaction(function () use ($transferId, $validated) {
                 $transfer = StockTransfer::with(['items.product'])->findOrFail($transferId);
                 $userId = auth()->id();
 
                 abort_if(
-                    !$transfer->canBeShipped(),
+                    ! $transfer->canBeShipped(),
                     422,
                     "Transfer {$transfer->transfer_number} cannot be shipped in {$transfer->status} status"
                 );
@@ -209,7 +218,7 @@ class StockTransferService
                         quantity: -$qtyToShip, // Negative for deduction
                         type: StockMovement::TYPE_TRANSFER_OUT,
                         reference: "Transfer Out: {$transfer->transfer_number}",
-                        notes: "In transit to " . $transfer->toWarehouse->name
+                        notes: 'In transit to '.$transfer->toWarehouse->name
                     );
 
                     // Add to transit table (inventory is now "in-flight")
@@ -264,12 +273,12 @@ class StockTransferService
         ])->validate();
 
         return $this->handleServiceOperation(
-            callback: fn() => DB::transaction(function () use ($transferId, $validated) {
+            callback: fn () => DB::transaction(function () use ($transferId, $validated) {
                 $transfer = StockTransfer::with(['items.product'])->findOrFail($transferId);
                 $userId = auth()->id();
 
                 abort_if(
-                    !$transfer->canBeReceived(),
+                    ! $transfer->canBeReceived(),
                     422,
                     "Transfer {$transfer->transfer_number} cannot be received in {$transfer->status} status"
                 );
@@ -277,9 +286,9 @@ class StockTransferService
                 // Process received items and move from transit to destination
                 foreach ($transfer->items as $item) {
                     $itemReceivingData = $validated['items'][$item->id] ?? [];
-                    
-                    $qtyReceived = (float)($itemReceivingData['qty_received'] ?? $item->qty_shipped);
-                    $qtyDamaged = (float)($itemReceivingData['qty_damaged'] ?? 0);
+
+                    $qtyReceived = (float) ($itemReceivingData['qty_received'] ?? $item->qty_shipped);
+                    $qtyDamaged = (float) ($itemReceivingData['qty_damaged'] ?? 0);
                     $qtyGood = $qtyReceived - $qtyDamaged;
 
                     // Update item
@@ -308,7 +317,7 @@ class StockTransferService
                             quantity: $qtyGood,
                             type: StockMovement::TYPE_TRANSFER_IN,
                             reference: "Transfer In: {$transfer->transfer_number}",
-                            notes: "Received from " . $transfer->fromWarehouse->name
+                            notes: 'Received from '.$transfer->fromWarehouse->name
                         );
                     }
 
@@ -320,7 +329,7 @@ class StockTransferService
                             quantity: $qtyDamaged,
                             type: StockMovement::TYPE_ADJUSTMENT,
                             reference: "Transfer Damage: {$transfer->transfer_number}",
-                            notes: "Damaged during transfer - " . ($itemReceivingData['damage_report'] ?? 'No details')
+                            notes: 'Damaged during transfer - '.($itemReceivingData['damage_report'] ?? 'No details')
                         );
                     }
                 }
@@ -357,7 +366,7 @@ class StockTransferService
     public function rejectTransfer(int $transferId, ?string $reason = null, ?int $userId = null): StockTransfer
     {
         return $this->handleServiceOperation(
-            callback: fn() => DB::transaction(function () use ($transferId, $reason, $userId) {
+            callback: fn () => DB::transaction(function () use ($transferId, $reason, $userId) {
                 $transfer = StockTransfer::findOrFail($transferId);
                 $userId = $userId ?? auth()->id();
 
@@ -389,7 +398,7 @@ class StockTransferService
     public function cancelTransfer(int $transferId, ?string $reason = null, ?int $userId = null): StockTransfer
     {
         return $this->handleServiceOperation(
-            callback: fn() => DB::transaction(function () use ($transferId, $reason, $userId) {
+            callback: fn () => DB::transaction(function () use ($transferId, $reason, $userId) {
                 $transfer = StockTransfer::with(['items'])->findOrFail($transferId);
                 $userId = $userId ?? auth()->id();
 
@@ -410,7 +419,7 @@ class StockTransferService
                             quantity: $transitRecord->quantity,
                             type: StockMovement::TYPE_ADJUSTMENT,
                             reference: "Transfer Cancelled: {$transfer->transfer_number}",
-                            notes: "Stock returned from transit due to cancellation"
+                            notes: 'Stock returned from transit due to cancellation'
                         );
 
                         // Mark transit record as cancelled
@@ -445,7 +454,7 @@ class StockTransferService
         if ($warehouseId) {
             $query->where(function ($q) use ($warehouseId) {
                 $q->where('from_warehouse_id', $warehouseId)
-                  ->orWhere('to_warehouse_id', $warehouseId);
+                    ->orWhere('to_warehouse_id', $warehouseId);
             });
         }
 
@@ -484,7 +493,7 @@ class StockTransferService
     protected function isFullyReceived(StockTransfer $transfer): bool
     {
         foreach ($transfer->items as $item) {
-            if (!$item->isFullyReceived()) {
+            if (! $item->isFullyReceived()) {
                 return false;
             }
         }

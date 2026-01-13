@@ -14,13 +14,16 @@ class CustomersController extends BaseApiController
     {
         $store = $this->getStore($request);
 
+        // NEW-MEDIUM-06 FIX: Validate and cap per_page to prevent DoS
         $validated = $request->validate([
             'sort_by' => 'sometimes|string|in:created_at,id,name,email',
             'sort_dir' => 'sometimes|string|in:asc,desc',
+            'per_page' => 'sometimes|integer|min:1|max:100',
         ]);
 
         $sortBy = $validated['sort_by'] ?? 'created_at';
         $sortDir = $validated['sort_dir'] ?? 'desc';
+        $perPage = $validated['per_page'] ?? 50;
 
         $query = Customer::query()
             ->when($store?->branch_id, fn ($q) => $q->where('branch_id', $store->branch_id))
@@ -35,7 +38,7 @@ class CustomersController extends BaseApiController
             })
             ->orderBy($sortBy, $sortDir);
 
-        $customers = $query->paginate($request->get('per_page', 50));
+        $customers = $query->paginate($perPage);
 
         return $this->paginatedResponse($customers, __('Customers retrieved successfully'));
     }

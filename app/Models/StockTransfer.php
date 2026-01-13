@@ -11,9 +11,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class StockTransfer extends Model
 {
-    use HasFactory, SoftDeletes, HasBranch;
+    use HasBranch, HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'branch_id',  // NEW-HIGH-08 FIX: Added branch_id to fillable for HasBranch trait
         'transfer_number',
         'from_warehouse_id',
         'to_warehouse_id',
@@ -70,23 +71,35 @@ class StockTransfer extends Model
 
     // Status constants
     public const STATUS_DRAFT = 'draft';
+
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_APPROVED = 'approved';
+
     public const STATUS_IN_TRANSIT = 'in_transit';
+
     public const STATUS_RECEIVED = 'received';
+
     public const STATUS_COMPLETED = 'completed';
+
     public const STATUS_CANCELLED = 'cancelled';
+
     public const STATUS_REJECTED = 'rejected';
 
     // Priority constants
     public const PRIORITY_LOW = 'low';
+
     public const PRIORITY_MEDIUM = 'medium';
+
     public const PRIORITY_HIGH = 'high';
+
     public const PRIORITY_URGENT = 'urgent';
 
     // Type constants
     public const TYPE_INTER_WAREHOUSE = 'inter_warehouse';
+
     public const TYPE_INTER_BRANCH = 'inter_branch';
+
     public const TYPE_INTERNAL = 'internal';
 
     protected static function boot()
@@ -102,13 +115,16 @@ class StockTransfer extends Model
 
     /**
      * Generate unique transfer number
+     * NEW-HIGH-08 FIX: Use database locking to prevent race conditions
      */
     public static function generateTransferNumber(): string
     {
         $prefix = 'TRF';
         $date = now()->format('Ymd');
-        
+
+        // Use lockForUpdate to prevent concurrent reads from getting the same number
         $lastTransfer = static::where('transfer_number', 'like', "{$prefix}-{$date}-%")
+            ->lockForUpdate()
             ->orderBy('transfer_number', 'desc')
             ->first();
 
@@ -242,7 +258,7 @@ class StockTransfer extends Model
      */
     public function approve(int $userId): bool
     {
-        if (!$this->canBeApproved()) {
+        if (! $this->canBeApproved()) {
             return false;
         }
 
@@ -262,7 +278,7 @@ class StockTransfer extends Model
      */
     public function markAsShipped(int $userId, ?array $shippingData = null): bool
     {
-        if (!$this->canBeShipped()) {
+        if (! $this->canBeShipped()) {
             return false;
         }
 
@@ -293,7 +309,7 @@ class StockTransfer extends Model
      */
     public function markAsReceived(int $userId): bool
     {
-        if (!$this->canBeReceived()) {
+        if (! $this->canBeReceived()) {
             return false;
         }
 
@@ -395,7 +411,7 @@ class StockTransfer extends Model
      */
     public function isOverdue(): bool
     {
-        if (!$this->expected_delivery_date || $this->status === self::STATUS_COMPLETED) {
+        if (! $this->expected_delivery_date || $this->status === self::STATUS_COMPLETED) {
             return false;
         }
 

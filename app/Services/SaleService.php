@@ -58,7 +58,7 @@ class SaleService implements SaleServiceInterface
                         if (! isset($it['product_id']) || ! isset($it['qty'])) {
                             continue;
                         }
-                        
+
                         // Prevent negative quantity exploit in returns
                         $requestedQty = (float) $it['qty'];
                         if ($requestedQty <= 0) {
@@ -83,10 +83,24 @@ class SaleService implements SaleServiceInterface
                     }
 
                     // Create return note with correct column name (total_amount)
+                    // NEW-MEDIUM-10 FIX: Use database locking to prevent reference_number race condition
+                    $today = today()->toDateString();
+                    $lastNote = ReturnNote::whereDate('created_at', $today)
+                        ->lockForUpdate()
+                        ->orderBy('reference_number', 'desc')
+                        ->first();
+
+                    $seq = 1;
+                    if ($lastNote && preg_match('/-(\d+)$/', $lastNote->reference_number, $m)) {
+                        $seq = ((int) $m[1]) + 1;
+                    }
+
+                    $referenceNumber = 'RET-'.date('Ymd').'-'.str_pad((string) $seq, 5, '0', STR_PAD_LEFT);
+
                     $note = ReturnNote::create([
                         'branch_id' => $sale->branch_id,
                         'sale_id' => $sale->getKey(),
-                        'reference_number' => 'RET-'.date('Ymd').'-'.str_pad((string) (ReturnNote::whereDate('created_at', today())->count() + 1), 5, '0', STR_PAD_LEFT),
+                        'reference_number' => $referenceNumber,
                         'type' => 'sale_return',
                         'warehouse_id' => $sale->warehouse_id,
                         'customer_id' => $sale->customer_id,

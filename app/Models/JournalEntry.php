@@ -35,9 +35,18 @@ class JournalEntry extends Model
         'currency',
         'exchange_rate',
         'reversed_entry_id',
+        'reversed_by_entry_id',
         'created_by',
         'approved_by',
+        'approved_at',
         'posted_at',
+        // Source tracking fields used by AccountingService
+        'source_module',
+        'source_type',
+        'source_id',
+        'fiscal_year',
+        'fiscal_period',
+        'is_auto_generated',
     ];
 
     protected $casts = [
@@ -46,6 +55,8 @@ class JournalEntry extends Model
         'total_credit' => 'decimal:4',
         'exchange_rate' => 'decimal:8',
         'posted_at' => 'datetime',
+        'approved_at' => 'datetime',
+        'is_auto_generated' => 'boolean',
     ];
 
     protected $appends = ['reference'];

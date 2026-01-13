@@ -77,6 +77,14 @@ class POSController extends Controller
             }
         }
 
+        // NEW-CRITICAL-03 FIX: Verify user has access to this branch
+        $user = auth()->user();
+        if (! $this->userCanAccessBranch($user, $branch->id)) {
+            throw ValidationException::withMessages([
+                'branch_id' => [__('You do not have permission to operate in this branch.')],
+            ]);
+        }
+
         // Merge branchId into request data
         $checkoutData = $request->all();
         $checkoutData['branch_id'] = $branch->id;
@@ -254,5 +262,36 @@ class POSController extends Controller
                 'message' => $e->getMessage(),
             ], 404);
         }
+    }
+
+    /**
+     * NEW-CRITICAL-03 FIX: Check if user has access to a specific branch
+     */
+    protected function userCanAccessBranch(?object $user, int $branchId): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        // Super Admin can access all branches
+        if (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin', 'super-admin'])) {
+            return true;
+        }
+
+        // Check if the branch matches user's primary branch
+        if (isset($user->branch_id) && $user->branch_id === $branchId) {
+            return true;
+        }
+
+        // Check if user has access to additional branches via relationship
+        if (method_exists($user, 'branches')) {
+            if (! $user->relationLoaded('branches')) {
+                $user->load('branches');
+            }
+
+            return $user->branches->contains('id', $branchId);
+        }
+
+        return false;
     }
 }

@@ -57,12 +57,32 @@ class ProductObserver
 
     public function deleted(Product $product): void
     {
-        // Delete associated media files to prevent orphaned files
+        // NEW-HIGH-05 FIX: Do NOT delete media files on soft delete
+        // Media deletion is handled in forceDeleted() event only
+        // This allows products to be restored without losing their images
+        $this->audit('deleted', $product);
+    }
+
+    /**
+     * Handle product force deletion - clean up media files
+     * NEW-HIGH-05 FIX: Media files are only deleted when product is permanently deleted
+     */
+    public function forceDeleted(Product $product): void
+    {
+        $this->deleteMediaFiles($product);
+        $this->audit('force_deleted', $product);
+    }
+
+    /**
+     * Delete associated media files for a product
+     */
+    protected function deleteMediaFiles(Product $product): void
+    {
         try {
             if ($product->image) {
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($product->image);
             }
-            
+
             if ($product->thumbnail) {
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($product->thumbnail);
             }
@@ -90,8 +110,6 @@ class ProductObserver
                 'error' => $e->getMessage(),
             ]);
         }
-
-        $this->audit('deleted', $product);
     }
 
     protected function audit(string $action, Product $product, array $changes = []): void

@@ -21,13 +21,16 @@ class OrdersController extends BaseApiController
     {
         $store = $this->getStore($request);
 
+        // NEW-MEDIUM-06 FIX: Validate and cap per_page to prevent DoS
         $validated = $request->validate([
             'sort_by' => 'sometimes|string|in:created_at,id,status,total_amount',
             'sort_dir' => 'sometimes|string|in:asc,desc',
+            'per_page' => 'sometimes|integer|min:1|max:100',
         ]);
 
         $sortBy = $validated['sort_by'] ?? 'created_at';
         $sortDir = $validated['sort_dir'] ?? 'desc';
+        $perPage = $validated['per_page'] ?? 50;
 
         $query = Sale::query()
             ->with(['customer:id,name,email,phone', 'items.product:id,name,sku'])
@@ -42,7 +45,7 @@ class OrdersController extends BaseApiController
             )
             ->orderBy($sortBy, $sortDir);
 
-        $orders = $query->paginate($request->get('per_page', 50));
+        $orders = $query->paginate($perPage);
 
         return $this->paginatedResponse($orders, __('Orders retrieved successfully'));
     }
@@ -69,8 +72,9 @@ class OrdersController extends BaseApiController
             'customer_id' => 'nullable|exists:customers,id',
             'customer' => 'nullable|array',
             'customer.name' => 'required_with:customer|string|max:255',
-            'customer.email' => 'nullable|email|max:255',
-            'customer.phone' => 'nullable|string|max:50',
+            // NEW-CRITICAL-02 FIX: Require at least email or phone to prevent random customer matching
+            'customer.email' => 'nullable|required_without:customer.phone|email|max:255',
+            'customer.phone' => 'nullable|required_without:customer.email|string|max:50',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required_without:items.*.external_id|exists:products,id',
             'items.*.external_id' => 'required_without:items.*.product_id|string',
@@ -102,14 +106,19 @@ class OrdersController extends BaseApiController
                 if (! $customerId && isset($validated['customer'])) {
                     $customerData = $validated['customer'];
 
-                    $customer = Customer::query()
-                        ->when($store?->branch_id, fn ($q) => $q->where('branch_id', $store->branch_id))
-                        ->when(! empty($customerData['email']), fn ($q) => $q->where('email', $customerData['email']))
-                        ->when(
-                            empty($customerData['email']) && ! empty($customerData['phone']),
-                            fn ($q) => $q->where('phone', $customerData['phone'])
-                        )
-                        ->first();
+                    // NEW-CRITICAL-02 FIX: Only look up existing customer if we have email or phone
+                    // Without a unique identifier, always create a new customer to avoid wrong assignment
+                    $customer = null;
+                    if (! empty($customerData['email']) || ! empty($customerData['phone'])) {
+                        $customer = Customer::query()
+                            ->when($store?->branch_id, fn ($q) => $q->where('branch_id', $store->branch_id))
+                            ->when(! empty($customerData['email']), fn ($q) => $q->where('email', $customerData['email']))
+                            ->when(
+                                empty($customerData['email']) && ! empty($customerData['phone']),
+                                fn ($q) => $q->where('phone', $customerData['phone'])
+                            )
+                            ->first();
+                    }
 
                     if (! $customer) {
                         $customer = Customer::create([

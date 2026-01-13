@@ -28,6 +28,10 @@ class InventoryController extends BaseApiController
         $store = $this->getStore($request);
         $validated = $request->validated();
 
+        // NEW-HIGH-04 FIX: Move warehouse filter into the join constraint to preserve LEFT JOIN behavior
+        // This ensures products with zero movements in the specified warehouse still appear with quantity 0
+        $warehouseId = $validated['warehouse_id'] ?? null;
+
         // quantity is signed: positive = in, negative = out
         $query = Product::query()
             ->select([
@@ -36,17 +40,23 @@ class InventoryController extends BaseApiController
                 'products.sku',
                 'products.min_stock',
                 'products.branch_id',
-                DB::raw('COALESCE(SUM(stock_movements.quantity), 0) as current_quantity'),
+                DB::raw('COALESCE(SUM(sm.quantity), 0) as current_quantity'),
             ])
-            ->leftJoin('stock_movements', 'products.id', '=', 'stock_movements.product_id')
+            ->leftJoin('stock_movements as sm', function ($join) use ($warehouseId) {
+                $join->on('products.id', '=', 'sm.product_id');
+                // Apply warehouse filter inside the join to keep LEFT JOIN semantics
+                if ($warehouseId !== null) {
+                    $join->where('sm.warehouse_id', '=', $warehouseId);
+                }
+            })
             ->when($store?->branch_id, fn ($q) => $q->where('products.branch_id', $store->branch_id))
             ->when($request->filled('sku'), fn ($q) => $q->where('products.sku', $validated['sku']))
-            ->when($request->filled('warehouse_id'), function ($q) use ($validated) {
-                $q->where('stock_movements.warehouse_id', $validated['warehouse_id'])
-                    ->addSelect('stock_movements.warehouse_id')
-                    ->groupBy('stock_movements.warehouse_id');
-            })
             ->groupBy('products.id', 'products.name', 'products.sku', 'products.min_stock', 'products.branch_id');
+
+        // Optionally include warehouse_id in select when filtered
+        if ($warehouseId !== null) {
+            $query->addSelect(DB::raw("'{$warehouseId}' as warehouse_id"));
+        }
 
         // For low stock filter
         if ($request->boolean('low_stock')) {
@@ -130,9 +140,11 @@ class InventoryController extends BaseApiController
                 throw new \RuntimeException('Product not found during stock update');
             }
             $calculated = $this->calculateCurrentStock($product->id, null, $product->branch_id);
-            $freshProduct->forceFill(['stock_quantity' => max(0, $calculated)])->save();
+            // NEW-MEDIUM-07 FIX: Store actual calculated value without clamping to 0
+            // This preserves negative stock visibility for accurate reporting and auditing
+            $freshProduct->forceFill(['stock_quantity' => $calculated])->save();
 
-            return max(0, $calculated);
+            return $calculated;
         });
 
         return $this->successResponse([
@@ -231,9 +243,10 @@ class InventoryController extends BaseApiController
                         throw new \RuntimeException('Product not found during stock update');
                     }
                     $calculated = $this->calculateCurrentStock($product->id, null, $product->branch_id);
-                    $freshProduct->forceFill(['stock_quantity' => max(0, $calculated)])->save();
+                    // NEW-MEDIUM-07 FIX: Store actual calculated value without clamping to 0
+                    $freshProduct->forceFill(['stock_quantity' => $calculated])->save();
 
-                    return max(0, $calculated);
+                    return $calculated;
                 });
 
                 $results['success'][] = [
