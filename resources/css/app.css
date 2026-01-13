@@ -1,0 +1,780 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@layer base {
+    :root {
+        color-scheme: light;
+        --color-primary: #10b981;
+        --color-primary-dark: #059669;
+        --color-primary-light: #34d399;
+        
+        /* Z-Index Scale System - Unified across the application */
+        --z-base: 0;
+        --z-content: 1;
+        --z-table-header: 5;
+        --z-dropdown: 100;
+        --z-sticky: 200;
+        --z-navbar: 300;
+        --z-sidebar-overlay: 400;
+        --z-sidebar: 500;
+        --z-popover: 600;
+        --z-modal-backdrop: 700;
+        --z-modal: 800;
+        --z-notification: 900;
+        --z-toast: 950;
+        --z-tooltip: 1000;
+        --z-loading: 9999;
+    }
+    
+    .dark {
+        color-scheme: dark;
+    }
+    
+    html {
+        font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+        @apply bg-gradient-to-br from-emerald-50 via-slate-50 to-slate-100 text-slate-900 min-h-screen overflow-x-hidden;
+        font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    .dark body {
+        @apply bg-slate-950 text-slate-100;
+    }
+
+    img, svg, video, canvas {
+        @apply max-w-full h-auto object-contain;
+    }
+
+    [x-cloak] {
+        display: none !important;
+    }
+}
+
+@layer components {
+    .content-container {
+        @apply w-full;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1.25rem;
+    }
+
+    .toolbar-wrap {
+        @apply flex-wrap gap-y-2;
+    }
+
+    .responsive-table {
+        @apply block w-full overflow-x-auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .erp-card {
+        @apply rounded-2xl border border-emerald-100/60 bg-gradient-to-br from-emerald-50 via-slate-50 to-white shadow-[0_18px_45px_-25px_rgba(16,185,129,0.65)];
+    }
+
+    .erp-card-dark {
+        @apply rounded-2xl border border-emerald-500/40 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 shadow-[0_18px_45px_-25px_rgba(16,185,129,0.9)];
+    }
+
+    .erp-btn-primary {
+        @apply inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2.5 text-sm sm:text-base font-semibold text-white shadow-lg shadow-emerald-500/30 transition-all duration-300 ease-out w-full sm:w-auto min-h-[44px] gap-2;
+    }
+    
+    .erp-btn-primary:hover {
+        @apply from-emerald-600 to-emerald-700 shadow-emerald-500/50 -translate-y-0.5 shadow-xl;
+    }
+    
+    .erp-btn-primary:active {
+        @apply from-emerald-700 to-emerald-800 translate-y-0 shadow-md;
+    }
+    
+    .erp-btn-primary:focus {
+        @apply outline-none ring-2 ring-emerald-500 ring-offset-2;
+    }
+    
+    .erp-btn-primary:disabled {
+        @apply opacity-50 cursor-not-allowed hover:translate-y-0 hover:shadow-lg;
+    }
+
+    .erp-btn-secondary {
+        @apply inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm sm:text-base font-medium text-slate-700 shadow-sm transition-all duration-300 ease-out w-full sm:w-auto min-h-[44px] gap-2;
+    }
+    
+    .erp-btn-secondary:hover {
+        @apply bg-slate-50 border-slate-300 -translate-y-0.5 shadow-md text-slate-900;
+    }
+    
+    .erp-btn-secondary:active {
+        @apply bg-slate-100 translate-y-0;
+    }
+    
+    .erp-btn-secondary:focus {
+        @apply outline-none ring-2 ring-slate-500 ring-offset-2;
+    }
+    
+    .dark .erp-btn-secondary {
+        @apply bg-slate-800 border-slate-600 text-slate-200;
+    }
+    
+    .dark .erp-btn-secondary:hover {
+        @apply bg-slate-700 text-white;
+    }
+
+    .erp-btn-danger {
+        @apply inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-red-500 to-red-600 px-4 py-2.5 text-sm sm:text-base font-semibold text-white shadow-lg shadow-red-500/30 transition-all duration-300 ease-out w-full sm:w-auto min-h-[44px] gap-2;
+    }
+    
+    .erp-btn-danger:hover {
+        @apply from-red-600 to-red-700 shadow-red-500/50 -translate-y-0.5 shadow-xl;
+    }
+    
+    .erp-btn-danger:active {
+        @apply from-red-700 to-red-800 translate-y-0 shadow-md;
+    }
+    
+    .erp-btn-danger:focus {
+        @apply outline-none ring-2 ring-red-500 ring-offset-2;
+    }
+
+    .erp-btn-warning {
+        @apply inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2.5 text-sm sm:text-base font-semibold text-white shadow-lg shadow-amber-500/30 transition-all duration-300 ease-out w-full sm:w-auto min-h-[44px] gap-2;
+    }
+    
+    .erp-btn-warning:hover {
+        @apply from-amber-600 to-amber-700 shadow-amber-500/50 -translate-y-0.5 shadow-xl;
+    }
+    
+    .erp-btn-warning:active {
+        @apply from-amber-700 to-amber-800 translate-y-0 shadow-md;
+    }
+    
+    .erp-btn-warning:focus {
+        @apply outline-none ring-2 ring-amber-500 ring-offset-2;
+    }
+
+    .erp-btn-info {
+        @apply inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2.5 text-sm sm:text-base font-semibold text-white shadow-lg shadow-blue-500/30 transition-all duration-300 ease-out w-full sm:w-auto min-h-[44px] gap-2;
+    }
+    
+    .erp-btn-info:hover {
+        @apply from-blue-600 to-blue-700 shadow-blue-500/50 -translate-y-0.5 shadow-xl;
+    }
+    
+    .erp-btn-info:active {
+        @apply from-blue-700 to-blue-800 translate-y-0 shadow-md;
+    }
+    
+    .erp-btn-info:focus {
+        @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+    }
+
+    .erp-btn-icon {
+        @apply inline-flex items-center justify-center w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-600 transition-all duration-300 ease-out;
+    }
+    
+    .erp-btn-icon:hover {
+        @apply bg-slate-50 text-slate-900 border-slate-300 -translate-y-0.5 shadow-md;
+    }
+    
+    .erp-btn-icon:active {
+        @apply bg-slate-100 translate-y-0;
+    }
+    
+    .erp-btn-icon:focus {
+        @apply outline-none ring-2 ring-emerald-500;
+    }
+    
+    .dark .erp-btn-icon {
+        @apply bg-slate-800 border-slate-600 text-slate-300;
+    }
+    
+    .dark .erp-btn-icon:hover {
+        @apply bg-slate-700 text-white;
+    }
+
+    .erp-badge {
+        @apply inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[0.7rem] font-medium text-emerald-700;
+    }
+
+    .erp-badge-success {
+        @apply inline-flex items-center rounded-full bg-green-100 text-green-700 px-2.5 py-0.5 text-xs font-medium;
+    }
+
+    .erp-badge-warning {
+        @apply inline-flex items-center rounded-full bg-amber-100 text-amber-700 px-2.5 py-0.5 text-xs font-medium;
+    }
+
+    .erp-badge-danger {
+        @apply inline-flex items-center rounded-full bg-red-100 text-red-700 px-2.5 py-0.5 text-xs font-medium;
+    }
+
+    .erp-badge-info {
+        @apply inline-flex items-center rounded-full bg-blue-100 text-blue-700 px-2.5 py-0.5 text-xs font-medium;
+    }
+
+    .erp-input {
+        @apply block w-full rounded-xl border border-slate-200 bg-white/60 px-4 py-3 text-sm sm:text-base text-slate-900 shadow-sm shadow-emerald-500/5 placeholder:text-slate-400 transition-all duration-300 ease-out min-h-[44px];
+    }
+    
+    .erp-input:hover {
+        @apply border-slate-300 bg-white;
+    }
+    
+    .erp-input:focus {
+        @apply bg-white border-emerald-500 outline-none ring-2 ring-emerald-500/20 shadow-md;
+    }
+    
+    .dark .erp-input {
+        @apply bg-slate-900/80 border-slate-700 text-slate-100;
+    }
+    
+    .dark .erp-input:hover {
+        @apply border-slate-600;
+    }
+    
+    .dark .erp-input:focus {
+        @apply border-emerald-500 ring-emerald-500/20;
+    }
+
+    .erp-label {
+        @apply block text-sm font-medium text-slate-700 dark:text-slate-300;
+    }
+
+    .erp-checkbox {
+        @apply rounded border-slate-300 text-emerald-600 shadow-sm transition-colors duration-200;
+    }
+    
+    .erp-checkbox:hover {
+        @apply border-slate-400;
+    }
+    
+    .erp-checkbox:focus {
+        @apply ring-2 ring-emerald-500/20 ring-offset-2 border-emerald-500;
+    }
+    
+    .dark .erp-checkbox {
+        @apply bg-slate-900 border-slate-600 text-emerald-500;
+    }
+    
+    .dark .erp-checkbox:hover {
+        @apply border-slate-500;
+    }
+
+    .erp-table {
+        @apply w-full text-sm text-slate-700 dark:text-slate-300;
+    }
+
+    .erp-table thead {
+        @apply sticky top-0 z-10 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700;
+    }
+
+    .erp-table th {
+        @apply px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap;
+    }
+
+    .erp-table tbody tr {
+        @apply border-b border-slate-100 dark:border-slate-800 transition-colors duration-200;
+    }
+    
+    .erp-table tbody tr:hover {
+        @apply bg-emerald-50/70 dark:bg-slate-800/70;
+    }
+
+    .erp-table tbody tr:nth-child(even) {
+        @apply bg-slate-50/50 dark:bg-slate-900/30;
+    }
+    
+    .erp-table tbody tr:nth-child(even):hover {
+        @apply bg-emerald-50/70 dark:bg-slate-800/70;
+    }
+
+    .erp-table td {
+        @apply px-4 py-3;
+    }
+
+    .erp-link {
+        @apply text-emerald-600 font-medium transition-all duration-200;
+    }
+    
+    .erp-link:hover {
+        @apply text-emerald-700 underline underline-offset-2;
+    }
+
+    .sidebar-link {
+        @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-white bg-gradient-to-r from-slate-800/80 via-slate-800/60 to-slate-900/60 border border-white/5 shadow-sm transition-all duration-300 ease-out;
+    }
+
+    .sidebar-link:hover {
+        @apply shadow-lg -translate-y-0.5 ring-1 ring-emerald-500/30;
+    }
+
+    .sidebar-link:active {
+        @apply translate-y-0 shadow-md brightness-95;
+    }
+
+    .sidebar-link.active {
+        @apply ring-2 ring-emerald-400/40 shadow-lg scale-[1.01] bg-emerald-500/20 text-emerald-100;
+    }
+
+    .sidebar-link-secondary {
+        @apply flex items-center gap-2 px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all duration-200;
+    }
+
+    .sidebar-link-secondary:hover {
+        @apply bg-slate-800/80 text-white;
+    }
+
+    .sidebar-link-secondary.active {
+        @apply bg-emerald-500/20 text-emerald-100 border border-emerald-400/30;
+    }
+}
+
+[dir="rtl"] {
+    .erp-table th,
+    .erp-table td {
+        @apply text-right;
+    }
+    
+    .sidebar-link-secondary.active {
+        @apply border-l-0 border-r-2;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .erp-btn-primary,
+    .erp-btn-secondary,
+    .erp-btn-danger,
+    .erp-btn-warning,
+    .erp-btn-info,
+    .erp-btn-icon,
+    .sidebar-link,
+    .sidebar-link-secondary {
+        @apply transition-none;
+    }
+}
+
+/* ========================================
+   Z-INDEX UTILITY CLASSES
+   Using CSS custom properties for consistency
+   ======================================== */
+
+/* Z-Index Scale Classes */
+.z-base { z-index: var(--z-base); }
+.z-content { z-index: var(--z-content); }
+.z-table-header { z-index: var(--z-table-header); }
+.z-dropdown { z-index: var(--z-dropdown); }
+.z-sticky { z-index: var(--z-sticky); }
+.z-navbar { z-index: var(--z-navbar); }
+.z-sidebar-overlay { z-index: var(--z-sidebar-overlay); }
+.z-sidebar { z-index: var(--z-sidebar); }
+.z-popover { z-index: var(--z-popover); }
+.z-modal-backdrop { z-index: var(--z-modal-backdrop); }
+.z-modal { z-index: var(--z-modal); }
+.z-notification { z-index: var(--z-notification); }
+.z-toast { z-index: var(--z-toast); }
+.z-tooltip { z-index: var(--z-tooltip); }
+.z-loading { z-index: var(--z-loading); }
+
+/* ========================================
+   STACKING CONTEXT FIXES
+   Prevent unwanted stacking contexts
+   ======================================== */
+
+/* Ensure dropdowns and popovers are not clipped by overflow */
+.dropdown-container {
+    position: relative;
+    isolation: isolate;
+}
+
+/* Fix for dropdowns inside containers with overflow */
+.dropdown-portal {
+    position: fixed;
+    z-index: var(--z-dropdown);
+}
+
+/* Ensure form elements maintain proper stacking */
+.form-field-container {
+    position: relative;
+    z-index: var(--z-content);
+}
+
+.form-field-container:focus-within {
+    z-index: var(--z-dropdown);
+}
+
+/* Fix for autocomplete/search dropdowns */
+.search-dropdown-wrapper {
+    position: relative;
+    z-index: var(--z-content);
+}
+
+.search-dropdown-wrapper:focus-within {
+    z-index: var(--z-dropdown);
+}
+
+.search-dropdown {
+    position: absolute;
+    z-index: var(--z-dropdown);
+    inset-inline-start: 0;
+    inset-inline-end: 0;
+}
+
+/* Modal and overlay fixes */
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal-backdrop);
+}
+
+.modal-content {
+    position: relative;
+    z-index: var(--z-modal);
+}
+
+/* Toast container */
+.toast-container {
+    position: fixed;
+    z-index: var(--z-toast);
+    pointer-events: none;
+}
+
+.toast-container > * {
+    pointer-events: auto;
+}
+
+/* Loading overlay */
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-loading);
+}
+
+/* ========================================
+   SIDEBAR STYLES (New Implementation)
+   Responsive, RTL/LTR ready sidebar
+   ======================================== */
+
+/* Main sidebar container */
+.erp-sidebar {
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+    width: 280px;
+    z-index: var(--z-sidebar);
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(180deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+    color: #f1f5f9;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[dir="rtl"] .erp-sidebar {
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Sidebar overlay for mobile */
+.erp-sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-sidebar-overlay);
+    background-color: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.erp-sidebar-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Desktop: sidebar always visible */
+@media (min-width: 1024px) {
+    .erp-sidebar {
+        position: sticky;
+        inset-block-start: 0;
+        height: 100vh;
+        height: 100dvh;
+        transform: translateX(0) !important;
+    }
+    
+    .erp-sidebar-overlay {
+        display: none;
+    }
+    
+    .erp-main-content {
+        margin-inline-start: 0;
+    }
+}
+
+/* Mobile: sidebar as drawer */
+@media (max-width: 1023px) {
+    .erp-sidebar {
+        transform: translateX(-100%);
+    }
+    
+    [dir="rtl"] .erp-sidebar {
+        transform: translateX(100%);
+    }
+    
+    .erp-sidebar.open {
+        transform: translateX(0);
+    }
+    
+    .erp-sidebar {
+        width: 85vw;
+        max-width: 320px;
+    }
+}
+
+/* Sidebar header */
+.erp-sidebar-header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    border-block-end: 1px solid rgba(148, 163, 184, 0.1);
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(12px);
+}
+
+/* Sidebar navigation */
+.erp-sidebar-nav {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.75rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+}
+
+.erp-sidebar-nav::-webkit-scrollbar {
+    width: 6px;
+}
+
+.erp-sidebar-nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.erp-sidebar-nav::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.3);
+    border-radius: 3px;
+}
+
+.erp-sidebar-nav::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.5);
+}
+
+/* Sidebar section */
+.erp-sidebar-section {
+    margin-block-end: 0.5rem;
+}
+
+.erp-sidebar-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.erp-sidebar-section-header:hover {
+    color: #e2e8f0;
+    background: rgba(148, 163, 184, 0.08);
+}
+
+.erp-sidebar-section-header svg {
+    width: 1rem;
+    height: 1rem;
+    transition: transform 0.2s ease;
+}
+
+.erp-sidebar-section-header[aria-expanded="true"] svg {
+    transform: rotate(180deg);
+}
+
+/* Sidebar items */
+.erp-sidebar-items {
+    padding-inline-start: 0.5rem;
+    padding-block: 0.25rem;
+}
+
+.erp-sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 1rem;
+    margin-block-end: 0.25rem;
+    border-radius: 0.625rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #cbd5e1;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.erp-sidebar-item:hover {
+    color: #f1f5f9;
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.15);
+}
+
+.erp-sidebar-item.active {
+    color: #ecfdf5;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.1) 100%);
+    border-color: rgba(16, 185, 129, 0.3);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
+}
+
+/* data-current attribute support for Livewire Navigate active state detection */
+.erp-sidebar-item[data-current] {
+    color: #ecfdf5;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.1) 100%);
+    border-color: rgba(16, 185, 129, 0.3);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
+}
+
+.erp-sidebar-item-icon {
+    flex-shrink: 0;
+    width: 1.25rem;
+    height: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.erp-sidebar-item-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* Sub-items (one level only) */
+.erp-sidebar-subitems {
+    padding-inline-start: 2rem;
+    margin-block-start: 0.25rem;
+    border-inline-start: 1px solid rgba(148, 163, 184, 0.15);
+    margin-inline-start: 0.75rem;
+}
+
+.erp-sidebar-subitem {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    margin-block-end: 0.125rem;
+    border-radius: 0.5rem;
+    font-size: 0.8125rem;
+    color: #94a3b8;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.erp-sidebar-subitem:hover {
+    color: #e2e8f0;
+    background: rgba(148, 163, 184, 0.08);
+}
+
+.erp-sidebar-subitem.active {
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+}
+
+/* data-current attribute support for Livewire Navigate active state detection */
+.erp-sidebar-subitem[data-current] {
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.erp-sidebar-subitem::before {
+    content: '';
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.5;
+    flex-shrink: 0;
+}
+
+.erp-sidebar-subitem.active::before {
+    background: #10b981;
+    opacity: 1;
+}
+
+/* data-current attribute support for bullet indicator */
+.erp-sidebar-subitem[data-current]::before {
+    background: #10b981;
+    opacity: 1;
+}
+
+/* Sidebar footer */
+.erp-sidebar-footer {
+    flex-shrink: 0;
+    padding: 0.75rem 1rem;
+    border-block-start: 1px solid rgba(148, 163, 184, 0.1);
+    background: rgba(15, 23, 42, 0.5);
+}
+
+/* Mobile menu toggle button */
+.erp-menu-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.625rem;
+    border: 1px solid #e2e8f0;
+    background: white;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.erp-menu-toggle:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #334155;
+}
+
+@media (max-width: 1023px) {
+    .erp-menu-toggle {
+        display: flex;
+    }
+}
+
+/* Main layout wrapper */
+.erp-layout {
+    display: flex;
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+.erp-main-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+/* Fix navbar z-index */
+.erp-navbar {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: var(--z-navbar);
+}

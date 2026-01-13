@@ -1,0 +1,566 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
+
+class Product extends BaseModel
+{
+    use LogsActivity, SoftDeletes;
+
+    protected ?string $moduleKey = 'inventory';
+
+    protected $table = 'products';
+
+    protected $with = ['branch', 'module'];
+
+    /**
+     * Fields that should be guarded from mass assignment.
+     * These sensitive fields must be set explicitly by the application.
+     */
+    protected $guarded = [
+        'id',
+        'uuid',
+        'code',
+        'created_by',
+        'updated_by',
+    ];
+
+    protected $fillable = [
+        'name', 'sku', 'barcode',
+        'thumbnail', 'image', 'gallery',
+        'module_id',
+        'branch_id',
+        'category_id',
+        'product_type',
+        'type',
+        'has_variations',
+        'has_variants',
+        'parent_product_id',
+        'variation_attributes',
+        'custom_fields',
+        'uom', 'uom_factor', 'unit_id',
+        'cost_method', 'cost_currency', 'standard_cost', 'cost',
+        'tax_id',
+        'price_list_id', 'default_price', 'price', 'price_currency',
+        'min_stock', 'reorder_point', 'max_stock', 'reorder_qty', 'stock_quantity', 'stock_alert_threshold',
+        'reserved_quantity', 'lead_time_days', 'location_code',
+        'is_serialized', 'is_batch_tracked',
+        'track_stock_alerts',
+        'has_warranty', 'warranty_period_days', 'warranty_period', 'warranty_type',
+        'length', 'width', 'height', 'weight',
+        'manufacturer', 'brand', 'model_number', 'origin_country', 'hs_code',
+        'manufacture_date', 'expiry_date', 'is_perishable', 'shelf_life_days',
+        'allow_backorder', 'requires_approval', 'minimum_order_quantity', 'maximum_order_quantity',
+        'msrp', 'wholesale_price', 'last_cost_update', 'last_price_update',
+        'hourly_rate', 'service_duration', 'duration_unit',
+        'status', 'notes',
+        'extra_attributes',
+    ];
+
+    protected $casts = [
+        'standard_cost' => 'decimal:4',
+        'cost' => 'decimal:4',
+        'default_price' => 'decimal:4',
+        'min_stock' => 'decimal:4',
+        'reorder_point' => 'decimal:4',
+        'max_stock' => 'decimal:2',
+        'reorder_qty' => 'decimal:4',
+        'stock_quantity' => 'decimal:4',
+        'stock_alert_threshold' => 'decimal:4',
+        'reserved_quantity' => 'decimal:4',
+        'lead_time_days' => 'decimal:1',
+        'hourly_rate' => 'decimal:2',
+        'service_duration' => 'integer',
+        'is_serialized' => 'boolean',
+        'is_batch_tracked' => 'boolean',
+        'has_variations' => 'boolean',
+        'has_variants' => 'boolean',
+        'track_stock_alerts' => 'boolean',
+        'has_warranty' => 'boolean',
+        'warranty_period_days' => 'integer',
+        'length' => 'decimal:2',
+        'width' => 'decimal:2',
+        'height' => 'decimal:2',
+        'weight' => 'decimal:2',
+        'manufacture_date' => 'date',
+        'expiry_date' => 'date',
+        'is_perishable' => 'boolean',
+        'shelf_life_days' => 'integer',
+        'allow_backorder' => 'boolean',
+        'requires_approval' => 'boolean',
+        'minimum_order_quantity' => 'decimal:4',
+        'maximum_order_quantity' => 'decimal:4',
+        'msrp' => 'decimal:4',
+        'wholesale_price' => 'decimal:4',
+        'last_cost_update' => 'date',
+        'last_price_update' => 'date',
+        'extra_attributes' => 'array',
+        'variation_attributes' => 'array',
+        'custom_fields' => 'array',
+        'gallery' => 'array',
+    ];
+
+    protected static function booted(): void
+    {
+        static::creating(function ($model): void {
+            $model->uuid ??= (string) Str::uuid();
+            $model->code ??= 'PRD-'.Str::upper(Str::random(8));
+            $model->type ??= 'product';
+            $model->product_type ??= 'physical';
+        });
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
+    public function module(): BelongsTo
+    {
+        return $this->belongsTo(Module::class);
+    }
+
+    public function parentProduct(): BelongsTo
+    {
+        return $this->belongsTo(Product::class, 'parent_product_id');
+    }
+
+    public function tax(): BelongsTo
+    {
+        return $this->belongsTo(Tax::class, 'tax_id');
+    }
+
+    public function priceGroup(): BelongsTo
+    {
+        return $this->belongsTo(PriceGroup::class, 'price_list_id');
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(ProductCategory::class, 'category_id');
+    }
+
+    /**
+     * Get the bill of materials for this product (if it's a manufactured item).
+     */
+    public function bom(): HasOne
+    {
+        return $this->hasOne(BillOfMaterial::class);
+    }
+
+    public function unit(): BelongsTo
+    {
+        return $this->belongsTo(UnitOfMeasure::class, 'unit_id');
+    }
+
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class);
+    }
+
+    public function saleItems(): HasMany
+    {
+        return $this->hasMany(SaleItem::class);
+    }
+
+    public function purchaseItems(): HasMany
+    {
+        return $this->hasMany(PurchaseItem::class);
+    }
+
+    public function transferItems(): HasMany
+    {
+        return $this->hasMany(TransferItem::class);
+    }
+
+    public function adjustmentItems(): HasMany
+    {
+        return $this->hasMany(AdjustmentItem::class);
+    }
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updatedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function variations(): HasMany
+    {
+        return $this->hasMany(ProductVariation::class);
+    }
+
+    public function childProducts(): HasMany
+    {
+        return $this->hasMany(Product::class, 'parent_product_id');
+    }
+
+    public function fieldValues(): HasMany
+    {
+        return $this->hasMany(ProductFieldValue::class);
+    }
+
+    public function priceTiers(): HasMany
+    {
+        return $this->hasMany(ProductPriceTier::class);
+    }
+
+    public function compatibilities(): HasMany
+    {
+        return $this->hasMany(ProductCompatibility::class);
+    }
+
+    public function compatibleVehicles(): BelongsToMany
+    {
+        return $this->belongsToMany(VehicleModel::class, 'product_compatibilities')
+            ->withPivot(['oem_number', 'position', 'notes', 'is_verified'])
+            ->withTimestamps();
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('status', 'active');
+    }
+
+    public function scopeServices(Builder $query): Builder
+    {
+        return $query->where('type', 'service');
+    }
+
+    public function scopeForModule(Builder $query, $moduleId): Builder
+    {
+        return $query->where('module_id', $moduleId);
+    }
+
+    public function scopeParentsOnly(Builder $query): Builder
+    {
+        return $query->whereNull('parent_product_id');
+    }
+
+    public function scopeVariationsOnly(Builder $query): Builder
+    {
+        return $query->whereNotNull('parent_product_id');
+    }
+
+    public function scopeWithVariations(Builder $query): Builder
+    {
+        return $query->where('has_variations', true);
+    }
+
+    /**
+     * Scope to filter products with low stock levels
+     * Returns products where current stock is at or below the alert threshold
+     *
+     *
+     * @example Product::lowStock()->get()
+     */
+    public function scopeLowStock(Builder $query): Builder
+    {
+        return $query->whereNotNull('stock_alert_threshold')
+            ->whereRaw('stock_quantity <= stock_alert_threshold');
+    }
+
+    /**
+     * Scope to filter products that are out of stock
+     *
+     *
+     * @example Product::outOfStock()->count()
+     */
+    public function scopeOutOfStock(Builder $query): Builder
+    {
+        return $query->where('stock_quantity', '<=', 0);
+    }
+
+    /**
+     * Scope to filter products that are in stock
+     *
+     *
+     * @example Product::inStock()->get()
+     */
+    public function scopeInStock(Builder $query): Builder
+    {
+        return $query->where('stock_quantity', '>', 0);
+    }
+
+    /**
+     * Scope to filter perishable products expiring within a specified number of days
+     *
+     * @param  int  $days  Number of days to look ahead (default: 30)
+     *
+     * @example Product::expiringSoon(7)->get() // Products expiring in 7 days
+     */
+    public function scopeExpiringSoon(Builder $query, int $days = 30): Builder
+    {
+        return $query->where('is_perishable', true)
+            ->whereNotNull('expiry_date')
+            ->whereBetween('expiry_date', [now(), now()->addDays($days)]);
+    }
+
+    public function scopeExpired(Builder $query): Builder
+    {
+        return $query->where('is_perishable', true)
+            ->whereNotNull('expiry_date')
+            ->where('expiry_date', '<', now());
+    }
+
+    public function uomLabel(): string
+    {
+        return $this->uom ?: 'unit';
+    }
+
+    // Business logic methods
+    public function isLowStock(): bool
+    {
+        return $this->stock_alert_threshold &&
+            $this->stock_quantity <= $this->stock_alert_threshold;
+    }
+
+    public function isOutOfStock(): bool
+    {
+        return $this->stock_quantity <= 0;
+    }
+
+    public function isInStock(float $quantity = 1): bool
+    {
+        return $this->getAvailableQuantity() >= $quantity;
+    }
+
+    public function getAvailableQuantity(): float
+    {
+        return max(0, $this->stock_quantity - $this->reserved_quantity);
+    }
+
+    public function reserveStock(float $quantity): bool
+    {
+        $success = DB::transaction(function () use ($quantity): bool {
+            $product = self::whereKey($this->getKey())->lockForUpdate()->first();
+
+            if (! $product) {
+                throw new \RuntimeException('Product not found for reservation.');
+            }
+
+            if ($product->getAvailableQuantity() < $quantity) {
+                throw new \RuntimeException('Insufficient stock to reserve.');
+            }
+
+            $product->reserved_quantity += $quantity;
+            $product->save();
+
+            return true;
+        }, 3);
+
+        if ($success) {
+            $this->refresh();
+        }
+
+        return $success;
+    }
+
+    public function releaseStock(float $quantity): void
+    {
+        $updated = DB::transaction(function () use ($quantity): bool {
+            $product = self::whereKey($this->getKey())->lockForUpdate()->first();
+
+            if (! $product) {
+                throw new \RuntimeException('Product not found for release.');
+            }
+
+            $product->reserved_quantity = max(0, $product->reserved_quantity - $quantity);
+            $product->save();
+
+            return true;
+        }, 3);
+
+        if ($updated) {
+            $this->refresh();
+        }
+    }
+
+    public function addStock(float $quantity): void
+    {
+        $updated = DB::transaction(function () use ($quantity): bool {
+            $product = self::whereKey($this->getKey())->lockForUpdate()->first();
+
+            if (! $product) {
+                throw new \RuntimeException('Product not found for adjustment.');
+            }
+
+            $product->stock_quantity += $quantity;
+            $product->save();
+
+            return true;
+        }, 3);
+
+        if ($updated) {
+            $this->refresh();
+        }
+    }
+
+    public function subtractStock(float $quantity): void
+    {
+        $updated = DB::transaction(function () use ($quantity): bool {
+            $product = self::whereKey($this->getKey())->lockForUpdate()->first();
+
+            if (! $product) {
+                throw new \RuntimeException('Product not found for adjustment.');
+            }
+
+            $product->stock_quantity = max(0, $product->stock_quantity - $quantity);
+            $product->save();
+
+            return true;
+        }, 3);
+
+        if ($updated) {
+            $this->refresh();
+        }
+    }
+
+    public function isExpired(): bool
+    {
+        return $this->is_perishable &&
+            $this->expiry_date &&
+            $this->expiry_date->isPast();
+    }
+
+    public function isExpiringSoon(int $days = 30): bool
+    {
+        return $this->is_perishable &&
+            $this->expiry_date &&
+            $this->expiry_date->isBetween(now(), now()->addDays($days));
+    }
+
+    public function needsReorder(): bool
+    {
+        return $this->reorder_point &&
+            $this->stock_quantity <= $this->reorder_point;
+    }
+
+    public function getReorderSuggestion(): ?float
+    {
+        if (! $this->needsReorder()) {
+            return null;
+        }
+
+        return $this->reorder_qty ?? ($this->reorder_point * 2);
+    }
+
+    public function hasWarranty(): bool
+    {
+        return $this->has_warranty && $this->warranty_period_days > 0;
+    }
+
+    public function getWarrantyExpiryDate(\DateTime $purchaseDate): ?\DateTime
+    {
+        if (! $this->hasWarranty()) {
+            return null;
+        }
+
+        return (clone $purchaseDate)->modify("+{$this->warranty_period_days} days");
+    }
+
+    public function getFieldValue(string $fieldKey)
+    {
+        $value = $this->fieldValues()
+            ->whereHas('field', fn ($q) => $q->where('field_key', $fieldKey))
+            ->first();
+
+        return $value?->typed_value;
+    }
+
+    public function setFieldValue(string $fieldKey, $value): ?ProductFieldValue
+    {
+        if (! $this->module_id) {
+            return null;
+        }
+
+        $field = ModuleProductField::where('module_id', $this->module_id)
+            ->where('field_key', $fieldKey)
+            ->first();
+
+        if (! $field) {
+            return null;
+        }
+
+        return ProductFieldValue::updateOrCreate(
+            [
+                'product_id' => $this->id,
+                'module_product_field_id' => $field->id,
+            ],
+            ['value' => is_array($value) ? json_encode($value) : (string) $value]
+        );
+    }
+
+    public function getAllFieldValues(): array
+    {
+        return $this->fieldValues()
+            ->with('field')
+            ->get()
+            ->mapWithKeys(fn ($v) => [$v->field->field_key => $v->typed_value])
+            ->toArray();
+    }
+
+    public function getPriceForQuantity(float $quantity, ?int $branchId = null): ?float
+    {
+        $tier = $this->priceTiers()
+            ->active()
+            ->forBranch($branchId)
+            ->forQuantity($quantity)
+            ->orderBy('min_quantity', 'desc')
+            ->first();
+
+        return $tier?->selling_price ?? $this->default_price;
+    }
+
+    public function getCostForQuantity(float $quantity, ?int $branchId = null): ?float
+    {
+        $tier = $this->priceTiers()
+            ->active()
+            ->forBranch($branchId)
+            ->forQuantity($quantity)
+            ->orderBy('min_quantity', 'desc')
+            ->first();
+
+        return $tier?->cost_price ?? $this->standard_cost;
+    }
+
+    public function isRental(): bool
+    {
+        return $this->product_type === 'rental' || $this->module?->is_rental;
+    }
+
+    public function isService(): bool
+    {
+        return $this->product_type === 'service' || $this->type === 'service' || $this->module?->is_service;
+    }
+
+    public function getThumbnailUrlAttribute(): ?string
+    {
+        return $this->thumbnail ? Storage::url($this->thumbnail) : null;
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'sku', 'default_price', 'cost', 'is_active', 'min_stock', 'category_id'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn (string $eventName) => "Product {$this->name} was {$eventName}");
+    }
+}

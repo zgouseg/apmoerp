@@ -1,0 +1,385 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Livewire\Reports;
+
+use App\Models\Sale;
+use App\Models\SaleItem;
+use App\Services\DatabaseCompatibilityService;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Livewire\Attributes\Layout;
+use Livewire\Component;
+
+class SalesAnalytics extends Component
+{
+    #[Layout('layouts.app')]
+    public string $dateRange = 'month';
+
+    public ?string $dateFrom = null;
+
+    public ?string $dateTo = null;
+
+    public ?int $branchId = null;
+
+    public bool $isAdmin = false;
+
+    public array $summaryStats = [];
+
+    public array $salesTrend = [];
+
+    public array $topProducts = [];
+
+    public array $topCustomers = [];
+
+    public array $paymentBreakdown = [];
+
+    public array $hourlyDistribution = [];
+
+    public array $categoryPerformance = [];
+
+    protected DatabaseCompatibilityService $dbService;
+
+    public function boot(DatabaseCompatibilityService $dbService): void
+    {
+        $this->dbService = $dbService;
+    }
+
+    public function mount(): void
+    {
+        $user = Auth::user();
+        if (! $user || ! $user->can('reports.sales.view')) {
+            abort(403);
+        }
+
+        $this->branchId = $user->branch_id;
+        // Use case-insensitive role check - seeder uses "Super Admin" (Title Case)
+        $this->isAdmin = $user->hasAnyRole(['Super Admin', 'super-admin', 'Admin', 'admin']);
+
+        $this->setDateRange();
+        $this->loadAllData();
+    }
+
+    public function setDateRange(): void
+    {
+        $now = Carbon::now();
+
+        switch ($this->dateRange) {
+            case 'today':
+                $this->dateFrom = $now->copy()->startOfDay()->toDateString();
+                $this->dateTo = $now->copy()->endOfDay()->toDateString();
+                break;
+            case 'week':
+                $this->dateFrom = $now->copy()->startOfWeek()->toDateString();
+                $this->dateTo = $now->copy()->endOfWeek()->toDateString();
+                break;
+            case 'month':
+                $this->dateFrom = $now->copy()->startOfMonth()->toDateString();
+                $this->dateTo = $now->copy()->endOfMonth()->toDateString();
+                break;
+            case 'quarter':
+                $this->dateFrom = $now->copy()->startOfQuarter()->toDateString();
+                $this->dateTo = $now->copy()->endOfQuarter()->toDateString();
+                break;
+            case 'year':
+                $this->dateFrom = $now->copy()->startOfYear()->toDateString();
+                $this->dateTo = $now->copy()->endOfYear()->toDateString();
+                break;
+            case 'custom':
+                if (! $this->dateFrom || ! $this->dateTo) {
+                    $this->dateFrom = $now->copy()->startOfMonth()->toDateString();
+                    $this->dateTo = $now->copy()->endOfMonth()->toDateString();
+                }
+                $maxDays = 365;
+                $daysDiff = Carbon::parse($this->dateFrom)->diffInDays(Carbon::parse($this->dateTo));
+                if ($daysDiff > $maxDays) {
+                    $this->dateTo = Carbon::parse($this->dateFrom)->addDays($maxDays)->toDateString();
+                }
+                break;
+        }
+    }
+
+    public function updatedDateRange(): void
+    {
+        $this->setDateRange();
+        $this->loadAllData();
+    }
+
+    public function updatedDateFrom(): void
+    {
+        $this->dateRange = 'custom';
+        $this->loadAllData();
+    }
+
+    public function updatedDateTo(): void
+    {
+        $this->dateRange = 'custom';
+        $this->loadAllData();
+    }
+
+    protected function scopedQuery()
+    {
+        $query = Sale::query()
+            ->whereBetween('created_at', [$this->dateFrom.' 00:00:00', $this->dateTo.' 23:59:59']);
+
+        if (! $this->isAdmin && $this->branchId) {
+            $query->where('branch_id', $this->branchId);
+        }
+
+        return $query;
+    }
+
+    protected function loadAllData(): void
+    {
+        $this->loadSummaryStats();
+        $this->loadSalesTrend();
+        $this->loadTopProducts();
+        $this->loadTopCustomers();
+        $this->loadPaymentBreakdown();
+        $this->loadHourlyDistribution();
+        $this->loadCategoryPerformance();
+    }
+
+    protected function loadSummaryStats(): void
+    {
+        $query = $this->scopedQuery();
+
+        $totalSales = (clone $query)->sum('grand_total') ?? 0;
+        $totalOrders = (clone $query)->count();
+        $completedOrders = (clone $query)->where('status', 'completed')->count();
+        $avgOrderValue = $totalOrders > 0 ? (float) bcdiv((string) $totalSales, (string) $totalOrders, 2) : 0;
+        $totalDiscount = (clone $query)->sum('discount_amount') ?? 0;
+        $totalTax = (clone $query)->sum('tax_amount') ?? 0;
+        $refundedAmount = (clone $query)->where('status', 'refunded')->sum('total_amount') ?? 0;
+
+        $prevPeriodQuery = Sale::query()
+            ->whereBetween('created_at', [
+                Carbon::parse($this->dateFrom)->subDays(Carbon::parse($this->dateFrom)->diffInDays(Carbon::parse($this->dateTo)) + 1)->toDateString().' 00:00:00',
+                Carbon::parse($this->dateFrom)->subDay()->toDateString().' 23:59:59',
+            ]);
+
+        if (! $this->isAdmin && $this->branchId) {
+            $prevPeriodQuery->where('branch_id', $this->branchId);
+        }
+
+        $prevTotalSales = $prevPeriodQuery->sum('grand_total') ?? 0;
+
+        if (bccomp((string) $prevTotalSales, '0', 2) > 0) {
+            $diff = bcsub((string) $totalSales, (string) $prevTotalSales, 4);
+            $salesGrowth = (float) bcdiv(bcmul($diff, '100', 6), (string) $prevTotalSales, 1);
+        } else {
+            $salesGrowth = bccomp((string) $totalSales, '0', 2) > 0 ? 100.0 : 0.0;
+        }
+
+        $completionRate = $totalOrders > 0 ? (float) bcdiv(bcmul((string) $completedOrders, '100', 4), (string) $totalOrders, 1) : 0;
+
+        $this->summaryStats = [
+            'total_sales' => $totalSales,
+            'total_orders' => $totalOrders,
+            'completed_orders' => $completedOrders,
+            'avg_order_value' => $avgOrderValue,
+            'total_discount' => $totalDiscount,
+            'total_tax' => $totalTax,
+            'refunded_amount' => $refundedAmount,
+            'sales_growth' => $salesGrowth,
+            'completion_rate' => $completionRate,
+        ];
+    }
+
+    protected function loadSalesTrend(): void
+    {
+        $days = Carbon::parse($this->dateFrom)->diffInDays(Carbon::parse($this->dateTo));
+        $groupBy = $days > 60 ? 'month' : ($days > 14 ? 'week' : 'day');
+
+        // Use database-portable date truncation
+        $dateFormat = match ($groupBy) {
+            'month' => $this->dbService->monthTruncateExpression('created_at'),
+            'week' => $this->dbService->weekTruncateExpression('created_at'),
+            default => $this->dbService->dateExpression('created_at'),
+        };
+
+        $query = Sale::query()
+            ->selectRaw("{$dateFormat} as period")
+            ->selectRaw('SUM(total_amount) as revenue')
+            ->selectRaw('COUNT(*) as orders')
+            ->whereBetween('created_at', [$this->dateFrom.' 00:00:00', $this->dateTo.' 23:59:59']);
+
+        if (! $this->isAdmin && $this->branchId) {
+            $query->where('branch_id', $this->branchId);
+        }
+
+        $results = $query->groupBy('period')->orderBy('period')->get();
+
+        $this->salesTrend = [
+            'labels' => $results->pluck('period')->map(function ($p) use ($groupBy) {
+                try {
+                    $date = Carbon::parse($p);
+
+                    return match ($groupBy) {
+                        'month' => $date->format('M Y'),
+                        'week' => 'Week '.$date->format('W'),
+                        default => $date->format('M d'),
+                    };
+                } catch (\Exception $e) {
+                    return (string) $p;
+                }
+            })->toArray(),
+            'revenue' => $results->pluck('revenue')->map(fn ($v) => (float) $v)->toArray(),
+            'orders' => $results->pluck('orders')->map(fn ($v) => (int) $v)->toArray(),
+        ];
+    }
+
+    protected function loadTopProducts(): void
+    {
+        $query = SaleItem::query()
+            ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
+            ->join('products', 'sale_items.product_id', '=', 'products.id')
+            ->select([
+                'products.id',
+                'products.name',
+                'products.sku',
+            ])
+            ->selectRaw('SUM(sale_items.quantity) as total_qty')
+            ->selectRaw('SUM(sale_items.line_total) as total_revenue')
+            ->whereBetween('sales.created_at', [$this->dateFrom.' 00:00:00', $this->dateTo.' 23:59:59']);
+
+        if (! $this->isAdmin && $this->branchId) {
+            $query->where('sales.branch_id', $this->branchId);
+        }
+
+        $this->topProducts = $query
+            ->groupBy('products.id', 'products.name', 'products.sku')
+            ->orderByDesc('total_revenue')
+            ->limit(10)
+            ->get()
+            ->map(fn ($p) => [
+                'id' => $p->id,
+                'name' => $p->name,
+                'sku' => $p->sku,
+                'quantity' => (int) $p->total_qty,
+                'revenue' => (float) $p->total_revenue,
+            ])
+            ->toArray();
+    }
+
+    protected function loadTopCustomers(): void
+    {
+        $query = Sale::query()
+            ->join('customers', 'sales.customer_id', '=', 'customers.id')
+            ->select([
+                'customers.id',
+                'customers.name',
+                'customers.email',
+            ])
+            ->selectRaw('COUNT(sales.id) as total_orders')
+            ->selectRaw('SUM(sales.total_amount) as total_spent')
+            ->whereBetween('sales.created_at', [$this->dateFrom.' 00:00:00', $this->dateTo.' 23:59:59'])
+            ->whereNotNull('sales.customer_id');
+
+        if (! $this->isAdmin && $this->branchId) {
+            $query->where('sales.branch_id', $this->branchId);
+        }
+
+        $this->topCustomers = $query
+            ->groupBy('customers.id', 'customers.name', 'customers.email')
+            ->orderByDesc('total_spent')
+            ->limit(10)
+            ->get()
+            ->map(fn ($c) => [
+                'id' => $c->id,
+                'name' => $c->name,
+                'email' => $c->email,
+                'orders' => (int) $c->total_orders,
+                'total_spent' => (float) $c->total_spent,
+            ])
+            ->toArray();
+    }
+
+    protected function loadPaymentBreakdown(): void
+    {
+        $query = DB::table('sale_payments')
+            ->join('sales', 'sale_payments.sale_id', '=', 'sales.id')
+            ->select('sale_payments.payment_method')
+            ->selectRaw('COUNT(*) as count')
+            ->selectRaw('SUM(sale_payments.amount) as total')
+            ->whereBetween('sales.created_at', [$this->dateFrom.' 00:00:00', $this->dateTo.' 23:59:59'])
+            ->whereNull('sales.deleted_at');
+
+        if (! $this->isAdmin && $this->branchId) {
+            $query->where('sales.branch_id', $this->branchId);
+        }
+
+        $results = $query->groupBy('sale_payments.payment_method')->get();
+
+        $this->paymentBreakdown = [
+            'labels' => $results->pluck('payment_method')->map(fn ($m) => ucfirst($m ?? 'cash'))->toArray(),
+            'counts' => $results->pluck('count')->map(fn ($v) => (int) $v)->toArray(),
+            'totals' => $results->pluck('total')->map(fn ($v) => (float) $v)->toArray(),
+        ];
+    }
+
+    protected function loadHourlyDistribution(): void
+    {
+        $hourExpr = $this->dbService->hourExpression('created_at');
+
+        $query = Sale::query()
+            ->selectRaw("{$hourExpr} as hour")
+            ->selectRaw('COUNT(*) as count')
+            ->whereBetween('created_at', [$this->dateFrom.' 00:00:00', $this->dateTo.' 23:59:59']);
+
+        if (! $this->isAdmin && $this->branchId) {
+            $query->where('branch_id', $this->branchId);
+        }
+
+        $results = $query->groupBy('hour')->orderBy('hour')->get()->keyBy('hour');
+
+        $hours = [];
+        $counts = [];
+        for ($i = 0; $i < 24; $i++) {
+            $hours[] = sprintf('%02d:00', $i);
+            $counts[] = (int) ($results->get($i)?->count ?? 0);
+        }
+
+        $this->hourlyDistribution = [
+            'labels' => $hours,
+            'data' => $counts,
+        ];
+    }
+
+    protected function loadCategoryPerformance(): void
+    {
+        $query = SaleItem::query()
+            ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
+            ->join('products', 'sale_items.product_id', '=', 'products.id')
+            ->leftJoin('product_categories', 'products.category_id', '=', 'product_categories.id')
+            ->select([
+                'product_categories.name as category_name',
+            ])
+            ->selectRaw('SUM(sale_items.quantity) as total_qty')
+            ->selectRaw('SUM(sale_items.line_total) as total_revenue')
+            ->whereBetween('sales.created_at', [$this->dateFrom.' 00:00:00', $this->dateTo.' 23:59:59']);
+
+        if (! $this->isAdmin && $this->branchId) {
+            $query->where('sales.branch_id', $this->branchId);
+        }
+
+        $results = $query
+            ->groupBy('product_categories.name')
+            ->orderByDesc('total_revenue')
+            ->limit(10)
+            ->get();
+
+        $this->categoryPerformance = [
+            'labels' => $results->pluck('category_name')->map(fn ($c) => $c ?? 'Uncategorized')->toArray(),
+            'quantities' => $results->pluck('total_qty')->map(fn ($v) => (int) $v)->toArray(),
+            'revenues' => $results->pluck('total_revenue')->map(fn ($v) => (float) $v)->toArray(),
+        ];
+    }
+
+    public function render()
+    {
+        return view('livewire.reports.sales-analytics');
+    }
+}
