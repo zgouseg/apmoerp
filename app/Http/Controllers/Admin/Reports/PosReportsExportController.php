@@ -40,11 +40,11 @@ class PosReportsExportController extends Controller
         $query = Sale::query()->posted();
 
         if (! empty($validated['date_from'])) {
-            $query->whereDate('posted_at', '>=', $validated['date_from']);
+            $query->whereDate('sale_date', '>=', $validated['date_from']);
         }
 
         if (! empty($validated['date_to'])) {
-            $query->whereDate('posted_at', '<=', $validated['date_to']);
+            $query->whereDate('sale_date', '<=', $validated['date_to']);
         }
 
         if (! empty($validated['branch_id'])) {
@@ -60,21 +60,21 @@ class PosReportsExportController extends Controller
         }
 
         if (! empty($validated['min_total'])) {
-            $query->where('grand_total', '>=', $validated['min_total']);
+            $query->where('total_amount', '>=', $validated['min_total']);
         }
 
-        $sales = $query->with('branch')->orderBy('posted_at')->limit(5000)->get();
+        $sales = $query->with('branch')->orderBy('sale_date')->limit(5000)->get();
 
         // Available columns with labels
         $availableColumns = [
             'id' => 'ID',
-            'posted_at' => 'Date',
+            'sale_date' => 'Date',
             'branch_name' => 'Branch',
             'status' => 'Status',
             'channel' => 'Channel',
-            'grand_total' => 'Total',
-            'paid_total' => 'Paid',
-            'due_total' => 'Due',
+            'total_amount' => 'Total',
+            'paid_amount' => 'Paid',
+            'due_amount' => 'Due',
         ];
 
         // Use selected columns or all columns
@@ -95,13 +95,13 @@ class PosReportsExportController extends Controller
         $rows = $sales->map(function (Sale $sale) use ($columns) {
             $row = [
                 'id' => $sale->id,
-                'posted_at' => optional($sale->posted_at ?? $sale->created_at)->format('Y-m-d H:i'),
+                'sale_date' => optional($sale->sale_date ?? $sale->created_at)->format('Y-m-d H:i'),
                 'branch_name' => optional($sale->branch)->name ?? '-',
                 'status' => $sale->status,
                 'channel' => $sale->channel ?? null,
-                'grand_total' => $sale->grand_total,
-                'paid_total' => $sale->paid_total,
-                'due_total' => $sale->due_total,
+                'total_amount' => $sale->total_amount,
+                'paid_amount' => $sale->paid_amount,
+                'due_amount' => $sale->remaining_amount,
             ];
 
             // Return only selected columns

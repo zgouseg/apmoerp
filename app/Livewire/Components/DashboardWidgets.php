@@ -81,17 +81,17 @@ class DashboardWidgets extends Component
             return [
                 'total_sales_today' => (clone $salesQuery)
                     ->whereDate('created_at', today())
-                    ->sum('grand_total') ?? 0,
+                    ->sum('total_amount') ?? 0,
                 'total_sales_week' => (clone $salesQuery)
                     ->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])
-                    ->sum('grand_total') ?? 0,
+                    ->sum('total_amount') ?? 0,
                 'total_sales_month' => (clone $salesQuery)
                     ->whereMonth('created_at', now()->month)
-                    ->sum('grand_total') ?? 0,
+                    ->sum('total_amount') ?? 0,
                 'total_revenue_month' => (clone $salesQuery)
                     ->whereMonth('created_at', now()->month)
                     ->where('status', 'completed')
-                    ->sum('grand_total') ?? 0,
+                    ->sum('total_amount') ?? 0,
                 'total_products' => (clone $productsQuery)->count(),
                 'active_products' => (clone $productsQuery)->where('is_active', true)->count(),
                 'total_customers' => (clone $customersQuery)->count(),

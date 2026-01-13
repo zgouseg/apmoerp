@@ -45,7 +45,7 @@ class ReportsController extends Controller
         $rows = DB::table('stock_movements as m')
             ->join('products as p', 'p.id', '=', 'm.product_id')
             ->select('p.id', 'p.name')
-            ->selectRaw('SUM(m.qty) as qty')
+            ->selectRaw('SUM(m.quantity) as qty')
             ->selectRaw("{$dateExpr} as first_move")
             ->where('m.branch_id', $branchId)
             ->whereDate('m.created_at', '<=', $asOf)
@@ -84,12 +84,12 @@ class ReportsController extends Controller
             ->where('branch_id', $b)
             ->whereDate('created_at', '>=', $from)
             ->whereDate('created_at', '<=', $to)
-            ->sum('paid_total');
+            ->sum('paid_amount');
         $out = DB::table('purchases')
             ->where('branch_id', $b)
             ->whereDate('created_at', '>=', $from)
             ->whereDate('created_at', '<=', $to)
-            ->sum('paid_total');
+            ->sum('paid_amount');
 
         return $this->ok(['period' => [$from, $to], 'inflow' => round($in, 2), 'outflow' => round($out, 2), 'net' => round($in - $out, 2)]);
     }

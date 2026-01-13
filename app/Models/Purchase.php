@@ -108,7 +108,7 @@ class Purchase extends BaseModel
 
     public function payments(): HasMany
     {
-        return $this->hasMany(Receipt::class);
+        return $this->hasMany(PurchasePayment::class);
     }
 
     public function returnNotes(): HasMany

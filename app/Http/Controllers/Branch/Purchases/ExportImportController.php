@@ -8,6 +8,7 @@ use App\Traits\ExportsCsv;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -28,11 +29,11 @@ class ExportImportController extends Controller
         $query = Purchase::query()->with(['branch', 'supplier']);
 
         if (! empty($validated['date_from'])) {
-            $query->whereDate('posted_at', '>=', $validated['date_from']);
+            $query->whereDate('purchase_date', '>=', $validated['date_from']);
         }
 
         if (! empty($validated['date_to'])) {
-            $query->whereDate('posted_at', '<=', $validated['date_to']);
+            $query->whereDate('purchase_date', '<=', $validated['date_to']);
         }
 
         if (! empty($validated['branch_id'])) {
@@ -51,16 +52,16 @@ class ExportImportController extends Controller
                 ['ID', 'Reference', 'Date', 'Supplier', 'Branch', 'Subtotal', 'Tax', 'Discount', 'Total', 'Paid', 'Due', 'Status'],
                 fn ($row) => [
                     $row->id,
-                    $row->reference,
-                    optional($row->posted_at)->format('Y-m-d'),
+                    $row->reference_number,
+                    optional($row->purchase_date)->format('Y-m-d'),
                     $row->supplier?->name ?? '',
                     $row->branch?->name ?? '',
                     $row->subtotal ?? 0,
-                    $row->tax_total ?? 0,
-                    $row->discount_total ?? 0,
-                    $row->grand_total,
-                    $row->amount_paid ?? 0,
-                    $row->amount_due ?? 0,
+                    $row->tax_amount ?? 0,
+                    $row->discount_amount ?? 0,
+                    $row->total_amount,
+                    $row->paid_amount ?? 0,
+                    $row->remaining_amount ?? 0,
                     $row->status,
                 ],
                 'purchase_invoices'
@@ -72,16 +73,16 @@ class ExportImportController extends Controller
             ['ID', 'Reference', 'Date', 'Supplier', 'Branch', 'Subtotal', 'Tax', 'Discount', 'Total', 'Paid', 'Due', 'Status'],
             fn ($row) => [
                 $row->id,
-                $row->reference,
-                optional($row->posted_at)->format('Y-m-d'),
+                $row->reference_number,
+                optional($row->purchase_date)->format('Y-m-d'),
                 $row->supplier?->name ?? '',
                 $row->branch?->name ?? '',
                 $row->subtotal ?? 0,
-                $row->tax_total ?? 0,
-                $row->discount_total ?? 0,
-                $row->grand_total,
-                $row->amount_paid ?? 0,
-                $row->amount_due ?? 0,
+                $row->tax_amount ?? 0,
+                $row->discount_amount ?? 0,
+                $row->total_amount,
+                $row->paid_amount ?? 0,
+                $row->remaining_amount ?? 0,
                 $row->status,
             ],
             'purchase_invoices'
@@ -153,21 +154,20 @@ class ExportImportController extends Controller
                 try {
                     // Find or create purchase
                     $purchaseData = [
-                        'reference' => $rowData['reference'] ?? 'PO-IMP-'.date('Ymd').'-'.\Str::uuid()->toString(),
-                        'posted_at' => $rowData['date'],
-                        'grand_total' => (float) $rowData['total'],
+                        'reference_number' => $rowData['reference'] ?? 'PO-IMP-'.date('Ymd').'-'.(string) Str::uuid(),
+                        'purchase_date' => $rowData['date'],
+                        'total_amount' => (float) $rowData['total'],
                         'subtotal' => (float) ($rowData['subtotal'] ?? $rowData['total']),
-                        'tax_total' => (float) ($rowData['tax'] ?? 0),
-                        'discount_total' => (float) ($rowData['discount'] ?? 0),
-                        'amount_paid' => (float) ($rowData['paid'] ?? 0),
-                        'amount_due' => (float) ($rowData['due'] ?? $rowData['total']),
+                        'tax_amount' => (float) ($rowData['tax'] ?? 0),
+                        'discount_amount' => (float) ($rowData['discount'] ?? 0),
+                        'paid_amount' => (float) ($rowData['paid'] ?? 0),
                         'status' => $rowData['status'],
                         'branch_id' => auth()->user()->branch_id,
                     ];
 
                     if ($updateExisting && ! empty($rowData['reference'])) {
                         Purchase::updateOrCreate(
-                            ['reference' => $rowData['reference']],
+                            ['reference_number' => $rowData['reference']],
                             $purchaseData
                         );
                     } else {

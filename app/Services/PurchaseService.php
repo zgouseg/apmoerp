@@ -130,7 +130,7 @@ class PurchaseService implements PurchaseServiceInterface
         return $this->handleServiceOperation(
             callback: function () use ($id) {
                 $p = $this->findBranchPurchaseOrFail($id);
-                $p->status = 'approved';
+                $p->status = 'confirmed';
                 $p->approved_at = now();
                 $p->save();
 
@@ -207,10 +207,10 @@ class PurchaseService implements PurchaseServiceInterface
                 $p = $this->findBranchPurchaseOrFail($id);
 
                 // Prevent cancelling if already received or paid
-                if ($p->status === 'received') {
+                if ($p->status === 'received' || $p->status === 'completed') {
                     throw new \InvalidArgumentException('Cannot cancel a received purchase. Please create a return instead.');
                 }
-                if ($p->status === 'paid') {
+                if ($p->payment_status === 'paid' || (float) $p->paid_amount > 0) {
                     throw new \InvalidArgumentException('Cannot cancel a paid purchase. Please refund first.');
                 }
                 if ($p->status === 'cancelled') {

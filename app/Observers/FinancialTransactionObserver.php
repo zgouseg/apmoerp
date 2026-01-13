@@ -35,7 +35,7 @@ class FinancialTransactionObserver
             'type' => get_class($model),
             'id' => $model->id,
             'code' => $model->code,
-            'amount' => $model->grand_total,
+            'amount' => $model->total_amount,
             'user_id' => auth()->id(),
         ]);
     }
@@ -45,10 +45,10 @@ class FinancialTransactionObserver
      */
     public function updated(Sale|Purchase $model): void
     {
-        // Check if grand_total changed
-        if ($model->isDirty('grand_total')) {
-            $oldTotal = $model->getOriginal('grand_total');
-            $newTotal = $model->grand_total;
+        // Check if total_amount changed
+        if ($model->isDirty('total_amount')) {
+            $oldTotal = $model->getOriginal('total_amount');
+            $newTotal = $model->total_amount;
             $difference = $newTotal - $oldTotal;
 
             if ($difference != 0) {
@@ -92,7 +92,7 @@ class FinancialTransactionObserver
             'type' => get_class($model),
             'id' => $model->id,
             'code' => $model->code,
-            'amount' => $model->grand_total,
+            'amount' => $model->total_amount,
             'user_id' => auth()->id(),
         ]);
     }
@@ -106,18 +106,18 @@ class FinancialTransactionObserver
             $customer = Customer::find($model->customer_id);
             if ($customer) {
                 if ($operation === 'add') {
-                    $customer->addBalance((float) $model->grand_total);
+                    $customer->addBalance((float) $model->total_amount);
                 } else {
-                    $customer->subtractBalance((float) $model->grand_total);
+                    $customer->subtractBalance((float) $model->total_amount);
                 }
             }
         } elseif ($model instanceof Purchase && $model->supplier_id) {
             $supplier = Supplier::find($model->supplier_id);
             if ($supplier) {
                 if ($operation === 'add') {
-                    $supplier->addBalance((float) $model->grand_total);
+                    $supplier->addBalance((float) $model->total_amount);
                 } else {
-                    $supplier->subtractBalance((float) $model->grand_total);
+                    $supplier->subtractBalance((float) $model->total_amount);
                 }
             }
         }

@@ -29,15 +29,15 @@ class ClosePosDayJob implements ShouldQueue
         $sales = \App\Models\Sale::query()
             ->whereDate('created_at', $date)
             ->when($this->branchId, fn ($q) => $q->where('branch_id', $this->branchId))
-            ->get(['grand_total', 'paid_total']);
+            ->get(['total_amount', 'paid_amount']);
 
         // Use bcmath for precise financial totals
         $grossString = '0.00';
         $paidString = '0.00';
 
         foreach ($sales as $sale) {
-            $grossString = bcadd($grossString, (string) $sale->grand_total, 2);
-            $paidString = bcadd($paidString, (string) $sale->paid_total, 2);
+            $grossString = bcadd($grossString, (string) $sale->total_amount, 2);
+            $paidString = bcadd($paidString, (string) $sale->paid_amount, 2);
         }
 
         $gross = (float) $grossString;

@@ -193,8 +193,8 @@ class Sale extends BaseModel
     public function scopeOverdue(Builder $query): Builder
     {
         return $query->where('payment_status', '!=', 'paid')
-            ->whereNotNull('payment_due_date')
-            ->where('payment_due_date', '<', now());
+            ->whereNotNull('due_date')
+            ->where('due_date', '<', now());
     }
 
     public function getTotalPaidAttribute(): float

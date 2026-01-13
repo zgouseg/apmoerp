@@ -86,7 +86,7 @@ class POSService implements POSServiceInterface
                 if ($user && $user->daily_discount_limit !== null) {
                     $previousDailyDiscount = (float) Sale::where('created_by', $user->id)
                         ->whereDate('created_at', now()->toDateString())
-                        ->sum('discount_total');
+                        ->sum('discount_amount');
                 }
 
                 // Lock all products at once to prevent performance issues and deadlocks
@@ -328,7 +328,7 @@ class POSService implements POSServiceInterface
                     ->where('created_at', '>=', $session->opened_at)
                     ->where('status', '!=', 'cancelled');
 
-                $totalSales = (float) $salesQuery->sum('grand_total');
+                $totalSales = (float) $salesQuery->sum('total_amount');
                 $totalTransactions = $salesQuery->count();
 
                 $paymentSummary = SalePayment::whereIn('sale_id', $salesQuery->pluck('id'))
@@ -384,9 +384,9 @@ class POSService implements POSServiceInterface
             'sales' => $sales,
             'summary' => [
                 'total_transactions' => $sales->count(),
-                'total_sales' => $sales->sum('grand_total'),
-                'total_discount' => $sales->sum('discount_total'),
-                'total_tax' => $sales->sum('tax_total'),
+                'total_sales' => $sales->sum('total_amount'),
+                'total_discount' => $sales->sum('discount_amount'),
+                'total_tax' => $sales->sum('tax_amount'),
                 'payment_breakdown' => $session->payment_summary ?? [],
                 'opening_cash' => $session->opening_cash,
                 'closing_cash' => $session->closing_cash,

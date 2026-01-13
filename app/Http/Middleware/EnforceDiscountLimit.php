@@ -72,7 +72,7 @@ class EnforceDiscountLimit
     protected function getUserMaxLineDiscount($user): float
     {
         // Priority: user attribute -> role/permission meta -> system setting
-        if (property_exists($user, 'max_line_discount') && is_numeric($user->max_line_discount)) {
+        if (! is_null($user->max_line_discount) && is_numeric($user->max_line_discount)) {
             return (float) $user->max_line_discount;
         }
 
@@ -82,7 +82,7 @@ class EnforceDiscountLimit
 
     protected function getUserMaxInvoiceDiscount($user): float
     {
-        if (property_exists($user, 'max_invoice_discount') && is_numeric($user->max_invoice_discount)) {
+        if (! is_null($user->max_invoice_discount) && is_numeric($user->max_invoice_discount)) {
             return (float) $user->max_invoice_discount;
         }
 

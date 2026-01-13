@@ -146,7 +146,7 @@ class SalesAnalytics extends Component
     {
         $query = $this->scopedQuery();
 
-        $totalSales = (clone $query)->sum('grand_total') ?? 0;
+        $totalSales = (clone $query)->sum('total_amount') ?? 0;
         $totalOrders = (clone $query)->count();
         $completedOrders = (clone $query)->where('status', 'completed')->count();
         $avgOrderValue = $totalOrders > 0 ? (float) bcdiv((string) $totalSales, (string) $totalOrders, 2) : 0;
@@ -164,7 +164,7 @@ class SalesAnalytics extends Component
             $prevPeriodQuery->where('branch_id', $this->branchId);
         }
 
-        $prevTotalSales = $prevPeriodQuery->sum('grand_total') ?? 0;
+        $prevTotalSales = $prevPeriodQuery->sum('total_amount') ?? 0;
 
         if (bccomp((string) $prevTotalSales, '0', 2) > 0) {
             $diff = bcsub((string) $totalSales, (string) $prevTotalSales, 4);

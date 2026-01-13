@@ -44,7 +44,7 @@ trait AuditsChanges
             $branchId = null;
             if (method_exists($this, 'branch') && $this->branch_id) {
                 $branchId = $this->branch_id;
-            } elseif ($user && property_exists($user, 'branch_id')) {
+            } elseif ($user && ! is_null($user->branch_id)) {
                 $branchId = $user->branch_id;
             }
 

@@ -220,7 +220,7 @@ class KPIDashboardService
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereBetween('created_at', [$dates['start'], $dates['end']])
             ->where('status', '!=', 'cancelled')
-            ->sum('grand_total');
+            ->sum('total_amount');
 
         $currentExpenses = Expense::query()
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
@@ -232,7 +232,7 @@ class KPIDashboardService
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereBetween('created_at', [$previousDates['start'], $previousDates['end']])
             ->where('status', '!=', 'cancelled')
-            ->sum('grand_total');
+            ->sum('total_amount');
 
         $previousExpenses = Expense::query()
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
@@ -245,7 +245,7 @@ class KPIDashboardService
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereBetween('created_at', [$dates['start'], $dates['end']])
             ->where('status', '!=', 'cancelled')
-            ->sum('grand_total');
+            ->sum('total_amount');
 
         // Calculate gross profit
         $grossProfit = $currentRevenue - $currentPurchases;
@@ -255,7 +255,7 @@ class KPIDashboardService
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereBetween('created_at', [$previousDates['start'], $previousDates['end']])
             ->where('status', '!=', 'cancelled')
-            ->sum('grand_total');
+            ->sum('total_amount');
 
         $grossProfitChange = $this->calculateChange($grossProfit, $previousGrossProfit);
 
@@ -345,7 +345,7 @@ class KPIDashboardService
             ->whereBetween('created_at', [$start, $end])
             ->where('status', '!=', 'cancelled');
 
-        $totalRevenue = $query->sum('grand_total');
+        $totalRevenue = $query->sum('total_amount');
         $totalOrders = $query->count();
         $avgOrderValue = $totalOrders > 0 ? $totalRevenue / $totalOrders : 0;
 

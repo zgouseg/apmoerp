@@ -70,7 +70,7 @@ class CheckDatabaseIntegrity extends Command
             'sales' => ['customer_id', 'branch_id', 'sale_date', 'status'],
             'purchases' => ['supplier_id', 'branch_id', 'purchase_date', 'status'],
             'products' => ['branch_id', 'sku', 'status', 'category_id'],
-            'stock_movements' => ['product_id', 'warehouse_id', 'movement_date'],
+            'stock_movements' => ['product_id', 'warehouse_id', 'created_at'],
             'customers' => ['branch_id', 'email', 'phone'],
             'suppliers' => ['branch_id', 'email'],
         ];
@@ -207,10 +207,10 @@ class CheckDatabaseIntegrity extends Command
         }
 
         $inconsistentSales = DB::table('sales')
-            ->select('sales.id', 'sales.total_amount', DB::raw('SUM(sale_items.qty * sale_items.price) as calculated_total'))
+            ->select('sales.id', 'sales.total_amount', DB::raw('SUM(sale_items.quantity * sale_items.unit_price) as calculated_total'))
             ->leftJoin('sale_items', 'sales.id', '=', 'sale_items.sale_id')
             ->groupBy('sales.id', 'sales.total_amount')
-            ->havingRaw('ABS(sales.total_amount - COALESCE(SUM(sale_items.qty * sale_items.price), 0)) > 0.01')
+            ->havingRaw('ABS(sales.total_amount - COALESCE(SUM(sale_items.quantity * sale_items.unit_price), 0)) > 0.01')
             ->count();
 
         if ($inconsistentSales > 0) {
