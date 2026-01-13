@@ -12,6 +12,16 @@ class StockMovement extends BaseModel
 
     protected $table = 'stock_movements';
 
+    // Movement type constants
+    public const TYPE_PURCHASE = 'purchase';
+    public const TYPE_SALE = 'sale';
+    public const TYPE_TRANSFER = 'transfer';
+    public const TYPE_TRANSFER_IN = 'transfer_in';
+    public const TYPE_TRANSFER_OUT = 'transfer_out';
+    public const TYPE_ADJUSTMENT = 'adjustment';
+    public const TYPE_RETURN = 'return';
+    public const TYPE_INITIAL = 'initial';
+
     /**
      * Fillable fields aligned with migration:
      * 2026_01_04_000003_create_inventory_tables.php
