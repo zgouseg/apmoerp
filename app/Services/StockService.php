@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\StockMovement;
 use Illuminate\Support\Facades\DB;
 
 class StockService
@@ -112,5 +113,54 @@ class StockService
 
         // quantity is signed: positive = in, negative = out
         return "COALESCE((SELECT SUM(quantity) FROM stock_movements WHERE stock_movements.product_id = {$productIdColumn} AND stock_movements.warehouse_id = {$warehouseIdColumn}), 0)";
+    }
+
+    /**
+     * Adjust stock for a product in a specific warehouse
+     *
+     * Creates a stock movement record with the specified quantity change.
+     * Positive quantity adds stock, negative quantity removes stock.
+     *
+     * @param int $productId The product ID
+     * @param int|null $warehouseId The warehouse ID
+     * @param float $quantity The quantity to adjust (positive = add, negative = remove)
+     * @param string $type The movement type (use StockMovement::TYPE_* constants)
+     * @param string|null $reference Reference description for the movement
+     * @param string|null $notes Additional notes for the movement
+     * @param int|null $referenceId Reference ID for polymorphic relation
+     * @param string|null $referenceType Reference type for polymorphic relation
+     * @return StockMovement The created stock movement record
+     */
+    public function adjustStock(
+        int $productId,
+        ?int $warehouseId,
+        float $quantity,
+        string $type,
+        ?string $reference = null,
+        ?string $notes = null,
+        ?int $referenceId = null,
+        ?string $referenceType = null
+    ): StockMovement {
+        return DB::transaction(function () use ($productId, $warehouseId, $quantity, $type, $reference, $notes, $referenceId, $referenceType) {
+            // Get current stock before adjustment
+            $stockBefore = self::getCurrentStock($productId, $warehouseId);
+            $stockAfter = $stockBefore + $quantity;
+
+            // Create the stock movement record
+            $movement = StockMovement::create([
+                'product_id' => $productId,
+                'warehouse_id' => $warehouseId,
+                'movement_type' => $type,
+                'quantity' => $quantity,
+                'stock_before' => $stockBefore,
+                'stock_after' => $stockAfter,
+                'reference_type' => $referenceType,
+                'reference_id' => $referenceId,
+                'notes' => $notes ?? $reference,
+                'created_by' => auth()->id(),
+            ]);
+
+            return $movement;
+        });
     }
 }

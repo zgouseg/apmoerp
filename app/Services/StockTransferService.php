@@ -6,13 +6,13 @@ use App\Models\InventoryTransit;
 use App\Models\StockMovement;
 use App\Models\StockTransfer;
 use App\Models\StockTransferItem;
-use App\Services\Traits\HandlesServiceOperations;
+use App\Traits\HandlesServiceErrors;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class StockTransferService
 {
-    use HandlesServiceOperations;
+    use HandlesServiceErrors;
 
     public function __construct(
         protected StockService $stockService
