@@ -73,8 +73,9 @@ class AccountingService
                 }
 
                 // FIX U-05: Add Accounts Receivable line for unpaid remainder (partial payments)
+                // Use bccomp for proper decimal comparison instead of float cast
                 $unpaidAmount = bcsub((string) $sale->total_amount, $totalPaymentReceived, 2);
-                if ((float) $unpaidAmount > 0) {
+                if (bccomp($unpaidAmount, '0', 2) > 0) {
                     $receivableAccount = AccountMapping::getAccount('sales', 'accounts_receivable', $sale->branch_id);
                     if ($receivableAccount) {
                         $lines[] = [

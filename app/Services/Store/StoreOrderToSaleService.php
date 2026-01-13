@@ -55,7 +55,8 @@ class StoreOrderToSaleService
                         $data[$field] = $order->tax_total ?? $order->tax_amount ?? 0;
                         break;
                     case 'subtotal':
-                        $data[$field] = $order->subtotal ?? (($order->total ?? 0) - ($order->tax_total ?? 0) - ($order->shipping_total ?? 0) + ($order->discount_total ?? 0));
+                        // Calculate subtotal: total - tax - shipping + discount (if not directly available)
+                        $data[$field] = $order->subtotal ?? $this->calculateSubtotal($order);
                         break;
                         // Legacy field names for backward compatibility
                     case 'total':
@@ -223,5 +224,19 @@ class StoreOrderToSaleService
 
             $saleItemModel->newQuery()->create($data);
         }
+    }
+
+    /**
+     * Calculate subtotal from order when not directly available.
+     * Formula: total - tax - shipping + discount
+     */
+    protected function calculateSubtotal(StoreOrder $order): float
+    {
+        $total = (float) ($order->total ?? 0);
+        $tax = (float) ($order->tax_total ?? 0);
+        $shipping = (float) ($order->shipping_total ?? 0);
+        $discount = (float) ($order->discount_total ?? 0);
+
+        return $total - $tax - $shipping + $discount;
     }
 }

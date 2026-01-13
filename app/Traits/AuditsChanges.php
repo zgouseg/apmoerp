@@ -33,7 +33,8 @@ trait AuditsChanges
         // like migrations and seeders where auditing is not needed.
         if (app()->runningInConsole() && ! app()->runningUnitTests()) {
             // Skip auditing only for specific artisan commands that shouldn't be audited
-            $command = request()->server('argv')[1] ?? '';
+            $argv = $_SERVER['argv'] ?? [];
+            $command = $argv[1] ?? '';
             $skipCommands = ['migrate', 'db:seed', 'make:', 'key:generate', 'config:', 'route:', 'view:'];
             foreach ($skipCommands as $skipCommand) {
                 if (str_starts_with($command, $skipCommand)) {
