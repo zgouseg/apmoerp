@@ -118,6 +118,8 @@ class StockService
     /**
      * Adjust stock for a product in a specific warehouse
      *
+     * STILL-V7-HIGH-N07 FIX: Uses SELECT FOR UPDATE locking to prevent race conditions
+     *
      * Creates a stock movement record with the specified quantity change.
      * Positive quantity adds stock, negative quantity removes stock.
      *
@@ -143,8 +145,14 @@ class StockService
         ?string $referenceType = null
     ): StockMovement {
         return DB::transaction(function () use ($productId, $warehouseId, $quantity, $type, $reference, $notes, $referenceId, $referenceType) {
-            // Get current stock before adjustment
-            $stockBefore = self::getCurrentStock($productId, $warehouseId);
+            // STILL-V7-HIGH-N07 FIX: Lock the rows for this product+warehouse combination
+            // and calculate stock at database level for efficiency
+            $stockBefore = (float) DB::table('stock_movements')
+                ->where('product_id', $productId)
+                ->where('warehouse_id', $warehouseId)
+                ->lockForUpdate()
+                ->sum('quantity');
+
             $stockAfter = $stockBefore + $quantity;
 
             // Create the stock movement record

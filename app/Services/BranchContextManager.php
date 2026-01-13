@@ -30,8 +30,16 @@ class BranchContextManager
 
     /**
      * Cached branch IDs for current request
+     * V8-CRITICAL-N01 FIX: null now has two meanings:
+     * - When $cachedBranchIdsResolved is false: not yet resolved
+     * - When $cachedBranchIdsResolved is true: Super Admin (all branches)
      */
     protected static ?array $cachedBranchIds = null;
+
+    /**
+     * V8-CRITICAL-N01 FIX: Flag to distinguish "not yet resolved" from "Super Admin (null = all branches)"
+     */
+    protected static bool $cachedBranchIdsResolved = false;
 
     /**
      * Check if we're currently resolving authentication
@@ -90,12 +98,15 @@ class BranchContextManager
      * Get accessible branch IDs for the current user
      * Returns cached value to prevent repeated queries
      *
-     * @return array<int>
+     * V8-CRITICAL-N01 FIX: Returns null for Super Admin to indicate "ALL branches"
+     * This distinguishes from an empty array [] which means "no access"
+     *
+     * @return array<int>|null Returns null for Super Admin (all branches), array of IDs for regular users
      */
-    public static function getAccessibleBranchIds(): array
+    public static function getAccessibleBranchIds(): ?array
     {
-        // Return cached value if available
-        if (self::$cachedBranchIds !== null) {
+        // Return cached value if available (including null for Super Admin)
+        if (self::$cachedBranchIds !== null || self::$cachedBranchIdsResolved) {
             return self::$cachedBranchIds;
         }
 
@@ -104,17 +115,18 @@ class BranchContextManager
 
         if (! $user) {
             self::$cachedBranchIds = [];
+            self::$cachedBranchIdsResolved = true;
 
             return [];
         }
 
-        // Check if user is Super Admin (has access to all branches)
+        // V8-CRITICAL-N01 FIX: Check if user is Super Admin (has access to all branches)
+        // Return null as sentinel value for "ALL branches" - distinct from [] which means "no access"
         if (self::isSuperAdmin($user)) {
-            // Super Admins see all branches - return empty array to signal "no filtering"
-            // Note: Empty array in this context means "don't apply branch filter" not "no access"
-            self::$cachedBranchIds = [];
+            self::$cachedBranchIds = null;
+            self::$cachedBranchIdsResolved = true;
 
-            return [];
+            return null;
         }
 
         $branchIds = [];
@@ -144,6 +156,7 @@ class BranchContextManager
         }
 
         self::$cachedBranchIds = array_values(array_filter($branchIds));
+        self::$cachedBranchIdsResolved = true;
 
         return self::$cachedBranchIds;
     }
@@ -203,6 +216,7 @@ class BranchContextManager
     {
         self::$cachedUser = null;
         self::$cachedBranchIds = null;
+        self::$cachedBranchIdsResolved = false;
         self::$resolvingAuth = false;
     }
 
@@ -213,5 +227,6 @@ class BranchContextManager
     {
         self::$cachedUser = $user;
         self::$cachedBranchIds = null; // Clear branch IDs cache
+        self::$cachedBranchIdsResolved = false; // Reset resolved flag
     }
 }

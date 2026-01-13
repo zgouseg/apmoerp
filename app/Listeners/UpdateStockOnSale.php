@@ -56,11 +56,13 @@ class UpdateStockOnSale implements ShouldQueue
                 }
             }
 
-            // Prevent duplicate stock movements for same sale
+            // STILL-V7-HIGH-U06 FIX: More precise duplicate check
+            // Include warehouse_id, exact quantity (base units), and sale_item_id for uniqueness
             $existing = StockMovement::where('reference_type', 'sale')
                 ->where('reference_id', $sale->getKey())
                 ->where('product_id', $item->product_id)
-                ->where('quantity', '<', 0) // Negative quantity = out movement
+                ->where('warehouse_id', $warehouseId)
+                ->where('quantity', -$baseQuantity) // Exact quantity including sign
                 ->exists();
 
             if ($existing) {

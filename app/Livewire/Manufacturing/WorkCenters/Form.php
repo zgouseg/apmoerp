@@ -94,7 +94,23 @@ class Form extends Component
         $base = strtoupper(Str::slug(Str::limit($this->name, 10, ''), ''));
 
         if (empty($base)) {
-            $base = sprintf('%03d', WorkCenter::count() + 1);
+            // V8-HIGH-N02 FIX: Use lockForUpdate and filter by branch to prevent race condition
+            // Cache branch first to avoid repeated queries
+            $user = auth()->user();
+            $branchId = $user?->branch_id;
+            if (! $branchId) {
+                $branchId = \Illuminate\Support\Facades\Cache::remember('default_branch_id', 3600, function () {
+                    return Branch::first()?->id;
+                });
+            }
+            
+            $lastWc = WorkCenter::when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+                ->lockForUpdate()
+                ->orderBy('id', 'desc')
+                ->first();
+            
+            $seq = $lastWc ? ($lastWc->id % 1000) + 1 : 1;
+            $base = sprintf('%03d', $seq);
         }
 
         $code = $prefix.'-'.$base;

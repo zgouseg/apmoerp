@@ -107,18 +107,26 @@ class BranchScope implements Scope
             return;
         }
 
-        // Get accessible branch IDs from context manager
+        // V8-CRITICAL-N01 FIX: Get accessible branch IDs from context manager
+        // null means Super Admin (all branches) - should have already returned above, but handle defensively
+        // [] means no access - apply impossible condition
+        // [ids...] means specific branches - apply filter
         $accessibleBranchIds = BranchContextManager::getAccessibleBranchIds();
 
         // Apply the branch filter
         $table = $model->getTable();
 
+        // V8-CRITICAL-N01 FIX: null = Super Admin, don't filter (defensive check, should be handled above)
+        if ($accessibleBranchIds === null) {
+            return;
+        }
+
         if (count($accessibleBranchIds) === 1) {
             $builder->where("{$table}.branch_id", $accessibleBranchIds[0]);
         } elseif (count($accessibleBranchIds) > 1) {
             $builder->whereIn("{$table}.branch_id", $accessibleBranchIds);
-        } elseif (count($accessibleBranchIds) === 0) {
-            // User has no branch access - return empty result set
+        } else {
+            // V8-CRITICAL-N01 FIX: Empty array [] now clearly means "no access" - return empty result set
             // Using a condition that's always false in a database-agnostic way
             $builder->whereNull("{$table}.id")->whereNotNull("{$table}.id");
         }

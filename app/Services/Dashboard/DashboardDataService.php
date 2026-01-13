@@ -192,30 +192,53 @@ class DashboardDataService
 
     /**
      * Generate low stock alerts data.
+     * STILL-V7-CRITICAL-U02 FIX: Calculate stock from stock_movements instead of products.stock_quantity
      */
     public function generateLowStockAlertsData(?int $branchId): array
     {
+        // Calculate current stock from stock_movements (source of truth)
+        $stockSubquery = DB::table('stock_movements')
+            ->select('product_id', DB::raw('COALESCE(SUM(quantity), 0) as current_stock'))
+            ->groupBy('product_id');
+
         $query = DB::table('products')
-            ->select('id', 'name', 'sku', 'stock_quantity', 'stock_alert_threshold')
-            ->whereNotNull('stock_alert_threshold')
-            ->whereRaw('COALESCE(stock_quantity, 0) <= stock_alert_threshold')
-            ->where('status', 'active')
-            ->orderBy('stock_quantity', 'asc')
+            ->leftJoinSub($stockSubquery, 'stock', function ($join) {
+                $join->on('products.id', '=', 'stock.product_id');
+            })
+            ->select(
+                'products.id',
+                'products.name',
+                'products.sku',
+                DB::raw('COALESCE(stock.current_stock, 0) as stock_quantity'),
+                'products.stock_alert_threshold'
+            )
+            ->whereNotNull('products.stock_alert_threshold')
+            ->whereRaw('COALESCE(stock.current_stock, 0) <= products.stock_alert_threshold')
+            ->where('products.status', 'active')
+            ->orderByRaw('COALESCE(stock.current_stock, 0) ASC')
             ->limit(10);
 
         if ($branchId) {
-            $query->where('branch_id', $branchId);
+            $query->where('products.branch_id', $branchId);
         }
 
         $products = $query->get()->toArray();
 
+        // Count query for total alerts
+        $countStockSubquery = DB::table('stock_movements')
+            ->select('product_id', DB::raw('COALESCE(SUM(quantity), 0) as current_stock'))
+            ->groupBy('product_id');
+
         $countQuery = DB::table('products')
-            ->whereNotNull('stock_alert_threshold')
-            ->whereRaw('COALESCE(stock_quantity, 0) <= stock_alert_threshold')
-            ->where('status', 'active');
+            ->leftJoinSub($countStockSubquery, 'stock', function ($join) {
+                $join->on('products.id', '=', 'stock.product_id');
+            })
+            ->whereNotNull('products.stock_alert_threshold')
+            ->whereRaw('COALESCE(stock.current_stock, 0) <= products.stock_alert_threshold')
+            ->where('products.status', 'active');
 
         if ($branchId) {
-            $countQuery->where('branch_id', $branchId);
+            $countQuery->where('products.branch_id', $branchId);
         }
 
         return [

@@ -128,8 +128,9 @@ class BankingService
 
     /**
      * Calculate book balance at a specific date
+     * STILL-V7-MEDIUM-N08 FIX: Return string for precision, convert to float only at display layer
      */
-    protected function calculateBookBalanceAt(int $bankAccountId, Carbon $date): float
+    protected function calculateBookBalanceAt(int $bankAccountId, Carbon $date): string
     {
         $bankAccount = BankAccount::findOrFail($bankAccountId);
 
@@ -148,7 +149,7 @@ class BankingService
             }
         }
 
-        return (float) $balance;
+        return $balance;
     }
 
     /**
@@ -235,12 +236,21 @@ class BankingService
 
     /**
      * Get current balance for an account
+     * STILL-V7-MEDIUM-N08 FIX: Return string for precision in reports
      */
-    public function getAccountBalance(int $accountId): float
+    public function getAccountBalance(int $accountId): string
     {
         $account = BankAccount::findOrFail($accountId);
 
-        return (float) $account->current_balance;
+        return (string) $account->current_balance;
+    }
+
+    /**
+     * Get current balance for an account as float (for backward compatibility)
+     */
+    public function getAccountBalanceFloat(int $accountId): float
+    {
+        return (float) $this->getAccountBalance($accountId);
     }
 
     /**
@@ -250,7 +260,7 @@ class BankingService
     {
         $balance = $this->getAccountBalance($accountId);
 
-        return bccomp((string) $balance, (string) $amount, 2) >= 0;
+        return bccomp($balance, (string) $amount, 2) >= 0;
     }
 
     /**
@@ -280,11 +290,12 @@ class BankingService
     public function recordWithdrawal(array $data): BankTransaction
     {
         // Check for sufficient balance before withdrawal using bcmath
+        // STILL-V7-MEDIUM-N08 FIX: getAccountBalance now returns string for precision
         $availableBalance = $this->getAccountBalance($data['account_id']);
-        if (bccomp((string) $availableBalance, (string) $data['amount'], 2) < 0) {
+        if (bccomp($availableBalance, (string) $data['amount'], 2) < 0) {
             throw new \InvalidArgumentException(sprintf(
                 'Insufficient balance for withdrawal. Available: %.2f, Requested: %.2f',
-                $availableBalance,
+                (float) $availableBalance,
                 $data['amount']
             ));
         }

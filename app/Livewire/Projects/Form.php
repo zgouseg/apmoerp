@@ -98,7 +98,15 @@ class Form extends Component
         $base = strtoupper(Str::slug(Str::limit($this->name, 10, ''), ''));
 
         if (empty($base)) {
-            $base = sprintf('%03d', Project::count() + 1);
+            // V8-HIGH-N02 FIX: Use lockForUpdate and filter by branch to prevent race condition
+            $branchId = auth()->user()?->branch_id;
+            $lastProject = Project::when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+                ->lockForUpdate()
+                ->orderBy('id', 'desc')
+                ->first();
+            
+            $seq = $lastProject ? ($lastProject->id % 1000) + 1 : 1;
+            $base = sprintf('%03d', $seq);
         }
 
         $code = $prefix.'-'.$base;

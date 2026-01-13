@@ -23,22 +23,6 @@ class UpdateStockOnPurchase implements ShouldQueue
         $warehouseId = $purchase->warehouse_id;
 
         foreach ($purchase->items as $item) {
-            // Critical ERP Logic: Prevent duplicate stock movements
-            $existing = StockMovement::where('reference_type', 'purchase')
-                ->where('reference_id', $purchase->getKey())
-                ->where('product_id', $item->product_id)
-                ->where('quantity', '>', 0) // Positive quantity = in movement
-                ->exists();
-
-            if ($existing) {
-                Log::info('Stock movement already recorded for purchase', [
-                    'purchase_id' => $purchase->getKey(),
-                    'product_id' => $item->product_id,
-                ]);
-
-                continue;
-            }
-
             // Validate quantity is positive (use quantity column)
             $itemQty = (float) $item->quantity;
             if ($itemQty <= 0) {
@@ -48,6 +32,24 @@ class UpdateStockOnPurchase implements ShouldQueue
                     'qty' => $itemQty,
                 ]);
                 throw new InvalidArgumentException("Purchase quantity must be positive for product {$item->product_id}");
+            }
+
+            // STILL-V7-HIGH-U06 FIX: More precise duplicate check
+            // Include warehouse_id and exact quantity for uniqueness
+            $existing = StockMovement::where('reference_type', 'purchase')
+                ->where('reference_id', $purchase->getKey())
+                ->where('product_id', $item->product_id)
+                ->where('warehouse_id', $warehouseId)
+                ->where('quantity', $itemQty) // Exact quantity
+                ->exists();
+
+            if ($existing) {
+                Log::info('Stock movement already recorded for purchase', [
+                    'purchase_id' => $purchase->getKey(),
+                    'product_id' => $item->product_id,
+                ]);
+
+                continue;
             }
 
             // Use repository for proper schema mapping

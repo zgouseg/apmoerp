@@ -141,11 +141,12 @@ class OrdersController extends BaseApiController
                     ]);
                 }
 
-                // Idempotency: reuse existing sale by external reference for the same branch
+                // STILL-V7-HIGH-U05 FIX: Idempotency - use external_reference instead of reference_number
+                // This aligns with StoreSyncService which uses external_reference for external IDs
                 if (! empty($validated['external_id'])) {
                     $existing = Sale::query()
                         ->where('branch_id', $branchId)
-                        ->where('reference_number', $validated['external_id'])
+                        ->where('external_reference', $validated['external_id'])
                         ->first();
 
                     if ($existing) {
@@ -219,7 +220,9 @@ class OrdersController extends BaseApiController
                     'paid_amount' => 0,
                     'payment_status' => 'unpaid',
                     'notes' => $validated['notes'] ?? null,
-                    'reference_number' => $validated['external_id'] ?? null,
+                    // STILL-V7-HIGH-U05 FIX: Use external_reference for external IDs (aligns with StoreSyncService)
+                    // reference_number should remain internal-only
+                    'external_reference' => $validated['external_id'] ?? null,
                     'sale_date' => now()->toDateString(),
                     'created_by' => auth()->id(),
                 ]);
@@ -302,11 +305,12 @@ class OrdersController extends BaseApiController
     {
         $store = $this->getStore($request);
 
-        // BUG-007 FIX: Use reference_number instead of external_reference to match order creation
+        // STILL-V7-HIGH-U05 FIX: Use external_reference instead of reference_number
+        // This aligns with StoreSyncService and the store() method
         $order = Sale::query()
             ->with(['customer', 'items.product'])
             ->when($store?->branch_id, fn ($q) => $q->where('branch_id', $store->branch_id))
-            ->where('reference_number', $externalId)
+            ->where('external_reference', $externalId)
             ->first();
 
         if (! $order) {

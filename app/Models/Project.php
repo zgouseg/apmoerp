@@ -64,8 +64,20 @@ class Project extends Model
 
         static::creating(function ($project) {
             if (empty($project->code)) {
+                // V8-HIGH-N02 FIX: Use lockForUpdate to prevent race condition
+                // Get the last code with a lock to prevent duplicates
+                $lastProject = static::whereDate('created_at', Carbon::today())
+                    ->lockForUpdate()
+                    ->orderBy('id', 'desc')
+                    ->first();
+
+                $seq = 1;
+                if ($lastProject && preg_match('/PRJ-\d{8}-(\d{6})$/', $lastProject->code, $matches)) {
+                    $seq = ((int) $matches[1]) + 1;
+                }
+
                 $project->code = 'PRJ-'.date('Ymd').'-'.str_pad(
-                    static::whereDate('created_at', Carbon::today())->count() + 1,
+                    (string) $seq,
                     6,
                     '0',
                     STR_PAD_LEFT

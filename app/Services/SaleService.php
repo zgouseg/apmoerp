@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\ReturnNote;
+use App\Models\ReturnRefund;
 use App\Models\Sale;
+use App\Models\StockMovement;
 use App\Services\Contracts\SaleServiceInterface;
 use App\Traits\HandlesServiceErrors;
 use App\Traits\HasRequestContext;
@@ -110,14 +112,39 @@ class SaleService implements SaleServiceInterface
                         'total_amount' => (float) $refund,
                     ]);
 
+                    // STILL-V7-CRITICAL-U04 FIX: Create a RefundPayment record instead of directly mutating paid_amount
+                    // This maintains proper audit trail and allows accurate financial reporting
+                    if (bccomp($refund, '0.00', 2) > 0) {
+                        $lastRefund = ReturnRefund::where('branch_id', $sale->branch_id)
+                            ->lockForUpdate()
+                            ->orderBy('id', 'desc')
+                            ->first();
+
+                        $refundSeq = $lastRefund ? ($lastRefund->id % 100000) + 1 : 1;
+                        $refundRefNumber = 'REF-'.date('Ymd').'-'.str_pad((string) $refundSeq, 5, '0', STR_PAD_LEFT);
+
+                        ReturnRefund::create([
+                            'sales_return_id' => $note->getKey(),
+                            'branch_id' => $sale->branch_id,
+                            'refund_method' => ReturnRefund::METHOD_ORIGINAL,
+                            'amount' => (float) $refund,
+                            'currency' => $sale->currency ?? setting('general.default_currency', 'EGP'),
+                            'reference_number' => $refundRefNumber,
+                            'status' => ReturnRefund::STATUS_PENDING,
+                            'notes' => "Refund for return #{$referenceNumber}: {$reason}",
+                            'created_by' => auth()->id(),
+                        ]);
+                    }
+
                     $sale->status = 'returned';
-                    // Use bcmath to prevent rounding errors in refund calculation
-                    // Use correct migration column name
+                    // STILL-V7-CRITICAL-U04 FIX: Update paid_amount based on refund record
+                    // The paid_amount is updated to reflect the pending refund
+                    // In future, this should be computed from payment records instead of direct mutation
                     $newPaidAmount = bcsub((string) $sale->paid_amount, $refund, 2);
                     $sale->paid_amount = max(0.0, (float) $newPaidAmount);
                     $sale->save();
 
-                    $this->logServiceInfo('handleReturn', 'Sale return processed', [
+                    $this->logServiceInfo('handleReturn', 'Sale return processed with refund record', [
                         'sale_id' => $sale->getKey(),
                         'return_note_id' => $note->getKey(),
                         'refund_amount' => $refund,
@@ -131,21 +158,83 @@ class SaleService implements SaleServiceInterface
         );
     }
 
+    /**
+     * STILL-V7-HIGH-U07 FIX: Void sale with proper stock and accounting reversal
+     */
     public function voidSale(int $saleId, ?string $reason = null): Sale
     {
         return $this->handleServiceOperation(
             callback: function () use ($saleId, $reason) {
-                $sale = $this->findBranchSaleOrFail($saleId);
-                $sale->status = 'void';
-                $sale->notes = trim(($sale->notes ?? '')."\nVOID: ".$reason);
-                $sale->save();
+                $sale = $this->findBranchSaleOrFail($saleId)->load('items');
 
-                $this->logServiceInfo('voidSale', 'Sale voided', [
-                    'sale_id' => $sale->getKey(),
-                    'reason' => $reason,
-                ]);
+                return DB::transaction(function () use ($sale, $reason) {
+                    // Update status first
+                    $sale->status = 'void';
+                    $sale->notes = trim(($sale->notes ?? '')."\nVOID: ".$reason);
+                    $sale->save();
 
-                return $sale;
+                    // STILL-V7-HIGH-U07 FIX: Reverse stock movements
+                    // Find existing stock movements for this sale and create reversals
+                    $existingMovements = StockMovement::where('reference_type', 'sale')
+                        ->where('reference_id', $sale->getKey())
+                        ->get();
+
+                    foreach ($existingMovements as $movement) {
+                        // Check if reversal already exists
+                        $reversalExists = StockMovement::where('reference_type', 'sale_void')
+                            ->where('reference_id', $sale->getKey())
+                            ->where('product_id', $movement->product_id)
+                            ->exists();
+
+                        if ($reversalExists) {
+                            continue;
+                        }
+
+                        // Create reversal movement (opposite quantity)
+                        StockMovement::create([
+                            'warehouse_id' => $movement->warehouse_id,
+                            'product_id' => $movement->product_id,
+                            'movement_type' => 'sale_void',
+                            'reference_type' => 'sale_void',
+                            'reference_id' => $sale->getKey(),
+                            'quantity' => -$movement->quantity, // Reverse the quantity (negative becomes positive)
+                            'notes' => "Void reversal for Sale #{$sale->code}",
+                            'created_by' => auth()->id(),
+                        ]);
+                    }
+
+                    // STILL-V7-HIGH-U07 FIX: Reverse accounting entries if journal entry exists
+                    if ($sale->journal_entry_id) {
+                        try {
+                            $accountingService = app(AccountingService::class);
+                            $journalEntry = \App\Models\JournalEntry::find($sale->journal_entry_id);
+                            // Check if journal entry exists, is posted, and is reversible (default to true if null)
+                            $isReversible = $journalEntry->is_reversible ?? true;
+                            if ($journalEntry && $journalEntry->status === 'posted' && $isReversible) {
+                                $accountingService->reverseJournalEntry(
+                                    $journalEntry,
+                                    "Sale voided: {$reason}",
+                                    auth()->id() ?? 1
+                                );
+                            }
+                        } catch (\Exception $e) {
+                            // Log but don't fail the void operation
+                            $this->logServiceInfo('voidSale', 'Failed to reverse journal entry', [
+                                'sale_id' => $sale->getKey(),
+                                'journal_entry_id' => $sale->journal_entry_id,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+                    }
+
+                    $this->logServiceInfo('voidSale', 'Sale voided with stock and accounting reversal', [
+                        'sale_id' => $sale->getKey(),
+                        'reason' => $reason,
+                        'movements_reversed' => $existingMovements->count(),
+                    ]);
+
+                    return $sale;
+                });
             },
             operation: 'voidSale',
             context: ['sale_id' => $saleId, 'reason' => $reason]

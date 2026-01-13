@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Models\Purchase;
 use App\Models\PurchaseItem;
+use App\Models\PurchasePayment;
 use App\Services\Contracts\PurchaseServiceInterface;
 use App\Traits\HandlesServiceErrors;
 use App\Traits\HasRequestContext;
@@ -201,45 +202,71 @@ class PurchaseService implements PurchaseServiceInterface
         );
     }
 
-    public function pay(int $id, float $amount): Purchase
+    /**
+     * STILL-V7-HIGH-U08 FIX: Pay method with proper payment entity creation
+     */
+    public function pay(int $id, float $amount, string $paymentMethod = 'cash', ?string $notes = null): Purchase
     {
         return $this->handleServiceOperation(
-            callback: function () use ($id, $amount) {
-                $p = $this->findBranchPurchaseOrFail($id);
+            callback: function () use ($id, $amount, $paymentMethod, $notes) {
+                return DB::transaction(function () use ($id, $amount, $paymentMethod, $notes) {
+                    $p = $this->findBranchPurchaseOrFail($id);
 
-                // Validate payment amount
-                if ($amount <= 0) {
-                    throw new \InvalidArgumentException('Payment amount must be positive');
-                }
+                    // Validate payment amount
+                    if ($amount <= 0) {
+                        throw new \InvalidArgumentException('Payment amount must be positive');
+                    }
 
-                // Use correct migration column names
-                $remainingDue = max(0, (float) $p->total_amount - (float) $p->paid_amount);
-                if ($amount > $remainingDue) {
-                    throw new \InvalidArgumentException(sprintf(
-                        'Payment amount (%.2f) exceeds remaining due (%.2f)',
-                        $amount,
-                        $remainingDue
-                    ));
-                }
+                    // Use correct migration column names
+                    $remainingDue = max(0, (float) $p->total_amount - (float) $p->paid_amount);
+                    if ($amount > $remainingDue) {
+                        throw new \InvalidArgumentException(sprintf(
+                            'Payment amount (%.2f) exceeds remaining due (%.2f)',
+                            $amount,
+                            $remainingDue
+                        ));
+                    }
 
-                // Critical ERP: Use bcmath for precise money calculations
-                $newPaidAmount = bcadd((string) $p->paid_amount, (string) $amount, 2);
-                $p->paid_amount = (float) $newPaidAmount;
+                    // STILL-V7-HIGH-U08 FIX: Create PurchasePayment record for audit trail
+                    $lastPayment = PurchasePayment::where('purchase_id', $p->getKey())
+                        ->lockForUpdate()
+                        ->orderBy('id', 'desc')
+                        ->first();
 
-                // Update payment status
-                if ((float) $p->paid_amount >= (float) $p->total_amount) {
-                    $p->payment_status = 'paid';
-                } elseif ((float) $p->paid_amount > 0) {
-                    $p->payment_status = 'partial';
-                } else {
-                    $p->payment_status = 'unpaid';
-                }
-                $p->save();
+                    $paymentSeq = $lastPayment ? ($lastPayment->id % 100000) + 1 : 1;
+                    $refNumber = 'PP-'.date('Ymd').'-'.str_pad((string) $paymentSeq, 5, '0', STR_PAD_LEFT);
 
-                return $p;
+                    PurchasePayment::create([
+                        'purchase_id' => $p->getKey(),
+                        'reference_number' => $refNumber,
+                        'amount' => $amount,
+                        'payment_method' => $paymentMethod,
+                        'status' => 'completed',
+                        'payment_date' => now()->toDateString(),
+                        'currency' => setting('general.default_currency', 'EGP'),
+                        'notes' => $notes,
+                        'paid_by' => auth()->id(),
+                    ]);
+
+                    // Critical ERP: Use bcmath for precise money calculations
+                    $newPaidAmount = bcadd((string) $p->paid_amount, (string) $amount, 2);
+                    $p->paid_amount = (float) $newPaidAmount;
+
+                    // Update payment status
+                    if ((float) $p->paid_amount >= (float) $p->total_amount) {
+                        $p->payment_status = 'paid';
+                    } elseif ((float) $p->paid_amount > 0) {
+                        $p->payment_status = 'partial';
+                    } else {
+                        $p->payment_status = 'unpaid';
+                    }
+                    $p->save();
+
+                    return $p;
+                });
             },
             operation: 'pay',
-            context: ['purchase_id' => $id, 'amount' => $amount]
+            context: ['purchase_id' => $id, 'amount' => $amount, 'payment_method' => $paymentMethod]
         );
     }
 

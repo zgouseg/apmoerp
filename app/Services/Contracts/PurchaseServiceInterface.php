@@ -14,7 +14,10 @@ interface PurchaseServiceInterface
 
     public function receive(int $id): Purchase;
 
-    public function pay(int $id, float $amount): Purchase;
+    /**
+     * STILL-V7-HIGH-U08 FIX: Updated signature to include payment method and notes
+     */
+    public function pay(int $id, float $amount, string $paymentMethod = 'cash', ?string $notes = null): Purchase;
 
     public function cancel(int $id): Purchase;
 }

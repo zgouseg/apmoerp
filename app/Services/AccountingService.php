@@ -155,6 +155,21 @@ class AccountingService
                 }
             }
 
+            // STILL-V7-CRITICAL-U03 FIX: Credit: Shipping Income (if applicable)
+            // This ensures journal entries remain balanced when shipping_amount > 0
+            if ($sale->shipping_amount > 0) {
+                $shippingAccount = AccountMapping::getAccount('sales', 'shipping_income', $sale->branch_id);
+                if ($shippingAccount) {
+                    $lines[] = [
+                        'journal_entry_id' => $entry->id,
+                        'account_id' => $shippingAccount->id,
+                        'debit' => 0,
+                        'credit' => $sale->shipping_amount,
+                        'description' => 'Shipping income',
+                    ];
+                }
+            }
+
             foreach ($lines as $lineData) {
                 JournalEntryLine::create($lineData);
             }
@@ -224,6 +239,21 @@ class AccountingService
                         'debit' => $purchase->tax_amount,
                         'credit' => 0,
                         'description' => 'Tax recoverable on purchases',
+                    ];
+                }
+            }
+
+            // STILL-V7-CRITICAL-U03 FIX: Debit: Shipping Expense (if applicable)
+            // This ensures journal entries remain balanced when shipping_amount > 0
+            if ($purchase->shipping_amount > 0) {
+                $shippingAccount = AccountMapping::getAccount('purchases', 'shipping_expense', $purchase->branch_id);
+                if ($shippingAccount) {
+                    $lines[] = [
+                        'journal_entry_id' => $entry->id,
+                        'account_id' => $shippingAccount->id,
+                        'debit' => $purchase->shipping_amount,
+                        'credit' => 0,
+                        'description' => 'Shipping expense',
                     ];
                 }
             }
