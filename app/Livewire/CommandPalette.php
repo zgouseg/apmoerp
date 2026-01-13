@@ -198,7 +198,7 @@ class CommandPalette extends Component
                 ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
                 ->where(function ($q) use ($query) {
                     $q->where('id', 'like', "%{$query}%")
-                        ->orWhere('reference_no', 'like', "%{$query}%");
+                        ->orWhere('reference_number', 'like', "%{$query}%");
                 })
                 ->with('customer')
                 ->limit(5)

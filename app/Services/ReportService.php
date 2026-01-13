@@ -68,7 +68,7 @@ class ReportService implements ReportServiceInterface
                     ->join('sales as s', 's.id', '=', 'si.sale_id')
                     ->join('products as p', 'p.id', '=', 'si.product_id')
                     ->where('s.branch_id', $branchId)
-                    ->selectRaw('p.id, p.name, SUM(si.qty*si.unit_price) as gross')
+                    ->selectRaw('p.id, p.name, SUM(si.quantity*si.unit_price) as gross')
                     ->groupBy('p.id', 'p.name')
                     ->orderByDesc('gross')
                     ->limit($limit)
@@ -212,11 +212,11 @@ class ReportService implements ReportServiceInterface
 
                 $summary = [
                     'total_sales' => $items->count(),
-                    'total_amount' => $items->sum('grand_total'),
-                    'total_paid' => $items->sum('amount_paid'),
-                    'total_due' => $items->sum('amount_due'),
-                    'by_status' => $items->groupBy('status')->map(fn ($g) => ['count' => $g->count(), 'amount' => $g->sum('grand_total')]),
-                    'by_branch' => $items->groupBy('branch_name')->map(fn ($g) => ['count' => $g->count(), 'amount' => $g->sum('grand_total')]),
+                    'total_amount' => $items->sum('total_amount'),
+                    'total_paid' => $items->sum('paid_amount'),
+                    'total_due' => $items->sum(fn ($item) => max(0, ($item->total_amount ?? 0) - ($item->paid_amount ?? 0))),
+                    'by_status' => $items->groupBy('status')->map(fn ($g) => ['count' => $g->count(), 'amount' => $g->sum('total_amount')]),
+                    'by_branch' => $items->groupBy('branch_name')->map(fn ($g) => ['count' => $g->count(), 'amount' => $g->sum('total_amount')]),
                 ];
 
                 return ['items' => $items, 'summary' => $summary];
@@ -249,9 +249,9 @@ class ReportService implements ReportServiceInterface
                     'items' => $items,
                     'summary' => [
                         'total_purchases' => $items->count(),
-                        'total_amount' => $items->sum('grand_total'),
-                        'total_paid' => $items->sum('amount_paid'),
-                        'total_due' => $items->sum('amount_due'),
+                        'total_amount' => $items->sum('total_amount'),
+                        'total_paid' => $items->sum('paid_amount'),
+                        'total_due' => $items->sum(fn ($item) => max(0, ($item->total_amount ?? 0) - ($item->paid_amount ?? 0))),
                     ],
                 ];
             },

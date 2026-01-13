@@ -12,10 +12,19 @@ class CustomerSegmentationService
      */
     public function getSegmentation()
     {
+        // Use sale_date or created_at instead of posted_at (which may not exist)
+        // Use database-agnostic approach for DATEDIFF
+        $driver = \DB::getDriverName();
+        $datediffExpr = match ($driver) {
+            'pgsql' => 'EXTRACT(DAY FROM (NOW() - MAX(sales.sale_date)))::integer',
+            'sqlite' => "CAST(julianday('now') - julianday(MAX(sales.sale_date)) AS INTEGER)",
+            default => 'DATEDIFF(NOW(), MAX(sales.sale_date))',
+        };
+
         $customers = Customer::select('customers.*')
             ->selectRaw('COUNT(sales.id) as purchase_frequency')
-            ->selectRaw('MAX(sales.posted_at) as last_purchase_date')
-            ->selectRaw('DATEDIFF(NOW(), MAX(sales.posted_at)) as recency_days')
+            ->selectRaw('MAX(sales.sale_date) as last_purchase_date')
+            ->selectRaw("{$datediffExpr} as recency_days")
             ->leftJoin('sales', 'customers.id', '=', 'sales.customer_id')
             ->whereNull('sales.deleted_at')
             ->groupBy('customers.id')
@@ -137,8 +146,16 @@ class CustomerSegmentationService
      */
     public function getChurnAnalysis()
     {
+        // Use sale_date or created_at instead of posted_at
+        $driver = \DB::getDriverName();
+        $datediffExpr = match ($driver) {
+            'pgsql' => 'EXTRACT(DAY FROM (NOW() - MAX(sales.sale_date)))::integer',
+            'sqlite' => "CAST(julianday('now') - julianday(MAX(sales.sale_date)) AS INTEGER)",
+            default => 'DATEDIFF(NOW(), MAX(sales.sale_date))',
+        };
+
         $at_risk = Customer::select('customers.*')
-            ->selectRaw('DATEDIFF(NOW(), MAX(sales.posted_at)) as days_since_purchase')
+            ->selectRaw("{$datediffExpr} as days_since_purchase")
             ->leftJoin('sales', 'customers.id', '=', 'sales.customer_id')
             ->whereNull('sales.deleted_at')
             ->groupBy('customers.id')

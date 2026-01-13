@@ -81,9 +81,10 @@ class AutomatedAlertService
      */
     public function checkOverdueSalesAlerts(?int $branchId = null): array
     {
+        // Use actual column name 'due_date' instead of accessor 'payment_due_date'
         $overdueSales = Sale::query()
-            ->whereNotNull('payment_due_date')
-            ->where('payment_due_date', '<', now())
+            ->whereNotNull('due_date')
+            ->where('due_date', '<', now())
             ->whereIn('payment_status', ['unpaid', 'partial'])
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->with(['customer', 'branch'])
@@ -92,10 +93,10 @@ class AutomatedAlertService
         $alerts = [];
 
         foreach ($overdueSales as $sale) {
-            $daysOverdue = now()->diffInDays($sale->payment_due_date);
+            $daysOverdue = now()->diffInDays($sale->due_date);
 
             $customerName = $sale->customer ? $sale->customer->name : 'Unknown';
-            $amountDue = $sale->amount_due ? $sale->amount_due : $sale->due_total;
+            $amountDue = $sale->remaining_amount;
 
             $alerts[] = [
                 'type' => 'overdue_payment',
@@ -105,7 +106,7 @@ class AutomatedAlertService
                 'customer_id' => $sale->customer_id,
                 'customer_name' => $customerName,
                 'amount_due' => $amountDue,
-                'payment_due_date' => $sale->payment_due_date,
+                'payment_due_date' => $sale->due_date,
                 'days_overdue' => $daysOverdue,
                 'branch_id' => $sale->branch_id,
                 'message' => "Payment overdue: Invoice {$sale->code} for {$customerName} is {$daysOverdue} days overdue",

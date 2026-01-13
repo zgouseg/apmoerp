@@ -37,7 +37,8 @@ class PosReportsExportController extends Controller
 
         $format = $validated['format'] ?? 'web';
 
-        $query = Sale::query()->posted();
+        // Include both 'posted' and 'completed' status for POS sales
+        $query = Sale::query()->whereIn('status', ['posted', 'completed']);
 
         if (! empty($validated['date_from'])) {
             $query->whereDate('sale_date', '>=', $validated['date_from']);

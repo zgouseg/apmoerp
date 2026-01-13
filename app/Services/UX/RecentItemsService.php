@@ -161,8 +161,8 @@ class RecentItemsService
         return match ($type) {
             'product' => DB::table('products')->where('id', $itemId)->value('name') ?? "Product #{$itemId}",
             'customer' => DB::table('customers')->where('id', $itemId)->value('name') ?? "Customer #{$itemId}",
-            'sale' => DB::table('sales')->where('id', $itemId)->value('code') ?? "Sale #{$itemId}",
-            'purchase' => DB::table('purchases')->where('id', $itemId)->value('code') ?? "Purchase #{$itemId}",
+            'sale' => DB::table('sales')->where('id', $itemId)->value('reference_number') ?? "Sale #{$itemId}",
+            'purchase' => DB::table('purchases')->where('id', $itemId)->value('reference_number') ?? "Purchase #{$itemId}",
             'invoice' => DB::table('rental_invoices')->where('id', $itemId)->value('code') ?? "Invoice #{$itemId}",
             'supplier' => DB::table('suppliers')->where('id', $itemId)->value('name') ?? "Supplier #{$itemId}",
             'report' => DB::table('report_definitions')->where('id', $itemId)->value('name') ?? "Report #{$itemId}",

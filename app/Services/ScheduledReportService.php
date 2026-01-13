@@ -162,11 +162,12 @@ class ScheduledReportService
     protected function fetchOrdersReportData(array $filters): array
     {
         try {
+            // Use actual column name 'reference_number' instead of 'code'
             $query = DB::table('sales')
                 ->leftJoin('customers', 'sales.customer_id', '=', 'customers.id')
                 ->select([
                     'sales.id',
-                    'sales.code',
+                    'sales.reference_number',
                     'customers.name as customer_name',
                     'sales.total_amount',
                     'sales.status',
@@ -204,7 +205,7 @@ class ScheduledReportService
                     'products.name',
                     'products.sku',
                     'product_categories.name as category',
-                    'products.price',
+                    'products.default_price as price',
                     'products.cost',
                 ])
                 // quantity is signed: positive = in, negative = out
@@ -213,8 +214,9 @@ class ScheduledReportService
             if (! empty($filters['category_id'])) {
                 $query->where('products.category_id', (int) $filters['category_id']);
             }
+            // Use 'status' column instead of 'is_active' which doesn't exist
             if (! empty($filters['is_active'])) {
-                $query->where('products.is_active', true);
+                $query->where('products.status', 'active');
             }
 
             return $query->orderBy('products.name')

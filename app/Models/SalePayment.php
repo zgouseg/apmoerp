@@ -41,6 +41,8 @@ class SalePayment extends Model
 
     public const METHOD_TRANSFER = 'bank_transfer';
 
+    public const METHOD_SIMPLE_TRANSFER = 'transfer';
+
     public const METHOD_CHEQUE = 'cheque';
 
     public static function paymentMethods(): array
@@ -49,6 +51,7 @@ class SalePayment extends Model
             self::METHOD_CASH => __('Cash'),
             self::METHOD_CARD => __('Card'),
             self::METHOD_TRANSFER => __('Bank Transfer'),
+            self::METHOD_SIMPLE_TRANSFER => __('Transfer'),
             self::METHOD_CHEQUE => __('Cheque'),
         ];
     }
@@ -67,5 +70,11 @@ class SalePayment extends Model
     public function getCreatedByAttribute()
     {
         return $this->received_by;
+    }
+
+    // Backward compatibility accessor for reference_no -> reference_number
+    public function getReferenceNoAttribute()
+    {
+        return $this->reference_number;
     }
 }

@@ -255,6 +255,11 @@ class Purchase extends BaseModel
         return $this->reference_number;
     }
 
+    public function getReferenceNoAttribute()
+    {
+        return $this->reference_number;
+    }
+
     public function getGrandTotalAttribute()
     {
         return $this->total_amount;

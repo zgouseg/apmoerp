@@ -105,7 +105,7 @@ class CustomerPortalController extends Controller
         }
 
         if ($request->filled('search')) {
-            $query->where('code', 'like', '%'.$request->search.'%');
+            $query->where('reference_number', 'like', '%'.$request->search.'%');
         }
 
         $orders = $query->paginate(15);

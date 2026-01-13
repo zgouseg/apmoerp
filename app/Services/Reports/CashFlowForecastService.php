@@ -6,6 +6,7 @@ use App\Models\BankAccount;
 use App\Models\Purchase;
 use App\Models\Sale;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class CashFlowForecastService
 {
@@ -63,17 +64,19 @@ class CashFlowForecastService
      */
     private function getExpectedInflows($startDate, $endDate)
     {
+        // Use actual database column names: due_date (not payment_due_date accessor)
+        // Calculate due_total as (total_amount - paid_amount) since it's an accessor
         return Sale::select(
             'id',
             'customer_id',
-            'payment_due_date as due_date',
-            'due_total as amount'
+            'due_date as due_date',
+            DB::raw('(total_amount - paid_amount) as amount')
         )
             ->where('payment_status', '!=', 'paid')
-            ->where('due_total', '>', 0)
-            ->whereBetween('payment_due_date', [$startDate, $endDate])
+            ->whereRaw('(total_amount - paid_amount) > 0')
+            ->whereBetween('due_date', [$startDate, $endDate])
             ->whereNull('deleted_at')
-            ->orderBy('payment_due_date')
+            ->orderBy('due_date')
             ->get();
     }
 
@@ -82,17 +85,19 @@ class CashFlowForecastService
      */
     private function getExpectedOutflows($startDate, $endDate)
     {
+        // Use actual database column names: due_date (not payment_due_date accessor)
+        // Calculate due_total as (total_amount - paid_amount) since it's an accessor
         return Purchase::select(
             'id',
             'supplier_id',
-            'payment_due_date as due_date',
-            'due_total as amount'
+            'due_date as due_date',
+            DB::raw('(total_amount - paid_amount) as amount')
         )
             ->where('payment_status', '!=', 'paid')
-            ->where('due_total', '>', 0)
-            ->whereBetween('payment_due_date', [$startDate, $endDate])
+            ->whereRaw('(total_amount - paid_amount) > 0')
+            ->whereBetween('due_date', [$startDate, $endDate])
             ->whereNull('deleted_at')
-            ->orderBy('payment_due_date')
+            ->orderBy('due_date')
             ->get();
     }
 

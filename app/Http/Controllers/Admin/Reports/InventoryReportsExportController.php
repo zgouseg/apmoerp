@@ -36,7 +36,7 @@ class InventoryReportsExportController extends Controller
         $query = Product::query();
 
         if (! empty($validated['branch_id'])) {
-            $query->where('default_branch_id', $validated['branch_id']);
+            $query->where('branch_id', $validated['branch_id']);
         }
 
         $products = $query->orderBy('name')->limit(5000)->get();
@@ -46,8 +46,8 @@ class InventoryReportsExportController extends Controller
             'id' => 'ID',
             'sku' => 'SKU',
             'name' => 'Name',
-            'stock_qty' => 'Stock',
-            'reorder_level' => 'Reorder Level',
+            'stock_quantity' => 'Stock',
+            'reorder_point' => 'Reorder Level',
         ];
 
         // Use selected columns or all columns
@@ -66,8 +66,8 @@ class InventoryReportsExportController extends Controller
         }
 
         $rows = $products->map(function (Product $product) use ($validated, $columns) {
-            $stock = $product->stock_qty ?? 0;
-            $reorder = $product->reorder_level ?? 0;
+            $stock = $product->stock_quantity ?? 0;
+            $reorder = $product->reorder_point ?? 0;
 
             if (! empty($validated['only_low']) && $reorder > 0 && $stock > $reorder) {
                 return null;
@@ -77,8 +77,8 @@ class InventoryReportsExportController extends Controller
                 'id' => $product->id,
                 'sku' => $product->sku,
                 'name' => $product->name,
-                'stock_qty' => $stock,
-                'reorder_level' => $reorder,
+                'stock_quantity' => $stock,
+                'reorder_point' => $reorder,
             ];
 
             // Return only selected columns

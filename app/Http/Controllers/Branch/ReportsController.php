@@ -42,12 +42,13 @@ class ReportsController extends Controller
             ? 'MIN(DATE(m.created_at))'
             : 'MIN(DATE(m.created_at))';
 
+        // Filter by branch through the products table since stock_movements doesn't have branch_id
         $rows = DB::table('stock_movements as m')
             ->join('products as p', 'p.id', '=', 'm.product_id')
             ->select('p.id', 'p.name')
             ->selectRaw('SUM(m.quantity) as qty')
             ->selectRaw("{$dateExpr} as first_move")
-            ->where('m.branch_id', $branchId)
+            ->where('p.branch_id', $branchId)
             ->whereDate('m.created_at', '<=', $asOf)
             ->groupBy('p.id', 'p.name')
             ->orderBy('first_move')

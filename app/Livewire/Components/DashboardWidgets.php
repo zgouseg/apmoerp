@@ -85,17 +85,24 @@ class DashboardWidgets extends Component
                 'total_sales_week' => (clone $salesQuery)
                     ->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])
                     ->sum('total_amount') ?? 0,
+                // Fix: Add whereYear to prevent summing same month from different years
                 'total_sales_month' => (clone $salesQuery)
+                    ->whereYear('created_at', now()->year)
                     ->whereMonth('created_at', now()->month)
                     ->sum('total_amount') ?? 0,
                 'total_revenue_month' => (clone $salesQuery)
+                    ->whereYear('created_at', now()->year)
                     ->whereMonth('created_at', now()->month)
                     ->where('status', 'completed')
                     ->sum('total_amount') ?? 0,
                 'total_products' => (clone $productsQuery)->count(),
                 'active_products' => (clone $productsQuery)->where('is_active', true)->count(),
                 'total_customers' => (clone $customersQuery)->count(),
-                'new_customers_month' => (clone $customersQuery)->whereMonth('created_at', now()->month)->count(),
+                // Fix: Add whereYear to prevent counting same month from different years
+                'new_customers_month' => (clone $customersQuery)
+                    ->whereYear('created_at', now()->year)
+                    ->whereMonth('created_at', now()->month)
+                    ->count(),
                 // Use indexed query with proper joins for better performance
                 // quantity is signed: positive = in, negative = out
                 'low_stock_count' => DB::table('products')

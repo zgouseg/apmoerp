@@ -104,19 +104,19 @@ class KPIDashboardService
 
         $totalProducts = $query->count();
 
-        // Low stock products
+        // Low stock products - use stock_quantity and reorder_point (actual column names)
         $lowStockCount = Product::query()
             ->where('is_active', true)
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
-            ->whereColumn('qty', '<=', 'reorder_level')
-            ->where('reorder_level', '>', 0)
+            ->whereColumn('stock_quantity', '<=', 'reorder_point')
+            ->where('reorder_point', '>', 0)
             ->count();
 
         // Out of stock products
         $outOfStockCount = Product::query()
             ->where('is_active', true)
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
-            ->where('qty', '<=', 0)
+            ->where('stock_quantity', '<=', 0)
             ->count();
 
         // Total inventory value

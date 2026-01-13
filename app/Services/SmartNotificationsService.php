@@ -66,7 +66,7 @@ class SmartNotificationsService
                         ->whereJsonContains('data->notification_type', 'low_stock_batch')
                         ->exists();
 
-                    if (!$alreadyNotified) {
+                    if (! $alreadyNotified) {
                         $productList = $lowStockProducts->map(function ($p) {
                             return [
                                 'name' => $p->name,
@@ -144,9 +144,11 @@ class SmartNotificationsService
         $notified = [];
 
         try {
+            // Use actual columns: 'due_date' instead of 'due_date' (same),
+            // and calculate due_total from (total_amount - paid_amount) instead of using accessor
             $query = Sale::query()
                 ->where('status', 'pending')
-                ->where('due_total', '>', 0)
+                ->whereRaw('(total_amount - paid_amount) > 0')
                 ->whereNotNull('due_date')
                 ->whereDate('due_date', '<', today())
                 ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
@@ -174,6 +176,8 @@ class SmartNotificationsService
                     if (! $alreadyNotified) {
                         $customerName = $invoice->customer?->name ?? __('Walk-in');
                         $daysOverdue = now()->diffInDays($invoice->due_date);
+                        // Calculate due_total from actual columns
+                        $dueTotal = max(0, (float) $invoice->total_amount - (float) $invoice->paid_amount);
 
                         $user->notify(new GeneralNotification(
                             type: 'overdue_invoice',
@@ -182,7 +186,7 @@ class SmartNotificationsService
                                 'ref' => $invoice->reference_no ?? $invoice->code,
                                 'customer' => $customerName,
                                 'days' => $daysOverdue,
-                                'amount' => number_format($invoice->due_total, 2),
+                                'amount' => number_format($dueTotal, 2),
                             ]),
                             actionUrl: route('app.sales.show', $invoice->id),
                             actionLabel: __('View Invoice'),
@@ -190,7 +194,7 @@ class SmartNotificationsService
                                 'invoice_id' => $invoice->id,
                                 'reference' => $invoice->reference_no ?? $invoice->code,
                                 'customer' => $customerName,
-                                'due_total' => $invoice->due_total,
+                                'due_total' => $dueTotal,
                                 'days_overdue' => $daysOverdue,
                             ]
                         ));
@@ -215,9 +219,10 @@ class SmartNotificationsService
         try {
             $dueDate = today()->addDays($daysBefore);
 
+            // Use actual columns and calculate due_total from (total_amount - paid_amount)
             $query = Sale::query()
                 ->where('status', 'pending')
-                ->where('due_total', '>', 0)
+                ->whereRaw('(total_amount - paid_amount) > 0')
                 ->whereNotNull('due_date')
                 ->whereDate('due_date', $dueDate)
                 ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
@@ -235,6 +240,8 @@ class SmartNotificationsService
             foreach ($upcomingInvoices as $invoice) {
                 foreach ($users as $user) {
                     $customerName = $invoice->customer?->name ?? __('Walk-in');
+                    // Calculate due_total from actual columns
+                    $dueTotal = max(0, (float) $invoice->total_amount - (float) $invoice->paid_amount);
 
                     $user->notify(new GeneralNotification(
                         type: 'payment_reminder',
@@ -243,7 +250,7 @@ class SmartNotificationsService
                             'ref' => $invoice->reference_no ?? $invoice->code,
                             'customer' => $customerName,
                             'days' => $daysBefore,
-                            'amount' => number_format($invoice->due_total, 2),
+                            'amount' => number_format($dueTotal, 2),
                         ]),
                         actionUrl: route('app.sales.show', $invoice->id),
                         actionLabel: __('View Invoice'),
@@ -251,7 +258,7 @@ class SmartNotificationsService
                             'invoice_id' => $invoice->id,
                             'reference' => $invoice->reference_no ?? $invoice->code,
                             'customer' => $customerName,
-                            'due_total' => $invoice->due_total,
+                            'due_total' => $dueTotal,
                             'days_until_due' => $daysBefore,
                         ]
                     ));
