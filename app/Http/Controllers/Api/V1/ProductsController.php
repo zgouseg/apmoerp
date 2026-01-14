@@ -270,7 +270,8 @@ class ProductsController extends BaseApiController
             'description' => 'nullable|string',
             'price' => 'sometimes|numeric|min:0',
             'cost_price' => 'nullable|numeric|min:0',
-            'quantity' => 'sometimes|integer|min:0',
+            // NEW-MEDIUM-02 FIX: Use numeric validation to support fractional quantities (consistent with store())
+            'quantity' => 'sometimes|numeric|min:0',
             'category_id' => 'nullable|exists:product_categories,id',
             'warehouse_id' => [
                 'required_with:quantity',

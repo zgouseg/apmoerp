@@ -16,9 +16,17 @@ class WarehouseStoreRequest extends FormRequest
 
     public function rules(): array
     {
-        $branchId = $this->user()?->branch_id;
+        // NEW-HIGH-01 FIX: Use branch_id from request attributes (set by middleware) instead of user's branch_id
+        // This ensures the uniqueness check uses the same branch_id that will be used when creating the warehouse
+        $branchId = (int) $this->attributes->get('branch_id');
 
-        // NEW-HIGH-06 FIX: Scope warehouse name/code uniqueness to branch_id for multi-branch support
+        // Fail validation if branch_id is not set
+        if (! $branchId) {
+            return [
+                'branch_id' => ['required'],
+            ];
+        }
+
         return [
             'name' => [
                 'required',
