@@ -10,6 +10,11 @@ use Illuminate\Support\Facades\DB;
 
 class SystemSettingController extends Controller
 {
+    public function index()
+    {
+        return $this->show();
+    }
+
     public function show()
     {
         $pairs = DB::table('system_settings')->pluck('value', 'key')->all();

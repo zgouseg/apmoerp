@@ -182,7 +182,7 @@ class ProductsController extends BaseApiController
             'quantity' => 'required|integer|min:0',
             'category_id' => 'nullable|exists:product_categories,id',
             'warehouse_id' => [
-                'nullable',
+                'required_with:quantity',
                 Rule::exists('warehouses', 'id')->where('branch_id', $store->branch_id),
             ],
             'barcode' => 'nullable|string|max:100',
@@ -266,7 +266,7 @@ class ProductsController extends BaseApiController
             'quantity' => 'sometimes|integer|min:0',
             'category_id' => 'nullable|exists:product_categories,id',
             'warehouse_id' => [
-                'nullable',
+                'required_with:quantity',
                 Rule::exists('warehouses', 'id')->where('branch_id', $store->branch_id),
             ],
             'barcode' => 'nullable|string|max:100',
