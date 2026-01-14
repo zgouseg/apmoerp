@@ -181,6 +181,11 @@ class SmartSuggestionsService
             $baseProduct = Product::find($productId);
             $bundledProduct = Product::find($item->product_id);
 
+            // NEW-MEDIUM-03 FIX: Skip null products to prevent crash when products are deleted/inactive
+            if (! $baseProduct || ! $bundledProduct) {
+                return null;
+            }
+
             $totalPrice = bcadd((string) ($baseProduct->default_price ?? 0), (string) ($bundledProduct->default_price ?? 0), 2);
             $suggestedBundlePrice = bcmul($totalPrice, '0.90', 2); // 10% bundle discount
             $savings = bcsub($totalPrice, $suggestedBundlePrice, 2);
@@ -198,7 +203,7 @@ class SmartSuggestionsService
                 'customer_savings' => (float) $savings,
                 'discount_percent' => '10%',
             ];
-        });
+        })->filter();
     }
 
     /**

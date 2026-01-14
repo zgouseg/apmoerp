@@ -213,7 +213,8 @@ class SaleService implements SaleServiceInterface
                             $accountingService = app(AccountingService::class);
                             $journalEntry = \App\Models\JournalEntry::find($sale->journal_entry_id);
                             // Check if journal entry exists, is posted, and is reversible (default to true if null)
-                            $isReversible = $journalEntry->is_reversible ?? true;
+                            // NEW-CRITICAL-01 FIX: Use nullsafe operator to prevent crash when journal entry is deleted/missing
+                            $isReversible = $journalEntry?->is_reversible ?? true;
                             if ($journalEntry && $journalEntry->status === 'posted' && $isReversible) {
                                 $accountingService->reverseJournalEntry(
                                     $journalEntry,
