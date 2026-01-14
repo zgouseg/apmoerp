@@ -64,4 +64,16 @@ class RoleController extends Controller
 
         return $this->ok([], __('Deleted'));
     }
+
+    public function syncPermissions(Request $request, Role $role)
+    {
+        $this->validate($request, [
+            'permissions' => ['required', 'array'],
+            'permissions.*' => ['string', 'exists:permissions,name'],
+        ]);
+
+        $role->syncPermissions($request->input('permissions'));
+
+        return $this->ok($role->load('permissions'), __('Permissions synced'));
+    }
 }

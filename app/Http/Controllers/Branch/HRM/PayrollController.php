@@ -38,4 +38,17 @@ class PayrollController extends Controller
 
         return $this->ok($payroll, __('Approved'));
     }
+
+    public function pay(Payroll $payroll)
+    {
+        if ($payroll->status !== 'approved') {
+            return $this->error(__('Payroll must be approved before payment'), 422);
+        }
+
+        $payroll->status = 'paid';
+        $payroll->paid_at = now();
+        $payroll->save();
+
+        return $this->ok($payroll, __('Paid'));
+    }
 }
