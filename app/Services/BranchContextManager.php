@@ -42,6 +42,12 @@ class BranchContextManager
     protected static bool $cachedBranchIdsResolved = false;
 
     /**
+     * STILL-V9-HIGH-04 FIX: Explicitly set branch ID for console/queue contexts
+     * This allows jobs to specify their branch context via the job payload
+     */
+    protected static ?int $explicitBranchId = null;
+
+    /**
      * Check if we're currently resolving authentication
      * Used to prevent infinite recursion
      */
@@ -209,6 +215,51 @@ class BranchContextManager
     }
 
     /**
+     * STILL-V9-HIGH-04 FIX: Get the explicitly set branch ID for console/queue contexts
+     * This allows queue workers and scheduled jobs to operate within a specific branch
+     *
+     * @return int|null The explicitly set branch ID, or null if not set
+     */
+    public static function getExplicitBranchId(): ?int
+    {
+        return self::$explicitBranchId;
+    }
+
+    /**
+     * STILL-V9-HIGH-04 FIX: Set an explicit branch context for console/queue contexts
+     * Jobs should call this method with their branch_id from the job payload
+     * before executing any branch-scoped queries.
+     *
+     * Usage in a job:
+     * ```php
+     * public function handle(): void
+     * {
+     *     BranchContextManager::setBranchContext($this->branchId);
+     *     try {
+     *         // ... perform branch-scoped operations
+     *     } finally {
+     *         BranchContextManager::clearBranchContext();
+     *     }
+     * }
+     * ```
+     *
+     * @param int $branchId The branch ID to set as the context
+     */
+    public static function setBranchContext(int $branchId): void
+    {
+        self::$explicitBranchId = $branchId;
+    }
+
+    /**
+     * STILL-V9-HIGH-04 FIX: Clear the explicit branch context
+     * Should be called after a job completes to prevent context leakage
+     */
+    public static function clearBranchContext(): void
+    {
+        self::$explicitBranchId = null;
+    }
+
+    /**
      * Clear all cached values
      * Should be called after authentication state changes
      */
@@ -218,6 +269,7 @@ class BranchContextManager
         self::$cachedBranchIds = null;
         self::$cachedBranchIdsResolved = false;
         self::$resolvingAuth = false;
+        self::$explicitBranchId = null;
     }
 
     /**

@@ -75,6 +75,25 @@ class StockService
     }
 
     /**
+     * Get current stock for a product filtered by branch
+     * Aggregates stock_movements through warehouses.branch_id
+     *
+     * V10-CRITICAL-01 FIX: Add branch-scoped stock calculation
+     *
+     * @param int $productId The product ID
+     * @param int $branchId The branch ID to filter by
+     * @return float The current stock level for the product in the branch
+     */
+    public static function getCurrentStockForBranch(int $productId, int $branchId): float
+    {
+        return (float) DB::table('stock_movements')
+            ->join('warehouses', 'stock_movements.warehouse_id', '=', 'warehouses.id')
+            ->where('stock_movements.product_id', $productId)
+            ->where('warehouses.branch_id', $branchId)
+            ->sum('stock_movements.quantity');
+    }
+
+    /**
      * Get SQL expression for calculating current stock
      * Use this for SELECT queries that need to calculate stock on the fly
      *
@@ -113,6 +132,40 @@ class StockService
 
         // quantity is signed: positive = in, negative = out
         return "COALESCE((SELECT SUM(quantity) FROM stock_movements WHERE stock_movements.product_id = {$productIdColumn} AND stock_movements.warehouse_id = {$warehouseIdColumn}), 0)";
+    }
+
+    /**
+     * Get SQL expression for calculating stock scoped to a specific branch
+     * Joins stock_movements through warehouses.branch_id
+     *
+     * V10-CRITICAL-01 FIX: Add branch-scoped stock calculation expression
+     *
+     * @param  string  $productIdColumn  Table.column reference (e.g., 'products.id')
+     * @param  int|string  $branchIdValueOrColumn  Either an integer branch ID or a column reference (e.g., 'products.branch_id')
+     *
+     * @throws \InvalidArgumentException if column names contain invalid characters
+     */
+    public static function getBranchStockCalculationExpression(string $productIdColumn = 'products.id', int|string $branchIdValueOrColumn = 'products.branch_id'): string
+    {
+        // Validate product column name to prevent SQL injection
+        if (! preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$/', $productIdColumn)) {
+            throw new \InvalidArgumentException('Invalid product column name format');
+        }
+
+        // Handle branch ID - either a numeric value or a column reference
+        if (is_int($branchIdValueOrColumn)) {
+            $branchCondition = "w.branch_id = {$branchIdValueOrColumn}";
+        } else {
+            // Validate branch column name to prevent SQL injection
+            if (! preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$/', $branchIdValueOrColumn)) {
+                throw new \InvalidArgumentException('Invalid branch column name format');
+            }
+            $branchCondition = "w.branch_id = {$branchIdValueOrColumn}";
+        }
+
+        // quantity is signed: positive = in, negative = out
+        // Join through warehouses to filter by branch
+        return "COALESCE((SELECT SUM(sm.quantity) FROM stock_movements sm INNER JOIN warehouses w ON sm.warehouse_id = w.id WHERE sm.product_id = {$productIdColumn} AND {$branchCondition}), 0)";
     }
 
     /**

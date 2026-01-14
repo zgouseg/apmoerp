@@ -268,12 +268,14 @@ class Product extends BaseModel
      * Returns products where current stock is at or below the alert threshold
      *
      * V9-CRITICAL-01 FIX: Use stock_movements as source of truth instead of stock_quantity
+     * V10-CRITICAL-01 FIX: Use branch-scoped stock calculation to prevent cross-branch leakage
      *
      * @example Product::lowStock()->get()
      */
     public function scopeLowStock(Builder $query): Builder
     {
-        $stockSubquery = \App\Services\StockService::getStockCalculationExpression('products.id');
+        // V10-CRITICAL-01 FIX: Use branch-scoped stock calculation
+        $stockSubquery = \App\Services\StockService::getBranchStockCalculationExpression('products.id', 'products.branch_id');
 
         return $query->whereNotNull('stock_alert_threshold')
             ->whereRaw("({$stockSubquery}) <= stock_alert_threshold");
@@ -283,12 +285,14 @@ class Product extends BaseModel
      * Scope to filter products that are out of stock
      *
      * V9-CRITICAL-01 FIX: Use stock_movements as source of truth instead of stock_quantity
+     * V10-CRITICAL-01 FIX: Use branch-scoped stock calculation to prevent cross-branch leakage
      *
      * @example Product::outOfStock()->count()
      */
     public function scopeOutOfStock(Builder $query): Builder
     {
-        $stockSubquery = \App\Services\StockService::getStockCalculationExpression('products.id');
+        // V10-CRITICAL-01 FIX: Use branch-scoped stock calculation
+        $stockSubquery = \App\Services\StockService::getBranchStockCalculationExpression('products.id', 'products.branch_id');
 
         return $query->whereRaw("({$stockSubquery}) <= 0");
     }
@@ -297,12 +301,14 @@ class Product extends BaseModel
      * Scope to filter products that are in stock
      *
      * V9-CRITICAL-01 FIX: Use stock_movements as source of truth instead of stock_quantity
+     * V10-CRITICAL-01 FIX: Use branch-scoped stock calculation to prevent cross-branch leakage
      *
      * @example Product::inStock()->get()
      */
     public function scopeInStock(Builder $query): Builder
     {
-        $stockSubquery = \App\Services\StockService::getStockCalculationExpression('products.id');
+        // V10-CRITICAL-01 FIX: Use branch-scoped stock calculation
+        $stockSubquery = \App\Services\StockService::getBranchStockCalculationExpression('products.id', 'products.branch_id');
 
         return $query->whereRaw("({$stockSubquery}) > 0");
     }
@@ -336,10 +342,13 @@ class Product extends BaseModel
     // Business logic methods
     /**
      * V9-CRITICAL-01 FIX: Use stock_movements as source of truth for stock status checks
+     * V10-CRITICAL-01 FIX: Use branch-scoped stock calculation
      */
     public function isLowStock(): bool
     {
-        $currentStock = \App\Services\StockService::getCurrentStock($this->id);
+        $currentStock = $this->branch_id
+            ? \App\Services\StockService::getCurrentStockForBranch($this->id, $this->branch_id)
+            : \App\Services\StockService::getCurrentStock($this->id);
 
         return $this->stock_alert_threshold &&
             $currentStock <= $this->stock_alert_threshold;
@@ -347,14 +356,20 @@ class Product extends BaseModel
 
     /**
      * V9-CRITICAL-01 FIX: Use stock_movements as source of truth for stock status checks
+     * V10-CRITICAL-01 FIX: Use branch-scoped stock calculation
      */
     public function isOutOfStock(): bool
     {
-        return \App\Services\StockService::getCurrentStock($this->id) <= 0;
+        $currentStock = $this->branch_id
+            ? \App\Services\StockService::getCurrentStockForBranch($this->id, $this->branch_id)
+            : \App\Services\StockService::getCurrentStock($this->id);
+
+        return $currentStock <= 0;
     }
 
     /**
      * V9-CRITICAL-01 FIX: Use stock_movements as source of truth for stock status checks
+     * V10-CRITICAL-01 FIX: Use branch-scoped stock calculation
      */
     public function isInStock(float $quantity = 1): bool
     {
@@ -363,10 +378,13 @@ class Product extends BaseModel
 
     /**
      * V9-CRITICAL-01 FIX: Use stock_movements as source of truth for available quantity
+     * V10-CRITICAL-01 FIX: Use branch-scoped stock calculation
      */
     public function getAvailableQuantity(): float
     {
-        $currentStock = \App\Services\StockService::getCurrentStock($this->id);
+        $currentStock = $this->branch_id
+            ? \App\Services\StockService::getCurrentStockForBranch($this->id, $this->branch_id)
+            : \App\Services\StockService::getCurrentStock($this->id);
 
         return max(0, $currentStock - ($this->reserved_quantity ?? 0));
     }
@@ -473,6 +491,7 @@ class Product extends BaseModel
 
     /**
      * V9-CRITICAL-01 FIX: Use stock_movements as source of truth for reorder logic
+     * V10-CRITICAL-01 FIX: Use branch-scoped stock calculation
      */
     public function needsReorder(): bool
     {
@@ -480,7 +499,9 @@ class Product extends BaseModel
             return false;
         }
 
-        $currentStock = \App\Services\StockService::getCurrentStock($this->id);
+        $currentStock = $this->branch_id
+            ? \App\Services\StockService::getCurrentStockForBranch($this->id, $this->branch_id)
+            : \App\Services\StockService::getCurrentStock($this->id);
 
         return $currentStock <= $this->reorder_point;
     }

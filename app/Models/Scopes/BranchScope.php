@@ -88,13 +88,25 @@ class BranchScope implements Scope
         // Get current user safely through BranchContextManager
         $user = BranchContextManager::getCurrentUser();
 
-        // V7-CRITICAL-U01 FIX: Fail closed for non-console contexts when no user
-        // Previously, this returned early and applied NO branch filter, causing data leakage
-        // Now: return empty result set for non-console contexts without authentication
+        // STILL-V9-HIGH-04 FIX: Fail closed for console contexts (queue workers/scheduled jobs) without user
+        // Queue workers and scheduled tasks run in console mode but MUST have branch context
+        // to prevent cross-branch operations. If no user/branch context is set, fail closed.
         if (! $user) {
-            // If we're not in console, not in safe console command, and not unit testing,
-            // then we're in a web/API request without authentication - fail closed
-            if (! app()->runningInConsole() && ! app()->runningUnitTests()) {
+            // Check if a branch context was explicitly set via BranchContextManager
+            $explicitBranchId = BranchContextManager::getExplicitBranchId();
+
+            if ($explicitBranchId !== null) {
+                // An explicit branch context was set (e.g., from a job payload)
+                $table = $model->getTable();
+                $builder->where("{$table}.branch_id", $explicitBranchId);
+                return;
+            }
+
+            // V7-CRITICAL-U01 FIX: Fail closed for both web and console contexts when no user
+            // Previously, console mode without user returned without applying any filter
+            // Now: return empty result set for ALL contexts without authentication/branch context
+            // This prevents queue workers and scheduled jobs from operating across all branches
+            if (! app()->runningUnitTests()) {
                 // Return empty result set by adding an impossible condition
                 $table = $model->getTable();
                 $builder->whereNull("{$table}.id")->whereNotNull("{$table}.id");
@@ -159,21 +171,56 @@ class BranchScope implements Scope
     }
 
     /**
+     * Cache for schema column checks to avoid repeated DB queries
+     * @var array<string, bool>
+     */
+    protected static array $schemaColumnCache = [];
+
+    /**
      * Check if the model has a branch_id column.
      *
-     * IMPORTANT: Only check fillable attributes, NOT the existence of branch() method.
-     * The HasBranch trait adds branch() method to ALL models via BaseModel,
-     * but many tables don't actually have a branch_id column (e.g., sale_items,
-     * purchase_items, stock_movements). Using method_exists() would cause SQL errors
-     * like "Unknown column X.branch_id" for those models.
+     * V10-HIGH-03 FIX: Use schema inspection instead of $fillable to determine if a table
+     * has a branch_id column. This prevents branch scoping from being silently disabled
+     * when branch_id is omitted from $fillable for valid mass-assignment reasons.
+     *
+     * The check uses cached schema inspection to avoid performance issues.
      */
     protected function hasBranchIdColumn(Model $model): bool
     {
-        // Only check if the model has branch_id in fillable attributes
-        // This is the reliable indicator that the table has a branch_id column
-        $fillable = $model->getFillable();
+        $table = $model->getTable();
 
-        return in_array('branch_id', $fillable, true);
+        // Check cache first to avoid repeated schema queries
+        if (isset(self::$schemaColumnCache[$table])) {
+            return self::$schemaColumnCache[$table];
+        }
+
+        // First check if branch_id is in fillable (fast path, most common case)
+        $fillable = $model->getFillable();
+        if (in_array('branch_id', $fillable, true)) {
+            self::$schemaColumnCache[$table] = true;
+            return true;
+        }
+
+        // V10-HIGH-03 FIX: Also check schema if not in fillable
+        // This handles cases where branch_id exists but is guarded for security
+        try {
+            $hasColumn = \Illuminate\Support\Facades\Schema::hasColumn($table, 'branch_id');
+            self::$schemaColumnCache[$table] = $hasColumn;
+            return $hasColumn;
+        } catch (\Exception $e) {
+            // If schema check fails (e.g., during migrations), fall back to fillable check
+            self::$schemaColumnCache[$table] = false;
+            return false;
+        }
+    }
+
+    /**
+     * Clear the schema column cache.
+     * Useful for testing or after migrations.
+     */
+    public static function clearSchemaColumnCache(): void
+    {
+        self::$schemaColumnCache = [];
     }
 
     /**

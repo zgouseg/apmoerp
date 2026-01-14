@@ -25,6 +25,9 @@ class AutomatedAlertService
 {
     /**
      * Check for low stock products and generate alerts.
+     *
+     * STILL-V9-CRITICAL-01 FIX: Use StockService for stock calculations instead of stock_quantity
+     * V10-CRITICAL-01 FIX: Use branch-scoped stock calculation
      */
     public function checkLowStockAlerts(?int $branchId = null): array
     {
@@ -37,19 +40,24 @@ class AutomatedAlertService
         $alerts = [];
 
         foreach ($products as $product) {
+            // STILL-V9-CRITICAL-01 FIX: Use StockService instead of stock_quantity
+            $currentStock = $product->branch_id
+                ? \App\Services\StockService::getCurrentStockForBranch($product->id, $product->branch_id)
+                : \App\Services\StockService::getCurrentStock($product->id);
+
             $alerts[] = [
                 'type' => 'low_stock',
-                'severity' => $this->getStockSeverity($product),
+                'severity' => $this->getStockSeverity($product, $currentStock),
                 'product_id' => $product->id,
                 'product_name' => $product->name,
                 'product_code' => $product->code,
-                'current_stock' => $product->stock_quantity,
+                'current_stock' => $currentStock,
                 'alert_threshold' => $product->stock_alert_threshold,
                 'reorder_point' => $product->reorder_point,
                 'branch_id' => $product->branch_id,
                 'branch_name' => $product->branch->name ?? null,
-                'message' => "Low stock alert: {$product->name} has {$product->stock_quantity} units remaining (threshold: {$product->stock_alert_threshold})",
-                'action_required' => $product->stock_quantity <= ($product->reorder_point ?? 0) ? 'reorder' : 'monitor',
+                'message' => "Low stock alert: {$product->name} has {$currentStock} units remaining (threshold: {$product->stock_alert_threshold})",
+                'action_required' => $currentStock <= ($product->reorder_point ?? 0) ? 'reorder' : 'monitor',
             ];
         }
 
@@ -58,18 +66,27 @@ class AutomatedAlertService
 
     /**
      * Get stock severity level.
+     *
+     * STILL-V9-CRITICAL-01 FIX: Accept current stock as parameter instead of reading from product model
      */
-    private function getStockSeverity(Product $product): string
+    private function getStockSeverity(Product $product, ?float $currentStock = null): string
     {
-        if ($product->stock_quantity <= 0) {
+        // Use provided current stock or calculate it
+        if ($currentStock === null) {
+            $currentStock = $product->branch_id
+                ? \App\Services\StockService::getCurrentStockForBranch($product->id, $product->branch_id)
+                : \App\Services\StockService::getCurrentStock($product->id);
+        }
+
+        if ($currentStock <= 0) {
             return 'critical';
         }
 
-        if ($product->reorder_point && $product->stock_quantity <= $product->reorder_point) {
+        if ($product->reorder_point && $currentStock <= $product->reorder_point) {
             return 'high';
         }
 
-        if ($product->stock_alert_threshold && $product->stock_quantity <= $product->stock_alert_threshold) {
+        if ($product->stock_alert_threshold && $currentStock <= $product->stock_alert_threshold) {
             return 'medium';
         }
 
@@ -183,14 +200,21 @@ class AutomatedAlertService
 
     /**
      * Check for expiring products.
+     *
+     * STILL-V9-CRITICAL-01 FIX: Use StockService for stock calculations instead of stock_quantity
+     * V10-CRITICAL-01 FIX: Use branch-scoped stock calculation
      */
     public function checkExpiringProductAlerts(int $days = 30, ?int $branchId = null): array
     {
+        // Get branch-scoped stock expression for filtering
+        $stockSubquery = \App\Services\StockService::getBranchStockCalculationExpression('products.id', 'products.branch_id');
+
         $products = Product::query()
             ->where('is_perishable', true)
             ->whereNotNull('expiry_date')
             ->whereBetween('expiry_date', [now(), now()->addDays($days)])
-            ->where('stock_quantity', '>', 0)
+            // STILL-V9-CRITICAL-01 FIX: Use stock_movements as source of truth
+            ->whereRaw("({$stockSubquery}) > 0")
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->with('branch')
             ->get();
@@ -198,10 +222,15 @@ class AutomatedAlertService
         $alerts = [];
 
         foreach ($products as $product) {
+            // STILL-V9-CRITICAL-01 FIX: Calculate current stock from stock_movements
+            $currentStock = $product->branch_id
+                ? \App\Services\StockService::getCurrentStockForBranch($product->id, $product->branch_id)
+                : \App\Services\StockService::getCurrentStock($product->id);
+
             $daysUntilExpiry = now()->diffInDays($product->expiry_date);
             $unitCost = $product->cost ? $product->cost : ($product->standard_cost ? $product->standard_cost : 0);
-            // Calculate estimated loss with bcmath precision
-            $estimatedLoss = (float) bcmul((string) $product->stock_quantity, (string) $unitCost, 2);
+            // Calculate estimated loss with bcmath precision using actual stock from movements
+            $estimatedLoss = (float) bcmul((string) $currentStock, (string) $unitCost, 2);
 
             $alerts[] = [
                 'type' => 'expiring_product',
@@ -209,12 +238,12 @@ class AutomatedAlertService
                 'product_id' => $product->id,
                 'product_name' => $product->name,
                 'product_code' => $product->code,
-                'stock_quantity' => $product->stock_quantity,
+                'stock_quantity' => $currentStock,
                 'expiry_date' => $product->expiry_date,
                 'days_until_expiry' => $daysUntilExpiry,
                 'estimated_loss' => $estimatedLoss,
                 'branch_id' => $product->branch_id,
-                'message' => "Product expiring: {$product->name} expires in {$daysUntilExpiry} days ({$product->stock_quantity} units in stock)",
+                'message' => "Product expiring: {$product->name} expires in {$daysUntilExpiry} days ({$currentStock} units in stock)",
                 'action_required' => $daysUntilExpiry <= 7 ? 'urgent_sale' : 'promote',
             ];
         }
