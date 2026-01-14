@@ -112,9 +112,16 @@ class ScheduledReportService
             if (! empty($filters['category_id'])) {
                 $query->where('category_id', (int) $filters['category_id']);
             }
+            // V10-CRITICAL-01 FIX: Add branch filter for inventory reports
+            if (! empty($filters['branch_id'])) {
+                $query->where('branch_id', (int) $filters['branch_id']);
+            }
             if (! empty($filters['low_stock'])) {
                 // quantity is signed: positive = in, negative = out
-                $query->whereRaw('COALESCE((SELECT SUM(quantity) FROM stock_movements WHERE stock_movements.product_id = products.id), 0) <= products.reorder_point');
+                // V10-CRITICAL-01 FIX: Use branch-scoped stock calculation to prevent cross-branch leakage
+                $stockSubquery = \App\Services\StockService::getBranchStockCalculationExpression('products.id', 'products.branch_id');
+                // Use COALESCE to handle null reorder_point values
+                $query->whereRaw("({$stockSubquery}) <= COALESCE(products.reorder_point, 0)");
             }
 
             return $query->orderBy('name')
