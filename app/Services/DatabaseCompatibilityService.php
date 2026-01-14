@@ -138,17 +138,32 @@ class DatabaseCompatibilityService
     }
 
     /**
-     * Get SQL expression to truncate datetime to start of week (Monday).
+     * Get SQL expression to truncate datetime to start of week (Saturday).
+     *
+     * All database drivers are aligned to return the Saturday preceding or equal to
+     * the given date, ensuring consistent weekly analytics across MySQL, PostgreSQL,
+     * and SQLite environments.
      *
      * @param  string  $column  The datetime column name
-     * @return string SQL expression that returns first day of week
+     * @return string SQL expression that returns first day of week (Saturday)
      */
     public function weekTruncateExpression(string $column): string
     {
         return match ($this->getDriver()) {
-            'pgsql' => "DATE_TRUNC('week', {$column})",
-            'sqlite' => "DATE({$column}, 'weekday 0', '-7 days')",
-            default => "DATE(DATE_SUB({$column}, INTERVAL WEEKDAY({$column}) DAY))", // MySQL, MariaDB
+            // PostgreSQL: DATE_TRUNC uses Monday as week start by default (ISO-8601).
+            // Subtract 2 days to shift to Saturday, then truncate, then the result represents
+            // the Monday of that shifted week, which corresponds to Saturday of the original week.
+            // Alternative: cast to date, calculate days since Saturday, subtract.
+            'pgsql' => "DATE(DATE_TRUNC('week', {$column}::date + INTERVAL '2 days') - INTERVAL '2 days')",
+            // SQLite: strftime('%w', date) returns 0=Sunday, 1=Monday, ..., 6=Saturday.
+            // To get the Saturday on or before a date, subtract (dow + 1) % 7 days:
+            // Saturday(6)->(6+1)%7=0, Sunday(0)->1, Monday(1)->2, ..., Friday(5)->6
+            'sqlite' => "DATE({$column}, '-' || ((CAST(strftime('%w', {$column}) AS INTEGER) + 1) % 7) || ' days')",
+            // MySQL/MariaDB: WEEKDAY() returns 0=Monday, 1=Tuesday, ..., 5=Saturday, 6=Sunday.
+            // To get Saturday: we need to subtract (WEEKDAY + 2) % 7 days.
+            // Saturday (5) -> subtract 0, Sunday (6) -> subtract 1, Monday (0) -> subtract 2,
+            // Tuesday (1) -> subtract 3, Wednesday (2) -> subtract 4, Thursday (3) -> subtract 5, Friday (4) -> subtract 6
+            default => "DATE(DATE_SUB({$column}, INTERVAL MOD(WEEKDAY({$column}) + 2, 7) DAY))",
         };
     }
 

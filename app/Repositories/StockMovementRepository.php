@@ -111,6 +111,8 @@ final class StockMovementRepository extends EloquentBaseRepository implements St
      *
      * V10-HIGH-02 FIX: Lock the warehouse row when no stock movements exist to ensure
      * proper serialization of concurrent writes for the first movement
+     *
+     * NEW-V14-MEDIUM-04 FIX: Fail fast if warehouse_id is invalid (row doesn't exist)
      */
     public function create(array $data): StockMovement
     {
@@ -140,10 +142,15 @@ final class StockMovementRepository extends EloquentBaseRepository implements St
             // This ensures that even when no stock movements exist for this product+warehouse,
             // concurrent transactions will be serialized. The warehouse row always exists when
             // creating stock movements, so this lock is always effective.
-            DB::table('warehouses')
+            // NEW-V14-MEDIUM-04 FIX: Check if warehouse exists and throw immediately if not
+            $warehouse = DB::table('warehouses')
                 ->where('id', $data['warehouse_id'])
                 ->lockForUpdate()
                 ->first();
+
+            if ($warehouse === null) {
+                throw new \DomainException("Invalid warehouse_id: {$data['warehouse_id']}");
+            }
 
             // Then also lock any existing stock movement rows for this product+warehouse
             // This provides additional safety for the case where movements already exist
