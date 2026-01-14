@@ -41,9 +41,7 @@ class AutomatedAlertService
 
         foreach ($products as $product) {
             // STILL-V9-CRITICAL-01 FIX: Use StockService instead of stock_quantity
-            $currentStock = $product->branch_id
-                ? \App\Services\StockService::getCurrentStockForBranch($product->id, $product->branch_id)
-                : \App\Services\StockService::getCurrentStock($product->id);
+            $currentStock = \App\Services\StockService::getStock($product->id, $product->branch_id);
 
             $alerts[] = [
                 'type' => 'low_stock',
@@ -71,11 +69,9 @@ class AutomatedAlertService
      */
     private function getStockSeverity(Product $product, ?float $currentStock = null): string
     {
-        // Use provided current stock or calculate it
+        // Use provided current stock or calculate it via helper method
         if ($currentStock === null) {
-            $currentStock = $product->branch_id
-                ? \App\Services\StockService::getCurrentStockForBranch($product->id, $product->branch_id)
-                : \App\Services\StockService::getCurrentStock($product->id);
+            $currentStock = \App\Services\StockService::getStock($product->id, $product->branch_id);
         }
 
         if ($currentStock <= 0) {
@@ -222,10 +218,8 @@ class AutomatedAlertService
         $alerts = [];
 
         foreach ($products as $product) {
-            // STILL-V9-CRITICAL-01 FIX: Calculate current stock from stock_movements
-            $currentStock = $product->branch_id
-                ? \App\Services\StockService::getCurrentStockForBranch($product->id, $product->branch_id)
-                : \App\Services\StockService::getCurrentStock($product->id);
+            // STILL-V9-CRITICAL-01 FIX: Calculate current stock from stock_movements via helper method
+            $currentStock = \App\Services\StockService::getStock($product->id, $product->branch_id);
 
             $daysUntilExpiry = now()->diffInDays($product->expiry_date);
             $unitCost = $product->cost ? $product->cost : ($product->standard_cost ? $product->standard_cost : 0);

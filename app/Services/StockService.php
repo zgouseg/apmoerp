@@ -75,6 +75,26 @@ class StockService
     }
 
     /**
+     * Get current stock for a product, automatically handling branch scoping
+     * This is a convenience method that chooses the appropriate stock calculation
+     * based on whether a branch ID is provided.
+     *
+     * V10-CRITICAL-01 FIX: Helper method to reduce code duplication across callers
+     *
+     * @param int $productId The product ID
+     * @param int|null $branchId The branch ID (optional, uses global stock if null)
+     * @return float The current stock level
+     */
+    public static function getStock(int $productId, ?int $branchId = null): float
+    {
+        if ($branchId !== null) {
+            return self::getCurrentStockForBranch($productId, $branchId);
+        }
+
+        return self::getCurrentStock($productId);
+    }
+
+    /**
      * Get current stock for a product filtered by branch
      * Aggregates stock_movements through warehouses.branch_id
      *

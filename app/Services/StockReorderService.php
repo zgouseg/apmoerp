@@ -147,10 +147,8 @@ class StockReorderService
             $reorderQty = $this->calculateReorderQuantity($product);
             // V10-CRITICAL-01 FIX: Use branch-specific sales velocity
             $salesVelocity = $this->calculateSalesVelocity($product->id, 30, $product->branch_id);
-            // V10-CRITICAL-01 FIX: Use branch-scoped stock calculation
-            $currentStock = $product->branch_id
-                ? \App\Services\StockService::getCurrentStockForBranch($product->id, $product->branch_id)
-                : \App\Services\StockService::getCurrentStock($product->id);
+            // V10-CRITICAL-01 FIX: Use branch-scoped stock calculation via helper method
+            $currentStock = \App\Services\StockService::getStock($product->id, $product->branch_id);
             $daysUntilStockout = $salesVelocity > 0
                 ? ceil($currentStock / $salesVelocity)
                 : null;
@@ -183,10 +181,8 @@ class StockReorderService
      */
     private function calculatePriority(Product $product, ?int $daysUntilStockout): int
     {
-        // V10-CRITICAL-01 FIX: Use branch-scoped stock calculation
-        $currentStock = $product->branch_id
-            ? \App\Services\StockService::getCurrentStockForBranch($product->id, $product->branch_id)
-            : \App\Services\StockService::getCurrentStock($product->id);
+        // V10-CRITICAL-01 FIX: Use branch-scoped stock calculation via helper method
+        $currentStock = \App\Services\StockService::getStock($product->id, $product->branch_id);
 
         // Out of stock = highest priority
         if ($currentStock <= 0) {

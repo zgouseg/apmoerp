@@ -346,9 +346,7 @@ class Product extends BaseModel
      */
     public function isLowStock(): bool
     {
-        $currentStock = $this->branch_id
-            ? \App\Services\StockService::getCurrentStockForBranch($this->id, $this->branch_id)
-            : \App\Services\StockService::getCurrentStock($this->id);
+        $currentStock = \App\Services\StockService::getStock($this->id, $this->branch_id);
 
         return $this->stock_alert_threshold &&
             $currentStock <= $this->stock_alert_threshold;
@@ -360,11 +358,7 @@ class Product extends BaseModel
      */
     public function isOutOfStock(): bool
     {
-        $currentStock = $this->branch_id
-            ? \App\Services\StockService::getCurrentStockForBranch($this->id, $this->branch_id)
-            : \App\Services\StockService::getCurrentStock($this->id);
-
-        return $currentStock <= 0;
+        return \App\Services\StockService::getStock($this->id, $this->branch_id) <= 0;
     }
 
     /**
@@ -382,9 +376,7 @@ class Product extends BaseModel
      */
     public function getAvailableQuantity(): float
     {
-        $currentStock = $this->branch_id
-            ? \App\Services\StockService::getCurrentStockForBranch($this->id, $this->branch_id)
-            : \App\Services\StockService::getCurrentStock($this->id);
+        $currentStock = \App\Services\StockService::getStock($this->id, $this->branch_id);
 
         return max(0, $currentStock - ($this->reserved_quantity ?? 0));
     }
@@ -499,9 +491,7 @@ class Product extends BaseModel
             return false;
         }
 
-        $currentStock = $this->branch_id
-            ? \App\Services\StockService::getCurrentStockForBranch($this->id, $this->branch_id)
-            : \App\Services\StockService::getCurrentStock($this->id);
+        $currentStock = \App\Services\StockService::getStock($this->id, $this->branch_id);
 
         return $currentStock <= $this->reorder_point;
     }
