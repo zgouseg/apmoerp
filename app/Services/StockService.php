@@ -56,6 +56,34 @@ class StockService
     }
 
     /**
+     * Get current stock for multiple products filtered by branch
+     * Aggregates stock_movements through warehouses.branch_id
+     *
+     * STILL-V14-CRITICAL-01 FIX: Add branch-scoped bulk stock calculation
+     *
+     * @param  array  $productIds  Array of product IDs
+     * @param  int  $branchId  The branch ID to filter by
+     * @return array Keyed by product_id
+     */
+    public static function getBulkCurrentStockForBranch(array $productIds, int $branchId): array
+    {
+        if (empty($productIds)) {
+            return [];
+        }
+
+        $results = DB::table('stock_movements')
+            ->join('warehouses', 'stock_movements.warehouse_id', '=', 'warehouses.id')
+            ->whereIn('stock_movements.product_id', $productIds)
+            ->where('warehouses.branch_id', $branchId)
+            ->select('stock_movements.product_id')
+            ->selectRaw('COALESCE(SUM(stock_movements.quantity), 0) as stock')
+            ->groupBy('stock_movements.product_id')
+            ->get();
+
+        return $results->pluck('stock', 'product_id')->toArray();
+    }
+
+    /**
      * Get stock value for a product from stock_movements table
      * Calculates value based on quantity * unit_cost
      */
@@ -81,8 +109,8 @@ class StockService
      *
      * V10-CRITICAL-01 FIX: Helper method to reduce code duplication across callers
      *
-     * @param int $productId The product ID
-     * @param int|null $branchId The branch ID (optional, uses global stock if null)
+     * @param  int  $productId  The product ID
+     * @param  int|null  $branchId  The branch ID (optional, uses global stock if null)
      * @return float The current stock level
      */
     public static function getStock(int $productId, ?int $branchId = null): float
@@ -100,8 +128,8 @@ class StockService
      *
      * V10-CRITICAL-01 FIX: Add branch-scoped stock calculation
      *
-     * @param int $productId The product ID
-     * @param int $branchId The branch ID to filter by
+     * @param  int  $productId  The product ID
+     * @param  int  $branchId  The branch ID to filter by
      * @return float The current stock level for the product in the branch
      */
     public static function getCurrentStockForBranch(int $productId, int $branchId): float
@@ -196,15 +224,16 @@ class StockService
      * Creates a stock movement record with the specified quantity change.
      * Positive quantity adds stock, negative quantity removes stock.
      *
-     * @param int $productId The product ID
-     * @param int $warehouseId The warehouse ID (required for stock movements)
-     * @param float $quantity The quantity to adjust (positive = add, negative = remove)
-     * @param string $type The movement type (use StockMovement::TYPE_* constants)
-     * @param string|null $reference Reference description for the movement
-     * @param string|null $notes Additional notes for the movement
-     * @param int|null $referenceId Reference ID for polymorphic relation
-     * @param string|null $referenceType Reference type for polymorphic relation
+     * @param  int  $productId  The product ID
+     * @param  int  $warehouseId  The warehouse ID (required for stock movements)
+     * @param  float  $quantity  The quantity to adjust (positive = add, negative = remove)
+     * @param  string  $type  The movement type (use StockMovement::TYPE_* constants)
+     * @param  string|null  $reference  Reference description for the movement
+     * @param  string|null  $notes  Additional notes for the movement
+     * @param  int|null  $referenceId  Reference ID for polymorphic relation
+     * @param  string|null  $referenceType  Reference type for polymorphic relation
      * @return StockMovement The created stock movement record
+     *
      * @throws \InvalidArgumentException If warehouseId is null
      */
     public function adjustStock(

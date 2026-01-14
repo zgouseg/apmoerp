@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin\Reports;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Services\StockService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -32,14 +33,26 @@ class InventoryReportsExportController extends Controller
         ]);
 
         $format = $validated['format'] ?? 'web';
+        $branchId = ! empty($validated['branch_id']) ? (int) $validated['branch_id'] : null;
 
         $query = Product::query();
 
-        if (! empty($validated['branch_id'])) {
-            $query->where('branch_id', $validated['branch_id']);
+        if ($branchId) {
+            $query->where('branch_id', $branchId);
         }
 
         $products = $query->orderBy('name')->limit(5000)->get();
+
+        // STILL-V14-CRITICAL-01 FIX: Get stock from stock_movements via StockService (source of truth)
+        // instead of products.stock_quantity (cached value that may be warehouse-specific)
+        $productIds = $products->pluck('id')->toArray();
+
+        // Use branch-filtered stock calculation when a branch is specified
+        if ($branchId) {
+            $stockData = StockService::getBulkCurrentStockForBranch($productIds, $branchId);
+        } else {
+            $stockData = StockService::getBulkCurrentStock($productIds);
+        }
 
         // Available columns with labels
         $availableColumns = [
@@ -65,8 +78,9 @@ class InventoryReportsExportController extends Controller
             $columns = $orderedColumns;
         }
 
-        $rows = $products->map(function (Product $product) use ($validated, $columns) {
-            $stock = $product->stock_quantity ?? 0;
+        $rows = $products->map(function (Product $product) use ($validated, $columns, $stockData) {
+            // STILL-V14-CRITICAL-01 FIX: Use stock from stock_movements (source of truth)
+            $stock = (float) ($stockData[$product->id] ?? 0);
             $reorder = $product->reorder_point ?? 0;
 
             if (! empty($validated['only_low']) && $reorder > 0 && $stock > $reorder) {

@@ -151,14 +151,13 @@ class CheckDatabaseIntegrity extends Command
         // Check for duplicate SKUs in products
         $this->checkDuplicates('products', 'sku', "sku IS NOT NULL AND sku != ''");
 
-        // Check for negative stock quantities
-        $negativeStock = DB::table('products')
-            ->where('stock_quantity', '<', 0)
-            ->count();
+        // STILL-V14-CRITICAL-01 FIX: Check for negative stock using stock_movements as source of truth
+        // instead of products.stock_quantity (cached value)
+        $this->checkNegativeStockFromMovements();
 
-        if ($negativeStock > 0) {
-            $this->warnings[] = "Found {$negativeStock} products with negative stock";
-        }
+        // STILL-V14-CRITICAL-01 FIX: Check for stock inconsistency between
+        // products.stock_quantity (cached) and stock_movements (source of truth)
+        $this->checkStockConsistency();
 
         // Check for sales with no items
         if (Schema::hasTable('sales') && Schema::hasTable('sale_items')) {
@@ -176,6 +175,51 @@ class CheckDatabaseIntegrity extends Command
         $this->checkSaleTotals();
 
         $this->info('✓ Data integrity check completed');
+    }
+
+    /**
+     * STILL-V14-CRITICAL-01 FIX: Check for negative stock using stock_movements table
+     * (the single source of truth for inventory)
+     */
+    private function checkNegativeStockFromMovements(): void
+    {
+        if (! Schema::hasTable('stock_movements') || ! Schema::hasTable('products')) {
+            return;
+        }
+
+        // Count products with negative stock from stock_movements (source of truth)
+        $negativeStock = DB::table('stock_movements')
+            ->select('product_id')
+            ->selectRaw('SUM(quantity) as total_stock')
+            ->groupBy('product_id')
+            ->havingRaw('SUM(quantity) < 0')
+            ->count();
+
+        if ($negativeStock > 0) {
+            $this->warnings[] = "Found {$negativeStock} products with negative stock (from stock_movements)";
+        }
+    }
+
+    /**
+     * STILL-V14-CRITICAL-01 FIX: Check for stock inconsistency between cached value
+     * (products.stock_quantity) and source of truth (stock_movements)
+     */
+    private function checkStockConsistency(): void
+    {
+        if (! Schema::hasTable('stock_movements') || ! Schema::hasTable('products')) {
+            return;
+        }
+
+        // Get products with stock_quantity that doesn't match stock_movements sum
+        // Allow for small floating-point differences (0.0001)
+        $inconsistentProducts = DB::table('products')
+            ->leftJoin(DB::raw('(SELECT product_id, SUM(quantity) as calculated_stock FROM stock_movements GROUP BY product_id) as sm'), 'products.id', '=', 'sm.product_id')
+            ->whereRaw('ABS(COALESCE(products.stock_quantity, 0) - COALESCE(sm.calculated_stock, 0)) > 0.0001')
+            ->count();
+
+        if ($inconsistentProducts > 0) {
+            $this->warnings[] = "Found {$inconsistentProducts} products where stock_quantity doesn't match stock_movements (use StockService for accurate stock)";
+        }
     }
 
     private function checkDuplicates(string $table, string $column, string $where = ''): void
@@ -306,11 +350,11 @@ class CheckDatabaseIntegrity extends Command
                 $this->info("✓ Applied: {$fix}");
             } catch (\Exception $e) {
                 $this->error("✗ Failed: {$fix}");
-                $this->error("  Error: " . $e->getMessage());
+                $this->error('  Error: '.$e->getMessage());
             }
         }
 
         $this->newLine();
-        $this->info("Fixed {$fixed} out of " . count($this->fixes) . ' issues');
+        $this->info("Fixed {$fixed} out of ".count($this->fixes).' issues');
     }
 }
