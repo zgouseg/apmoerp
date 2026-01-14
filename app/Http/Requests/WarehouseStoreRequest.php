@@ -6,6 +6,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class WarehouseStoreRequest extends FormRequest
 {
@@ -20,11 +21,11 @@ class WarehouseStoreRequest extends FormRequest
         // This ensures the uniqueness check uses the same branch_id that will be used when creating the warehouse
         $branchId = (int) $this->attributes->get('branch_id');
 
-        // Fail validation if branch_id is not set
+        // Fail validation with clear message if branch context is not available
         if (! $branchId) {
-            return [
-                'branch_id' => ['required'],
-            ];
+            throw ValidationException::withMessages([
+                'branch_id' => [__('Branch context is required.')],
+            ]);
         }
 
         return [
