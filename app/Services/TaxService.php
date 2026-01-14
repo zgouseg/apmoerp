@@ -19,7 +19,8 @@ class TaxService implements TaxServiceInterface
         }
         $tax = Tax::find($taxId);
 
-        return (float) ($tax->rate ?? 0.0);
+        // NEW-HIGH-02 FIX: Use nullsafe operator to prevent crash when tax is deleted/missing
+        return (float) ($tax?->rate ?? 0.0);
     }
 
     public function compute(float $base, ?int $taxId): float
@@ -105,10 +106,10 @@ class TaxService implements TaxServiceInterface
     /**
      * Calculate tax lines for multiple items
      *
-     * @param array $items Array of items with subtotal and tax_id keys
-     * @param mixed $customer Customer model or null - Reserved for future tax exemption logic
-     * @param mixed $warehouse Warehouse model or null - Reserved for future location-based tax
-     * @param string|null $date Date for tax rate lookup - Reserved for future rate versioning
+     * @param  array  $items  Array of items with subtotal and tax_id keys
+     * @param  mixed  $customer  Customer model or null - Reserved for future tax exemption logic
+     * @param  mixed  $warehouse  Warehouse model or null - Reserved for future location-based tax
+     * @param  string|null  $date  Date for tax rate lookup - Reserved for future rate versioning
      * @return array Returns ['lines' => [...], 'total_tax' => float]
      *
      * @todo Implement customer tax exemption checking
@@ -158,8 +159,8 @@ class TaxService implements TaxServiceInterface
     /**
      * Calculate total tax for a subtotal given tax rate rules
      *
-     * @param float $subtotal Base amount before tax
-     * @param array $taxRateRules Tax rules array with rate, is_inclusive keys
+     * @param  float  $subtotal  Base amount before tax
+     * @param  array  $taxRateRules  Tax rules array with rate, is_inclusive keys
      * @return float Total tax amount
      */
     public function calculateTotalTax(float $subtotal, array $taxRateRules): float

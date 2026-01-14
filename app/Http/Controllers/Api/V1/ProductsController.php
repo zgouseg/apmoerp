@@ -175,11 +175,18 @@ class ProductsController extends BaseApiController
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'sku' => 'required|string|max:100|unique:products,sku',
+            // NEW-HIGH-04 FIX: Scope SKU uniqueness to branch_id for multi-branch ERP support
+            'sku' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('products', 'sku')->where('branch_id', $store->branch_id),
+            ],
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'cost_price' => 'nullable|numeric|min:0',
-            'quantity' => 'required|integer|min:0',
+            // NEW-MEDIUM-05 FIX: Use numeric validation to support fractional quantities (weight/volume/meters)
+            'quantity' => 'required|numeric|min:0',
             'category_id' => 'nullable|exists:product_categories,id',
             'warehouse_id' => [
                 'required_with:quantity',
