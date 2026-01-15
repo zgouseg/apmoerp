@@ -365,13 +365,17 @@ class Form extends Component
                             // Get product info
                             $product = Product::find($item['product_id']);
 
+                            // V22-HIGH-09 FIX: Set received_quantity to match quantity when status is 'received'
+                            // This ensures the listener uses the correct quantity for stock additions
+                            $receivedQty = ($this->status === 'received') ? $item['qty'] : 0;
+
                             PurchaseItem::create([
                                 'purchase_id' => $purchase->id,
                                 'product_id' => $item['product_id'],
                                 'product_name' => $product?->name ?? $item['product_name'] ?? '',
                                 'sku' => $product?->sku ?? $item['sku'] ?? null,
                                 'quantity' => $item['qty'],
-                                'received_quantity' => 0,
+                                'received_quantity' => $receivedQty,
                                 'unit_price' => $item['unit_cost'],
                                 // V22-HIGH-05 FIX: Store the calculated discount_percent
                                 'discount_percent' => round($discountPercent, 2),
