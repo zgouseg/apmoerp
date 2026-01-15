@@ -52,9 +52,10 @@ class Index extends Component
 
         $adjustment = Adjustment::findOrFail($id);
 
-        // Check if user has access to this branch's data
+        // V25-MED-02 FIX: Check if user has access to this branch's data
+        // Super admins should be able to access all branches
         $user = auth()->user();
-        if ($user->branch_id && $adjustment->branch_id !== $user->branch_id) {
+        if (! $user->hasRole('Super Admin') && $user->branch_id && $adjustment->branch_id !== $user->branch_id) {
             abort(403, 'Unauthorized access to this branch data');
         }
 
@@ -76,8 +77,11 @@ class Index extends Component
     {
         $user = auth()->user();
 
+        // V25-MED-02 FIX: Super admins should see all branches
+        $shouldFilterByBranch = ! $user->hasRole('Super Admin') && $user->branch_id;
+
         $query = Adjustment::with(['items.product', 'items.product.category'])
-            ->when($user->branch_id, fn ($q) => $q->where('adjustments.branch_id', $user->branch_id))
+            ->when($shouldFilterByBranch, fn ($q) => $q->where('adjustments.branch_id', $user->branch_id))
             ->when($this->search, function ($q) {
                 $q->where(function ($query) {
                     // V24-CRIT-03 FIX: Remove 'note' column search - Adjustment model only has 'reason'
@@ -91,12 +95,12 @@ class Index extends Component
 
         // Statistics
         $stats = [
-            'total' => Adjustment::when($user->branch_id, fn ($q) => $q->where('branch_id', $user->branch_id))->count(),
-            'this_month' => Adjustment::when($user->branch_id, fn ($q) => $q->where('branch_id', $user->branch_id))
+            'total' => Adjustment::when($shouldFilterByBranch, fn ($q) => $q->where('branch_id', $user->branch_id))->count(),
+            'this_month' => Adjustment::when($shouldFilterByBranch, fn ($q) => $q->where('branch_id', $user->branch_id))
                 ->whereYear('created_at', now()->year)
                 ->whereMonth('created_at', now()->month)
                 ->count(),
-            'total_items' => Adjustment::when($user->branch_id, fn ($q) => $q->where('branch_id', $user->branch_id))
+            'total_items' => Adjustment::when($shouldFilterByBranch, fn ($q) => $q->where('branch_id', $user->branch_id))
                 ->withCount('items')
                 ->get()
                 ->sum('items_count'),

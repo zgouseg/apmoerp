@@ -67,11 +67,12 @@ class DashboardDataService
 
     /**
      * Generate sales today data.
+     * V25-MED-01 FIX: Use sale_date instead of created_at for business reporting
      */
     public function generateSalesTodayData(?int $branchId): array
     {
         $query = DB::table('sales')
-            ->whereDate('created_at', today())
+            ->whereDate('sale_date', today())
             ->where('status', '!=', 'cancelled');
 
         if ($branchId) {
@@ -92,11 +93,12 @@ class DashboardDataService
 
     /**
      * Generate sales this week data.
+     * V25-MED-01 FIX: Use sale_date instead of created_at for business reporting
      */
     public function generateSalesWeekData(?int $branchId): array
     {
         $query = DB::table('sales')
-            ->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])
+            ->whereBetween('sale_date', [now()->startOfWeek()->toDateString(), now()->endOfWeek()->toDateString()])
             ->where('status', '!=', 'cancelled');
 
         if ($branchId) {
@@ -112,12 +114,13 @@ class DashboardDataService
 
     /**
      * Generate sales this month data.
+     * V25-MED-01 FIX: Use sale_date instead of created_at for business reporting
      */
     public function generateSalesMonthData(?int $branchId): array
     {
         $query = DB::table('sales')
-            ->whereYear('created_at', now()->year)
-            ->whereMonth('created_at', now()->month)
+            ->whereYear('sale_date', now()->year)
+            ->whereMonth('sale_date', now()->month)
             ->where('status', '!=', 'cancelled');
 
         if ($branchId) {
@@ -133,6 +136,7 @@ class DashboardDataService
 
     /**
      * Generate top selling products data.
+     * V25-MED-01 FIX: Use sale_date instead of created_at for business reporting
      */
     public function generateTopSellingProductsData(?int $branchId, int $limit = 5): array
     {
@@ -146,7 +150,7 @@ class DashboardDataService
                 DB::raw('COALESCE(SUM(sale_items.line_total), 0) as total_revenue')
             )
             ->where('sales.status', '!=', 'cancelled')
-            ->whereBetween('sales.created_at', [now()->subDays(30), now()])
+            ->whereBetween('sales.sale_date', [now()->subDays(30)->toDateString(), now()->toDateString()])
             ->groupBy('products.id', 'products.name')
             ->orderByDesc('total_quantity')
             ->limit($limit);
@@ -163,6 +167,7 @@ class DashboardDataService
 
     /**
      * Generate top customers data.
+     * V25-MED-01 FIX: Use sale_date instead of created_at for business reporting
      */
     public function generateTopCustomersData(?int $branchId, int $limit = 5): array
     {
@@ -175,7 +180,7 @@ class DashboardDataService
                 DB::raw('COALESCE(SUM(sales.total_amount), 0) as total_spent')
             )
             ->where('sales.status', '!=', 'cancelled')
-            ->whereBetween('sales.created_at', [now()->subDays(30), now()])
+            ->whereBetween('sales.sale_date', [now()->subDays(30)->toDateString(), now()->toDateString()])
             ->groupBy('customers.id', 'customers.name')
             ->orderByDesc('total_spent')
             ->limit($limit);

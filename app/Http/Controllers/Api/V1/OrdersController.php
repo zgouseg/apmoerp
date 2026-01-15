@@ -303,7 +303,7 @@ class OrdersController extends BaseApiController
             return $this->errorResponse(__('Cannot complete unpaid order'), 422);
         }
 
-        DB::transaction(function () use ($order, $next) {
+        DB::transaction(function () use ($order, $next, $current) {
             $order->status = $next;
             // V22-HIGH-04 FIX: Use the Sale::total_paid accessor which considers all valid payment statuses
             // (completed, posted, paid) instead of hardcoding only 'completed'
@@ -314,6 +314,12 @@ class OrdersController extends BaseApiController
                 ? 'paid'
                 : ($totalPaid > 0 ? 'partial' : 'unpaid');
             $order->save();
+
+            // V25-HIGH-05 FIX: Dispatch SaleCompleted event when transitioning to completed
+            // This triggers inventory deductions and other side effects
+            if ($current !== 'completed' && $next === 'completed' && $order->warehouse_id) {
+                event(new \App\Events\SaleCompleted($order->fresh('items')));
+            }
         });
 
         return $this->successResponse($order->fresh(), __('Order status updated successfully'));

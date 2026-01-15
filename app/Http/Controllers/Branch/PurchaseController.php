@@ -14,11 +14,15 @@ use App\Http\Requests\PurchaseStoreRequest;
 use App\Http\Requests\PurchaseUpdateRequest;
 use App\Models\Purchase;
 use App\Services\Contracts\PurchaseServiceInterface as Purchases;
+use App\Services\PurchaseReturnService;
 use Illuminate\Http\Request;
 
 class PurchaseController extends Controller
 {
-    public function __construct(protected Purchases $purchases) {}
+    public function __construct(
+        protected Purchases $purchases,
+        protected PurchaseReturnService $purchaseReturnService
+    ) {}
 
     protected function requireBranchId(Request $request): int
     {
@@ -101,10 +105,23 @@ class PurchaseController extends Controller
 
     public function handleReturn(PurchaseReturnRequest $request, int $purchase)
     {
-        $this->requireBranchId($request);
+        $branchId = $this->requireBranchId($request);
 
-        // No payload yet, but request handles authorization
-        return $this->ok(['purchase_id' => $purchase], __('Return handled'));
+        // V25-HIGH-09 FIX: Wire the endpoint to PurchaseReturnService for proper return workflow
+        $validated = $request->validated();
+
+        // Build the return data with purchase_id and branch_id
+        $returnData = [
+            'purchase_id' => $purchase,
+            'branch_id' => $branchId,
+            'reason' => $validated['reason'],
+            'notes' => $validated['notes'] ?? null,
+            'items' => $validated['items'],
+        ];
+
+        $return = $this->purchaseReturnService->createReturn($returnData);
+
+        return $this->ok($return->load('items'), __('Return created successfully'), 201);
     }
 
     public function cancel(PurchaseCancelRequest $request, int $purchase)

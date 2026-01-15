@@ -275,8 +275,12 @@ class Reconciliation extends Component
         // Note: reconciliation_id is left as null since this simple wizard doesn't create
         // a BankReconciliation record. For full reconciliation with tracking, use BankingService.
         $matchedIds = collect($this->matchedTransactions)->pluck('id');
+
+        // V25-HIGH-02 FIX: Only update transactions that fall within the selected date range
+        // This prevents reconciling transactions from outside the statement period
         BankTransaction::whereIn('id', $matchedIds)
             ->where('bank_account_id', $this->accountId) // Ensure transactions belong to this account
+            ->whereBetween('transaction_date', [$this->startDate, $this->endDate]) // V25-HIGH-02 FIX
             ->update([
                 'status' => 'reconciled',
             ]);

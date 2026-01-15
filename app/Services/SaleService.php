@@ -60,6 +60,8 @@ class SaleService implements SaleServiceInterface
                     // Calculate refund amount first
                     $refund = '0.00';
                     $processedItems = [];
+                    // V25-CRIT-03 FIX: Track items for stock movements
+                    $returnedItemsData = [];
 
                     foreach ($items as $it) {
                         // V22-HIGH-07 FIX: Support both sale_item_id and product_id for backwards compatibility
@@ -112,6 +114,20 @@ class SaleService implements SaleServiceInterface
                         // Use bcmath for precise money calculation
                         $line = bcmul((string) $qty, (string) $si->unit_price, 2);
                         $refund = bcadd($refund, $line, 2);
+
+                        // V25-CRIT-03 FIX: Track returned item data for stock movements
+                        $returnedItemsData[] = [
+                            'sale_item_id' => $si->id,
+                            'product_id' => $si->product_id,
+                            'qty' => $qty,
+                            'unit_price' => $si->unit_price,
+                        ];
+                    }
+
+                    // V25-CRIT-03 FIX: Validate that at least one item is being returned
+                    // Abort if no valid items were processed to prevent creating empty returns
+                    if (empty($returnedItemsData)) {
+                        throw new \InvalidArgumentException(__('No valid items to return. Please ensure items exist on the sale and have available quantities.'));
                     }
 
                     // Create return note with correct column name (total_amount)
@@ -140,7 +156,30 @@ class SaleService implements SaleServiceInterface
                         'return_date' => now()->toDateString(),
                         'reason' => $reason,
                         'total_amount' => (float) $refund,
+                        'restock_items' => true,
                     ]);
+
+                    // V25-CRIT-03 FIX: Create stock movements to track returned quantities
+                    // This enables proper over-return protection and inventory accuracy
+                    if ($sale->warehouse_id) {
+                        $stockMovementRepo = app(\App\Repositories\Contracts\StockMovementRepositoryInterface::class);
+
+                        foreach ($returnedItemsData as $itemData) {
+                            // Create stock movement to add items back to inventory
+                            $stockMovementRepo->create([
+                                'product_id' => $itemData['product_id'],
+                                'warehouse_id' => $sale->warehouse_id,
+                                'qty' => $itemData['qty'],
+                                'direction' => 'in',
+                                'movement_type' => 'return',
+                                'reference_type' => 'sale_item_return',
+                                'reference_id' => $itemData['sale_item_id'],
+                                'notes' => "Sale return for Sale #{$sale->code}: {$reason}",
+                                'unit_cost' => $itemData['unit_price'],
+                                'created_by' => auth()->id(),
+                            ]);
+                        }
+                    }
 
                     // STILL-V7-CRITICAL-U04 FIX: Create a RefundPayment record instead of directly mutating paid_amount
                     // This maintains proper audit trail and allows accurate financial reporting
@@ -183,6 +222,7 @@ class SaleService implements SaleServiceInterface
                         'sale_id' => $sale->getKey(),
                         'return_note_id' => $note->getKey(),
                         'refund_amount' => $refund,
+                        'items_returned' => count($returnedItemsData),
                     ]);
 
                     return $note;

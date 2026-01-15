@@ -7,6 +7,7 @@ namespace App\Livewire\Purchases\Returns;
 use App\Models\Purchase;
 use App\Models\ReturnNote;
 use App\Models\User;
+use App\Repositories\Contracts\StockMovementRepositoryInterface;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -147,7 +148,10 @@ class Index extends Component
 
         try {
             DB::transaction(function () use ($itemsToReturn, $user, $purchase) {
+                $stockMovementRepo = app(StockMovementRepositoryInterface::class);
                 $refund = 0.0;
+                $processedItems = [];
+
                 foreach ($itemsToReturn as $it) {
                     $pi = $purchase->items->firstWhere('product_id', $it['product_id']);
                     if (! $pi) {
@@ -155,15 +159,25 @@ class Index extends Component
                     }
                     $qty = min((float) $it['qty'], (float) $pi->qty);
                     // V23-CRIT-01 FIX: Use unit_cost accessor (maps to unit_price) instead of non-existent cost
-                    $line = $qty * (float) $pi->unit_cost;
+                    $unitCost = (float) $pi->unit_cost;
+                    $line = $qty * $unitCost;
                     $refund += $line;
+
+                    // V25-CRIT-02 FIX: Track processed items for stock movements
+                    $processedItems[] = [
+                        'product_id' => $pi->product_id,
+                        'qty' => $qty,
+                        'unit_cost' => $unitCost,
+                    ];
                 }
 
-                // V23-CRIT-01 FIX: Use correct ReturnNote fields per model schema
-                ReturnNote::create([
+                // V25-CRIT-02 FIX: Use correct ReturnNote fields per model schema
+                // Include warehouse_id for proper inventory tracking
+                $returnNote = ReturnNote::create([
                     'branch_id' => $purchase->branch_id,
                     'purchase_id' => $purchase->id,
                     'supplier_id' => $purchase->supplier_id,
+                    'warehouse_id' => $purchase->warehouse_id,
                     'type' => ReturnNote::TYPE_PURCHASE,
                     'status' => ReturnNote::STATUS_PENDING,
                     'return_date' => now(),
@@ -171,6 +185,25 @@ class Index extends Component
                     'total_amount' => $refund,
                     'processed_by' => $user->id,
                 ]);
+
+                // V25-CRIT-02 FIX: Create stock movements to deduct returned items from inventory
+                // Purchase returns reduce inventory (items going back to supplier)
+                if ($purchase->warehouse_id) {
+                    foreach ($processedItems as $item) {
+                        $stockMovementRepo->create([
+                            'product_id' => $item['product_id'],
+                            'warehouse_id' => $purchase->warehouse_id,
+                            'qty' => $item['qty'],
+                            'direction' => 'out',
+                            'movement_type' => 'purchase_return',
+                            'reference_type' => 'return_note',
+                            'reference_id' => $returnNote->id,
+                            'notes' => "Purchase return for Purchase #{$purchase->reference_number}",
+                            'unit_cost' => $item['unit_cost'],
+                            'created_by' => $user->id,
+                        ]);
+                    }
+                }
 
                 $purchase->status = 'returned';
                 $purchase->save();
