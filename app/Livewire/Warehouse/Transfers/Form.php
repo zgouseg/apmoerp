@@ -129,13 +129,25 @@ class Form extends Component
         // Save items
         $this->transfer->items()->delete();
 
+        // V24-HIGH-01 FIX: Batch load products to avoid N+1 query issue
+        $productIds = collect($this->items)->pluck('product_id')->filter()->unique();
+        $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
+
         foreach ($this->items as $item) {
+            // V24-HIGH-01 FIX: Get product from pre-loaded collection for unit_cost
+            $product = $products->get($item['product_id']);
+            $unitCost = $product ? ($product->cost ?? $product->standard_cost ?? 0) : 0;
+            
             TransferItem::create([
                 'transfer_id' => $this->transfer->id,
                 'product_id' => $item['product_id'],
                 'quantity' => $item['qty'], // Use quantity column per migration
+                'unit_cost' => $unitCost,
             ]);
         }
+        
+        // V24-HIGH-01 FIX: Update transfer total_value after items are saved
+        $this->transfer->updateTotalValue();
 
         session()->flash('success', __('Transfer saved successfully'));
 
