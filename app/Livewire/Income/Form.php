@@ -7,6 +7,7 @@ namespace App\Livewire\Income;
 use App\Livewire\Concerns\HandlesErrors;
 use App\Models\Income;
 use App\Models\IncomeCategory;
+use App\Services\BranchAccessService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -50,6 +51,34 @@ class Form extends Component
         ];
     }
 
+    /**
+     * MED-03 FIX: Unified branch determination logic used by both mount and save
+     * Returns the branch ID to use, checking in order: income record, user branch_id, user branches pivot
+     */
+    protected function determineBranchId(?Income $income = null): ?int
+    {
+        $user = auth()->user();
+
+        // If editing an existing income, use its branch
+        if ($income && $income->exists && $income->branch_id) {
+            return (int) $income->branch_id;
+        }
+
+        if (! $user) {
+            return null;
+        }
+
+        // Check direct branch_id assignment
+        if ($user->branch_id) {
+            return (int) $user->branch_id;
+        }
+
+        // Fallback to first branch from pivot relationship
+        $firstBranch = $user->branches()->first();
+
+        return $firstBranch ? (int) $firstBranch->id : null;
+    }
+
     public function mount(?Income $income = null): void
     {
         $this->authorize('income.manage');
@@ -59,7 +88,9 @@ class Form extends Component
         $this->income_date = now()->format('Y-m-d');
 
         if ($income && $income->exists) {
-            if ($user?->branch_id && $income->branch_id && $income->branch_id !== $user->branch_id && ! $isSuperAdmin) {
+            // MED-03 FIX: Use BranchAccessService for consistent multi-branch access check
+            $branchAccessService = app(BranchAccessService::class);
+            if (! $isSuperAdmin && $income->branch_id && ! $branchAccessService->canAccessBranch($user, $income->branch_id)) {
                 abort(403, __('You cannot access income records from other branches.'));
             }
 
@@ -96,14 +127,20 @@ class Form extends Component
         $validated = $this->validate();
         $user = auth()->user();
         $isSuperAdmin = $user?->hasAnyRole(['Super Admin', 'super-admin']);
-        $branchId = $this->income?->branch_id ?? $user?->branch_id ?? $user?->branches()->first()?->id;
+
+        // MED-03 FIX: Use unified branch determination logic
+        $branchId = $this->determineBranchId($this->income);
 
         if (! $branchId && ! $isSuperAdmin) {
             abort(403, __('Unable to determine a branch for this income record.'));
         }
 
-        if ($this->income && $this->income->branch_id && $branchId !== $this->income->branch_id && ! $isSuperAdmin) {
-            abort(403, __('You cannot modify income records from another branch.'));
+        // MED-03 FIX: Use BranchAccessService for consistent access check
+        if ($this->income && $this->income->branch_id && ! $isSuperAdmin) {
+            $branchAccessService = app(BranchAccessService::class);
+            if (! $branchAccessService->canAccessBranch($user, $this->income->branch_id)) {
+                abort(403, __('You cannot modify income records from another branch.'));
+            }
         }
 
         $validated['branch_id'] = $this->income?->branch_id ?? $branchId;

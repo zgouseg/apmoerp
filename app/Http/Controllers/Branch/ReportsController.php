@@ -62,13 +62,21 @@ class ReportsController extends Controller
         $b = (int) $request->attributes->get('branch_id');
         $from = $request->input('from', now()->startOfMonth()->toDateString());
         $to = $request->input('to', now()->endOfMonth()->toDateString());
+
+        // MED-01 FIX: Exclude cancelled/void/returned/refunded sales and purchases for accurate PnL
+        // These statuses represent transactions that should not be counted in revenue/expenses
+        $excludedStatuses = ['cancelled', 'void', 'voided', 'returned', 'refunded'];
+
         $sales = DB::table('sales')
             ->where('branch_id', $b)
+            ->whereNotIn('status', $excludedStatuses)
             ->whereDate('created_at', '>=', $from)
             ->whereDate('created_at', '<=', $to)
             ->sum('total_amount');
+
         $purchases = DB::table('purchases')
             ->where('branch_id', $b)
+            ->whereNotIn('status', $excludedStatuses)
             ->whereDate('created_at', '>=', $from)
             ->whereDate('created_at', '<=', $to)
             ->sum('total_amount');

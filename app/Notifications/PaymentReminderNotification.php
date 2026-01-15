@@ -30,6 +30,9 @@ class PaymentReminderNotification extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
+        // HIGH-01 FIX: Use correct route name 'app.sales.show' instead of invalid '/invoices/' URL
+        $invoiceUrl = route('app.sales.show', ['sale' => $this->alert->id]);
+
         return (new MailMessage)
             ->subject(__('Payment Reminder'))
             ->greeting(__('Hello :name', ['name' => $notifiable->name]))
@@ -37,7 +40,7 @@ class PaymentReminderNotification extends Notification implements ShouldQueue
             ->line(__('Invoice: :reference', ['reference' => $this->alert->reference]))
             ->line(__('Amount Due: :amount', ['amount' => money($this->alert->amount_due)]))
             ->line(__('Due Date: :date', ['date' => $this->alert->due_date]))
-            ->action(__('View Invoice'), url('/invoices/'.$this->alert->id))
+            ->action(__('View Invoice'), $invoiceUrl)
             ->line(__('Thank you for your business!'));
     }
 

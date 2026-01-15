@@ -138,16 +138,18 @@ class SmartNotificationsService
 
     /**
      * Check and send overdue invoice notifications
+     *
+     * HIGH-02 FIX: Use payment_status instead of status for more accurate overdue detection
      */
     public function checkOverdueInvoices(?int $branchId = null): array
     {
         $notified = [];
 
         try {
-            // Use actual columns: 'due_date' instead of 'due_date' (same),
-            // and calculate due_total from (total_amount - paid_amount) instead of using accessor
+            // HIGH-02 FIX: Use payment_status (unpaid/partial) which is more accurate than status='pending'
+            // A sale with status='completed' could still have unpaid balance
             $query = Sale::query()
-                ->where('status', 'pending')
+                ->whereIn('payment_status', ['unpaid', 'partial'])
                 ->whereRaw('(total_amount - paid_amount) > 0')
                 ->whereNotNull('due_date')
                 ->whereDate('due_date', '<', today())
@@ -211,6 +213,8 @@ class SmartNotificationsService
 
     /**
      * Check and send payment reminders for invoices due soon
+     *
+     * HIGH-02 FIX: Use payment_status instead of status for more accurate detection
      */
     public function checkPaymentReminders(?int $branchId = null, int $daysBefore = 3): array
     {
@@ -219,9 +223,9 @@ class SmartNotificationsService
         try {
             $dueDate = today()->addDays($daysBefore);
 
-            // Use actual columns and calculate due_total from (total_amount - paid_amount)
+            // HIGH-02 FIX: Use payment_status (unpaid/partial) which is more accurate than status='pending'
             $query = Sale::query()
-                ->where('status', 'pending')
+                ->whereIn('payment_status', ['unpaid', 'partial'])
                 ->whereRaw('(total_amount - paid_amount) > 0')
                 ->whereNotNull('due_date')
                 ->whereDate('due_date', $dueDate)
@@ -274,15 +278,27 @@ class SmartNotificationsService
 
     /**
      * Get users who should receive notifications based on permission
+     *
+     * HIGH-02 FIX: Use branches pivot relationship instead of just branch_id column
+     * to properly support multi-branch users
      */
     protected function getUsersForNotification(string $permission, ?int $branchId = null): \Illuminate\Support\Collection
     {
-        return User::query()
+        $query = User::query()
             ->where('is_active', true)
             ->whereNotNull('email')
-            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
-            ->permission($permission)
-            ->get();
+            ->permission($permission);
+
+        // HIGH-02 FIX: Use branches pivot relationship for proper multi-branch support
+        // Users can access a branch either via branch_id column OR via branches pivot table
+        if ($branchId) {
+            $query->where(function ($q) use ($branchId) {
+                $q->where('branch_id', $branchId)
+                    ->orWhereRelation('branches', 'branches.id', $branchId);
+            });
+        }
+
+        return $query->get();
     }
 
     /**
