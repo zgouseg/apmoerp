@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Models\RentalContract;
-use App\Models\RentalUnit;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -34,10 +33,11 @@ class ExpireRentalContracts extends Command
 
         $this->info("Checking for rental contracts that expired before or on: {$date}");
 
-        // Find active contracts that have passed their end date
+        // MED-06 FIX: Use <= to match description "before or on"
+        // Find active contracts that have passed their end date (including today)
         $expiredContracts = RentalContract::where('status', 'active')
             ->whereNotNull('end_date')
-            ->where('end_date', '<', $date)
+            ->where('end_date', '<=', $date)
             ->with('unit')
             ->get();
 

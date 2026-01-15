@@ -30,9 +30,15 @@ class SetBranchContext
     public function handle(Request $request, Closure $next): Response
     {
         // Priority: Route param > Request payload (for POST/PUT) > Header
-        $routeBranchId = $request->route('branch');
+        $routeBranchParam = $request->route('branch');
         $payloadBranchId = $request->input('branch_id');
         $headerBranchId = $request->headers->get('X-Branch-Id');
+
+        // CRIT-01 FIX: Handle Route Binding returning Branch Model instead of ID
+        // Route::bind('branch') in bootstrap/app.php returns Branch model, not ID
+        $routeBranchId = $routeBranchParam instanceof Branch
+            ? $routeBranchParam->getKey()
+            : $routeBranchParam;
 
         // Determine the branch ID to use
         $branchId = $routeBranchId ?? $payloadBranchId ?? $headerBranchId;
@@ -67,8 +73,11 @@ class SetBranchContext
             }
         }
 
+        // CRIT-01 FIX: Reuse Branch model if already resolved from route binding
         /** @var Branch $branch */
-        $branch = Branch::query()->whereKey($branchId)->first();
+        $branch = $routeBranchParam instanceof Branch
+            ? $routeBranchParam
+            : Branch::query()->whereKey($branchId)->first();
 
         if (! $branch) {
             throw new ModelNotFoundException('Branch not found.');
@@ -84,7 +93,7 @@ class SetBranchContext
             // Super admins can access all branches
             if (! BranchContextManager::isSuperAdmin($user)) {
                 $accessibleBranchIds = BranchContextManager::getAccessibleBranchIds();
-                
+
                 if (! in_array((int) $branch->getKey(), $accessibleBranchIds, true)) {
                     return $this->error(
                         'You do not have access to this branch.',
@@ -97,6 +106,9 @@ class SetBranchContext
                 }
             }
         }
+
+        // MED-08 FIX: Set explicit branch context for BranchScope to use
+        BranchContextManager::setBranchContext((int) $branch->getKey());
 
         // set into request + container
         $request->attributes->set('branch', $branch);
