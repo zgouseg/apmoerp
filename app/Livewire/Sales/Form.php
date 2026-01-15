@@ -281,25 +281,63 @@ class Form extends Component
         $this->items = array_values($this->items);
     }
 
+    /**
+     * V22-HIGH-06 FIX: Use BCMath for consistent precision with line item calculations
+     */
     public function getSubTotalProperty(): float
     {
-        return collect($this->items)->sum(function ($item) {
-            return ($item['qty'] ?? 0) * ($item['unit_price'] ?? 0) - ($item['discount'] ?? 0);
-        });
+        $total = '0.00';
+        foreach ($this->items as $item) {
+            $qty = (string) ($item['qty'] ?? 0);
+            $price = (string) ($item['unit_price'] ?? 0);
+            $discount = (string) ($item['discount'] ?? 0);
+
+            $lineSubtotal = bcmul($qty, $price, BCMATH_CALCULATION_SCALE);
+            $lineAfterDiscount = bcsub($lineSubtotal, $discount, BCMATH_CALCULATION_SCALE);
+            $total = bcadd($total, $lineAfterDiscount, BCMATH_CALCULATION_SCALE);
+        }
+
+        return (float) bcdiv($total, '1', BCMATH_STORAGE_SCALE);
     }
 
+    /**
+     * V22-HIGH-06 FIX: Use BCMath for consistent precision with line item calculations
+     */
     public function getTaxTotalProperty(): float
     {
-        return collect($this->items)->sum(function ($item) {
-            $lineTotal = ($item['qty'] ?? 0) * ($item['unit_price'] ?? 0) - ($item['discount'] ?? 0);
+        $total = '0.00';
+        foreach ($this->items as $item) {
+            $qty = (string) ($item['qty'] ?? 0);
+            $price = (string) ($item['unit_price'] ?? 0);
+            $discount = (string) ($item['discount'] ?? 0);
+            $taxRate = (string) ($item['tax_rate'] ?? 0);
 
-            return $lineTotal * (($item['tax_rate'] ?? 0) / 100);
-        });
+            $lineSubtotal = bcmul($qty, $price, BCMATH_CALCULATION_SCALE);
+            $lineAfterDiscount = bcsub($lineSubtotal, $discount, BCMATH_CALCULATION_SCALE);
+            $taxRateDecimal = bcdiv($taxRate, '100', BCMATH_TAX_RATE_SCALE);
+            $taxAmount = bcmul($lineAfterDiscount, $taxRateDecimal, BCMATH_CALCULATION_SCALE);
+            $total = bcadd($total, $taxAmount, BCMATH_CALCULATION_SCALE);
+        }
+
+        return (float) bcdiv($total, '1', BCMATH_STORAGE_SCALE);
     }
 
+    /**
+     * V22-HIGH-06 FIX: Use BCMath for consistent precision
+     */
     public function getGrandTotalProperty(): float
     {
-        return $this->subTotal + $this->taxTotal - $this->discount_total + $this->shipping_total;
+        $subTotal = (string) $this->subTotal;
+        $taxTotal = (string) $this->taxTotal;
+        $discountTotal = (string) $this->discount_total;
+        $shippingTotal = (string) $this->shipping_total;
+
+        // grandTotal = subTotal + taxTotal - discount_total + shipping_total
+        $result = bcadd($subTotal, $taxTotal, BCMATH_CALCULATION_SCALE);
+        $result = bcsub($result, $discountTotal, BCMATH_CALCULATION_SCALE);
+        $result = bcadd($result, $shippingTotal, BCMATH_CALCULATION_SCALE);
+
+        return (float) bcdiv($result, '1', BCMATH_STORAGE_SCALE);
     }
 
     public function save(): mixed

@@ -315,11 +315,17 @@ class ScheduledReportService
         return $csv;
     }
 
+    /**
+     * V22-MED-01 FIX: Generate actual PDF using Dompdf
+     */
     protected function generatePdf(ReportTemplate $template, array $data): string
     {
         $html = $this->buildPdfHtml($template, $data);
 
-        return $html;
+        // Use Dompdf to generate actual PDF content
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
+
+        return $pdf->output();
     }
 
     protected function buildPdfHtml(ReportTemplate $template, array $data): string
@@ -369,9 +375,61 @@ class ScheduledReportService
         return $html;
     }
 
+    /**
+     * V22-MED-01 FIX: Generate actual Excel file using PhpSpreadsheet
+     */
     protected function generateExcel(array $data): string
     {
-        return $this->generateCsv($data);
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+
+        if (empty($data)) {
+            $sheet->setCellValue('A1', 'No data available');
+        } else {
+            // Write headers
+            $headers = array_keys($data[0]);
+            $col = 1;
+            foreach ($headers as $header) {
+                $sheet->setCellValueByColumnAndRow($col, 1, ucwords(str_replace('_', ' ', $header)));
+                $col++;
+            }
+
+            // Style header row
+            $headerStyle = [
+                'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                'fill' => [
+                    'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                    'startColor' => ['rgb' => '10b981'],
+                ],
+            ];
+            $sheet->getStyle('A1:'.\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($headers)).'1')
+                ->applyFromArray($headerStyle);
+
+            // Write data rows
+            $row = 2;
+            foreach ($data as $record) {
+                $col = 1;
+                foreach ($record as $value) {
+                    $sheet->setCellValueByColumnAndRow($col, $row, $value);
+                    $col++;
+                }
+                $row++;
+            }
+
+            // Auto-size columns
+            foreach (range(1, count($headers)) as $col) {
+                $sheet->getColumnDimensionByColumn($col)->setAutoSize(true);
+            }
+        }
+
+        // Generate XLSX content
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+
+        ob_start();
+        $writer->save('php://output');
+        $content = ob_get_clean();
+
+        return $content;
     }
 
     protected function sendEmails(array $recipientEmails, string $filePath, ReportTemplate $template, string $scheduleName): array

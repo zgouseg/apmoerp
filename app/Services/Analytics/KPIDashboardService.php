@@ -95,8 +95,9 @@ class KPIDashboardService
      */
     public function getInventoryKPIs(?int $branchId): array
     {
+        // V22-HIGH-11 FIX: Use status='active' instead of is_active (Product model uses status field)
         $query = Product::query()
-            ->where('is_active', true);
+            ->where('status', 'active');
 
         if ($branchId) {
             $query->where('branch_id', $branchId);
@@ -104,24 +105,27 @@ class KPIDashboardService
 
         $totalProducts = $query->count();
 
+        // V22-HIGH-11 FIX: Use status='active' instead of is_active
         // Low stock products - use stock_quantity and reorder_point (actual column names)
         $lowStockCount = Product::query()
-            ->where('is_active', true)
+            ->where('status', 'active')
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereColumn('stock_quantity', '<=', 'reorder_point')
             ->where('reorder_point', '>', 0)
             ->count();
 
+        // V22-HIGH-11 FIX: Use status='active' instead of is_active
         // Out of stock products
         $outOfStockCount = Product::query()
-            ->where('is_active', true)
+            ->where('status', 'active')
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->where('stock_quantity', '<=', 0)
             ->count();
 
+        // V22-HIGH-11 FIX: Use status='active' instead of is_active
         // Total inventory value
         $inventoryValue = Product::query()
-            ->where('is_active', true)
+            ->where('status', 'active')
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->sum(DB::raw('stock_quantity * COALESCE(cost, 0)'));
 

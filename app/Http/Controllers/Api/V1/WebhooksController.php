@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Models\Store;
+use App\Services\BranchContextManager;
 use App\Services\Store\StoreSyncService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -25,10 +26,17 @@ class WebhooksController extends BaseApiController
 
     public function handleShopify(Request $request, int $storeId): JsonResponse
     {
-        $store = Store::with('integration')->find($storeId);
+        // V22-CRIT-01 FIX: Load Store without BranchScope since webhooks don't have auth user
+        $store = Store::withoutGlobalScopes()->with('integration')->find($storeId);
 
         if (! $store || ! $store->is_active || $store->type !== 'shopify') {
             return $this->errorResponse(__('Store not found or not active'), 404);
+        }
+
+        // V22-CRIT-01 FIX: Set branch context from the store's branch_id
+        if ($store->branch_id) {
+            BranchContextManager::setBranchContext($store->branch_id);
+            request()->attributes->set('branch_id', $store->branch_id);
         }
 
         if (! $this->verifyShopifyWebhook($request, $store)) {
@@ -64,10 +72,17 @@ class WebhooksController extends BaseApiController
 
     public function handleWooCommerce(Request $request, int $storeId): JsonResponse
     {
-        $store = Store::with('integration')->find($storeId);
+        // V22-CRIT-01 FIX: Load Store without BranchScope since webhooks don't have auth user
+        $store = Store::withoutGlobalScopes()->with('integration')->find($storeId);
 
         if (! $store || ! $store->is_active || $store->type !== 'woocommerce') {
             return $this->errorResponse(__('Store not found or not active'), 404);
+        }
+
+        // V22-CRIT-01 FIX: Set branch context from the store's branch_id
+        if ($store->branch_id) {
+            BranchContextManager::setBranchContext($store->branch_id);
+            request()->attributes->set('branch_id', $store->branch_id);
         }
 
         if (! $this->verifyWooCommerceWebhook($request, $store)) {
@@ -158,10 +173,17 @@ class WebhooksController extends BaseApiController
      */
     public function handleLaravel(Request $request, int $storeId): JsonResponse
     {
-        $store = Store::with('integration')->find($storeId);
+        // V22-CRIT-01 FIX: Load Store without BranchScope since webhooks don't have auth user
+        $store = Store::withoutGlobalScopes()->with('integration')->find($storeId);
 
         if (! $store || ! $store->is_active || $store->type !== 'laravel') {
             return $this->errorResponse(__('Store not found or not active'), 404);
+        }
+
+        // V22-CRIT-01 FIX: Set branch context from the store's branch_id
+        if ($store->branch_id) {
+            BranchContextManager::setBranchContext($store->branch_id);
+            request()->attributes->set('branch_id', $store->branch_id);
         }
 
         if (! $this->verifyLaravelWebhook($request, $store)) {
@@ -242,19 +264,62 @@ class WebhooksController extends BaseApiController
             if ($mapping && $mapping->product) {
                 $inventoryService = app(\App\Services\Contracts\InventoryServiceInterface::class);
                 request()->attributes->set('branch_id', $store->branch_id);
-                $currentQty = $inventoryService->currentQty($mapping->product->id);
+
+                // V22-CRIT-02 FIX: Get the default warehouse for the store's branch
+                $warehouseId = $this->getDefaultWarehouseForBranch($store->branch_id);
+
+                if (! $warehouseId) {
+                    Log::warning('Laravel inventory update skipped: no default warehouse for branch', [
+                        'store_id' => $store->id,
+                        'branch_id' => $store->branch_id,
+                        'product_id' => $mapping->product->id,
+                    ]);
+
+                    return;
+                }
+
+                $currentQty = $inventoryService->currentQty($mapping->product->id, $warehouseId);
                 $difference = $quantity - $currentQty;
 
                 if ($difference != 0) {
                     $inventoryService->adjust(
                         $mapping->product->id,
                         $difference,
-                        null,
+                        $warehouseId,
                         'Laravel store inventory webhook update'
                     );
                 }
             }
         }
+    }
+
+    /**
+     * V22-CRIT-02 FIX: Get the default warehouse for a branch
+     */
+    protected function getDefaultWarehouseForBranch(?int $branchId): ?int
+    {
+        if (! $branchId) {
+            return null;
+        }
+
+        // First try to get the default warehouse for this branch
+        $warehouse = \App\Models\Warehouse::withoutGlobalScopes()
+            ->where('branch_id', $branchId)
+            ->where('is_default', true)
+            ->where('is_active', true)
+            ->first();
+
+        if ($warehouse) {
+            return $warehouse->id;
+        }
+
+        // Fall back to any active warehouse in the branch
+        $warehouse = \App\Models\Warehouse::withoutGlobalScopes()
+            ->where('branch_id', $branchId)
+            ->where('is_active', true)
+            ->first();
+
+        return $warehouse?->id;
     }
 
     protected function isFresh(?string $timestamp, int $allowedSkewSeconds = 180): bool

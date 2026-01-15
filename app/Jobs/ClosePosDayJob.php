@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Models\Branch;
 use App\Services\BranchContextManager;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -26,16 +27,33 @@ class ClosePosDayJob implements ShouldQueue
     {
         $date = $this->date ?: now()->toDateString();
 
-        // HIGH-08 FIX: Set branch context for BranchScope to work properly in queue
-        if ($this->branchId) {
-            BranchContextManager::setBranchContext($this->branchId);
+        // V22-MED-05 FIX: If no branchId is provided, process all active branches
+        if ($this->branchId === null) {
+            $activeBranches = Branch::withoutGlobalScopes()
+                ->where('is_active', true)
+                ->pluck('id');
+
+            foreach ($activeBranches as $branchId) {
+                $this->processClosingForBranch($date, $branchId);
+            }
+        } else {
+            $this->processClosingForBranch($date, $this->branchId);
         }
+    }
+
+    /**
+     * V22-MED-05 FIX: Process POS closing for a specific branch
+     */
+    protected function processClosingForBranch(string $date, int $branchId): void
+    {
+        // HIGH-08 FIX: Set branch context for BranchScope to work properly in queue
+        BranchContextManager::setBranchContext($branchId);
 
         try {
             // V6-MEDIUM-02 FIX: Filter only revenue statuses, exclude cancelled/void/returned sales
             $sales = \App\Models\Sale::query()
                 ->whereDate('created_at', $date)
-                ->when($this->branchId, fn ($q) => $q->where('branch_id', $this->branchId))
+                ->where('branch_id', $branchId)
                 ->whereNotIn('status', ['cancelled', 'void', 'returned', 'refunded'])
                 ->get(['total_amount', 'paid_amount']);
 
@@ -54,13 +72,13 @@ class ClosePosDayJob implements ShouldQueue
             // Save a closing record if you have a model/table for that
             if (class_exists(\App\Models\PosClosing::class)) {
                 \App\Models\PosClosing::query()->create([
-                    'branch_id' => $this->branchId,
+                    'branch_id' => $branchId,
                     'date' => $date,
                     'gross' => $gross,
                     'paid' => $paid,
                 ]);
             } else {
-                Log::info('POS closing summary', compact('date', 'gross', 'paid') + ['branch_id' => $this->branchId]);
+                Log::info('POS closing summary', compact('date', 'gross', 'paid') + ['branch_id' => $branchId]);
             }
         } finally {
             // HIGH-08 FIX: Clear branch context to prevent leakage

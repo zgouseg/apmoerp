@@ -345,12 +345,29 @@ class Form extends Component
                         }
 
                         foreach ($this->items as $item) {
-                            $lineTotal = ($item['qty'] * $item['unit_cost']) - ($item['discount'] ?? 0);
-                            $taxAmount = $lineTotal * (($item['tax_rate'] ?? 0) / 100);
-                            $lineTotal += $taxAmount;
+                            // V22-HIGH-05 FIX: Calculate discount_percent from discount amount
+                            // The UI allows entering a discount amount, which needs to be converted to percentage
+                            $lineSubtotal = $item['qty'] * $item['unit_cost'];
+                            $discountAmount = max(0, (float) ($item['discount'] ?? 0));
+
+                            // Calculate discount_percent from the discount amount (if lineSubtotal > 0)
+                            $discountPercent = 0;
+                            if ($lineSubtotal > 0 && $discountAmount > 0) {
+                                // Ensure discount doesn't exceed line subtotal
+                                $discountAmount = min($discountAmount, $lineSubtotal);
+                                $discountPercent = ($discountAmount / $lineSubtotal) * 100;
+                            }
+
+                            $lineAfterDiscount = $lineSubtotal - $discountAmount;
+                            $taxAmount = $lineAfterDiscount * (($item['tax_rate'] ?? 0) / 100);
+                            $lineTotal = $lineAfterDiscount + $taxAmount;
 
                             // Get product info
                             $product = Product::find($item['product_id']);
+
+                            // V22-HIGH-09 FIX: Set received_quantity to match quantity when status is 'received'
+                            // This ensures the listener uses the correct quantity for stock additions
+                            $receivedQty = ($this->status === 'received') ? $item['qty'] : 0;
 
                             PurchaseItem::create([
                                 'purchase_id' => $purchase->id,
@@ -358,9 +375,10 @@ class Form extends Component
                                 'product_name' => $product?->name ?? $item['product_name'] ?? '',
                                 'sku' => $product?->sku ?? $item['sku'] ?? null,
                                 'quantity' => $item['qty'],
-                                'received_quantity' => 0,
+                                'received_quantity' => $receivedQty,
                                 'unit_price' => $item['unit_cost'],
-                                'discount_percent' => 0,
+                                // V22-HIGH-05 FIX: Store the calculated discount_percent
+                                'discount_percent' => round($discountPercent, 2),
                                 'tax_percent' => $item['tax_rate'] ?? 0,
                                 'tax_amount' => $taxAmount,
                                 'line_total' => $lineTotal,

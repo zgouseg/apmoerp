@@ -53,26 +53,56 @@ class SaleService implements SaleServiceInterface
                 $sale = $this->findBranchSaleOrFail($saleId)->load('items');
 
                 return DB::transaction(function () use ($sale, $items, $reason) {
+                    // V22-HIGH-07 FIX: Calculate previously returned quantities per sale_item
+                    // This prevents over-returning items across multiple return requests
+                    $previouslyReturned = $this->getPreviouslyReturnedQuantities($sale->getKey());
+
                     // Calculate refund amount first
                     $refund = '0.00';
+                    $processedItems = [];
+
                     foreach ($items as $it) {
+                        // V22-HIGH-07 FIX: Support both sale_item_id and product_id for backwards compatibility
+                        // sale_item_id is preferred as it correctly identifies the specific line item
+                        $saleItemId = $it['sale_item_id'] ?? null;
+                        $productId = $it['product_id'] ?? null;
+                        $requestedQty = (float) ($it['qty'] ?? 0);
+
                         // Validate required fields
-                        if (! isset($it['product_id']) || ! isset($it['qty'])) {
+                        if ((! $saleItemId && ! $productId) || $requestedQty <= 0) {
                             continue;
                         }
 
                         // Prevent negative quantity exploit in returns
-                        $requestedQty = (float) $it['qty'];
                         if ($requestedQty <= 0) {
                             throw new \InvalidArgumentException(__('Return quantity must be positive. Received: :qty', ['qty' => $requestedQty]));
                         }
 
-                        $si = $sale->items->firstWhere('product_id', $it['product_id']);
+                        // V22-HIGH-07 FIX: Find sale item by sale_item_id if provided, else by product_id
+                        $si = null;
+                        if ($saleItemId) {
+                            $si = $sale->items->firstWhere('id', $saleItemId);
+                        } else {
+                            // Legacy: find by product_id - but now we track which items were already processed
+                            // to handle multiple items with the same product
+                            $si = $sale->items
+                                ->filter(fn ($item) => $item->product_id == $productId && ! in_array($item->id, $processedItems))
+                                ->first();
+                        }
+
                         if (! $si) {
                             continue;
                         }
-                        // Use quantity column (not qty) - cap at original sale quantity
-                        $qty = min($requestedQty, (float) $si->quantity);
+
+                        // Mark this item as processed
+                        $processedItems[] = $si->id;
+
+                        // V22-HIGH-07 FIX: Calculate available quantity considering previous returns
+                        $alreadyReturned = $previouslyReturned[$si->id] ?? 0.0;
+                        $availableToReturn = max(0, (float) $si->quantity - $alreadyReturned);
+
+                        // Cap at available quantity
+                        $qty = min($requestedQty, $availableToReturn);
 
                         // Skip if qty is zero or negative (additional safety check)
                         if ($qty <= 0) {
@@ -138,14 +168,15 @@ class SaleService implements SaleServiceInterface
                         ]);
                     }
 
+                    // V22-HIGH-07 FIX: For simplicity, mark as returned when any return is processed
+                    // Note: The previous logic for tracking partial returns was incomplete.
+                    // A full implementation would track returned quantities per line item in a return_items table.
+                    // For now, we mark the sale as returned when any return is processed.
                     $sale->status = 'returned';
                     // V9-HIGH-03 FIX: Do NOT update paid_amount when refund is pending
                     // The paid_amount should only be updated when refund is actually completed
                     // This maintains accurate financial reporting and prevents incorrect balance calculations
                     // Note: paid_amount will be updated by the refund completion workflow
-                    // OLD CODE (removed):
-                    // $newPaidAmount = bcsub((string) $sale->paid_amount, $refund, 2);
-                    // $sale->paid_amount = max(0.0, (float) $newPaidAmount);
                     $sale->save();
 
                     $this->logServiceInfo('handleReturn', 'Sale return processed with refund record', [
@@ -160,6 +191,33 @@ class SaleService implements SaleServiceInterface
             operation: 'handleReturn',
             context: ['sale_id' => $saleId, 'items_count' => count($items), 'reason' => $reason]
         );
+    }
+
+    /**
+     * V22-HIGH-07 FIX: Get quantities already returned per sale_item_id
+     * This is a simplified implementation - a full solution would track return items in a separate table
+     */
+    protected function getPreviouslyReturnedQuantities(int $saleId): array
+    {
+        // In a full implementation, this would query a return_note_items table
+        // For now, we check stock movements with reference_type = 'return' and reference to sale items
+        $saleItemIds = \App\Models\SaleItem::where('sale_id', $saleId)->pluck('id');
+
+        $returned = [];
+        foreach ($saleItemIds as $itemId) {
+            // Check for return-related stock movements for this sale item
+            // This is an approximation - a complete fix would require a return_items table
+            // Use 'quantity' column (the actual column name in stock_movements table)
+            // Returns add stock back, so we look for positive quantities (direction='in')
+            $returnedQty = StockMovement::where('reference_type', 'sale_item_return')
+                ->where('reference_id', $itemId)
+                ->where('quantity', '>', 0)  // Positive quantity = stock added back
+                ->sum('quantity');
+
+            $returned[$itemId] = abs((float) $returnedQty);
+        }
+
+        return $returned;
     }
 
     /**

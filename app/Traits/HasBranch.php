@@ -152,6 +152,7 @@ trait HasBranch
 
     /**
      * Check if model is accessible by user
+     * V22-MED-02 FIX: Query branches relationship directly instead of requiring it to be pre-loaded
      */
     public function isAccessibleByUser(?object $user = null): bool
     {
@@ -169,8 +170,16 @@ trait HasBranch
             return true;
         }
 
-        if (method_exists($user, 'branches') && $user->relationLoaded('branches')) {
-            return $user->branches->contains('id', $this->branch_id);
+        // V22-MED-02 FIX: Check branches relationship via query instead of requiring it to be loaded
+        // This ensures correct results even when the relationship isn't pre-loaded
+        if (method_exists($user, 'branches')) {
+            // If already loaded, use the collection
+            if ($user->relationLoaded('branches')) {
+                return $user->branches->contains('id', $this->branch_id);
+            }
+
+            // Otherwise, query the pivot table directly to avoid loading all branches
+            return $user->branches()->where('branches.id', $this->branch_id)->exists();
         }
 
         return false;

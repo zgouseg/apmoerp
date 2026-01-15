@@ -132,10 +132,8 @@ class ProductsController extends BaseApiController
     {
         $store = $this->getStore($request);
 
-        if (! auth()->user()) {
-            return $this->errorResponse(__('Authentication required'), 401);
-        }
-
+        // V22-HIGH-01 FIX: Remove auth()->user() check for store token routes
+        // Store token authentication is sufficient; auth user is not required
         if (! $store || ! $store->branch_id) {
             return $this->errorResponse(__('Store authentication required'), 401);
         }
@@ -148,7 +146,8 @@ class ProductsController extends BaseApiController
             return $this->errorResponse(__('Product not found'), 404);
         }
 
-        $this->authorize('view', $product);
+        // V22-HIGH-01 FIX: Skip authorization for store token routes (no auth user)
+        // The store token middleware handles access control via abilities
 
         $product->load(['category']);
 
@@ -266,7 +265,13 @@ class ProductsController extends BaseApiController
 
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'sku' => 'sometimes|string|max:100|unique:products,sku,'.$product->id,
+            // V22-HIGH-02 FIX: Scope SKU uniqueness to branch_id for multi-branch ERP support
+            'sku' => [
+                'sometimes',
+                'string',
+                'max:100',
+                Rule::unique('products', 'sku')->ignore($product->id)->where('branch_id', $store->branch_id),
+            ],
             'description' => 'nullable|string',
             'price' => 'sometimes|numeric|min:0',
             'cost_price' => 'nullable|numeric|min:0',
@@ -340,10 +345,8 @@ class ProductsController extends BaseApiController
     {
         $store = $this->getStore($request);
 
-        if (! auth()->user()) {
-            return $this->errorResponse(__('Authentication required'), 401);
-        }
-
+        // V22-HIGH-01 FIX: Remove auth()->user() check for store token routes
+        // Store token authentication is sufficient; auth user is not required
         if (! $store || ! $store->branch_id) {
             return $this->errorResponse(__('Store authentication required'), 401);
         }
@@ -356,7 +359,8 @@ class ProductsController extends BaseApiController
             return $this->errorResponse(__('Product not found'), 404);
         }
 
-        $this->authorize('delete', $product);
+        // V22-HIGH-01 FIX: Skip authorization for store token routes (no auth user)
+        // The store token middleware handles access control via 'products.write' ability
 
         $product->delete();
 

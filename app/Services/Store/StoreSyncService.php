@@ -227,14 +227,29 @@ class StoreSyncService
             if ($mapping && $mapping->product) {
                 // Use inventory service to adjust stock instead of direct update
                 request()->attributes->set('branch_id', $store->branch_id);
-                $currentQty = $this->inventory->currentQty($mapping->product->id);
+
+                // V22-CRIT-02 FIX: Get the default warehouse for the store's branch
+                // Inventory adjustments require a warehouse ID
+                $warehouseId = $this->getDefaultWarehouseForBranch($store->branch_id);
+
+                if (! $warehouseId) {
+                    Log::warning('Shopify inventory update skipped: no default warehouse for branch', [
+                        'store_id' => $store->id,
+                        'branch_id' => $store->branch_id,
+                        'product_id' => $mapping->product->id,
+                    ]);
+
+                    return;
+                }
+
+                $currentQty = $this->inventory->currentQty($mapping->product->id, $warehouseId);
                 $difference = $available - $currentQty;
 
                 if (abs($difference) > 0.001) {
                     $this->inventory->adjust(
                         $mapping->product->id,
                         $difference,
-                        null,
+                        $warehouseId,
                         'Shopify inventory webhook update'
                     );
                 }
@@ -772,5 +787,35 @@ class StoreSyncService
             'status' => StoreSyncLog::STATUS_RUNNING,
             'started_at' => now(),
         ]);
+    }
+
+    /**
+     * V22-CRIT-02 FIX: Get the default warehouse for a branch
+     * This is used for inventory adjustments via webhooks
+     */
+    protected function getDefaultWarehouseForBranch(?int $branchId): ?int
+    {
+        if (! $branchId) {
+            return null;
+        }
+
+        // First try to get the default warehouse for this branch
+        $warehouse = \App\Models\Warehouse::withoutGlobalScopes()
+            ->where('branch_id', $branchId)
+            ->where('is_default', true)
+            ->where('is_active', true)
+            ->first();
+
+        if ($warehouse) {
+            return $warehouse->id;
+        }
+
+        // Fall back to any active warehouse in the branch
+        $warehouse = \App\Models\Warehouse::withoutGlobalScopes()
+            ->where('branch_id', $branchId)
+            ->where('is_active', true)
+            ->first();
+
+        return $warehouse?->id;
     }
 }

@@ -249,15 +249,29 @@ class DashboardDataService
 
     /**
      * Generate rent invoices due data.
+     * V22-CRIT-03 FIX: Filter by branchId through rental_contracts join
      */
     public function generateRentInvoicesDueData(?int $branchId): array
     {
         $query = DB::table('rental_invoices')
-            ->select('id', 'code', 'contract_id', 'amount', 'due_date', 'status')
-            ->where('status', 'pending')
-            ->whereBetween('due_date', [now(), now()->addDays(7)])
-            ->orderBy('due_date', 'asc')
+            ->join('rental_contracts', 'rental_invoices.contract_id', '=', 'rental_contracts.id')
+            ->select(
+                'rental_invoices.id',
+                'rental_invoices.code',
+                'rental_invoices.contract_id',
+                'rental_invoices.amount',
+                'rental_invoices.due_date',
+                'rental_invoices.status'
+            )
+            ->where('rental_invoices.status', 'pending')
+            ->whereBetween('rental_invoices.due_date', [now(), now()->addDays(7)])
+            ->orderBy('rental_invoices.due_date', 'asc')
             ->limit(10);
+
+        // V22-CRIT-03 FIX: Apply branch filter through rental_contracts
+        if ($branchId) {
+            $query->where('rental_contracts.branch_id', $branchId);
+        }
 
         $invoices = $query->get()->toArray();
         $totalAmount = collect($invoices)->sum('amount');

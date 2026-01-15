@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Models\Customer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CustomersController extends BaseApiController
 {
@@ -62,10 +63,32 @@ class CustomersController extends BaseApiController
 
     public function store(Request $request): JsonResponse
     {
+        $store = $this->getStore($request);
+        $branchId = $store?->branch_id;
+
+        // V22-HIGH-10 FIX: Scope unique validation to branch_id
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'nullable|email|max:255|unique:customers,email',
-            'phone' => 'nullable|string|max:50',
+            'email' => [
+                'nullable',
+                'email',
+                'max:255',
+                Rule::unique('customers', 'email')->where(function ($query) use ($branchId) {
+                    if ($branchId) {
+                        $query->where('branch_id', $branchId);
+                    }
+                }),
+            ],
+            'phone' => [
+                'nullable',
+                'string',
+                'max:50',
+                Rule::unique('customers', 'phone')->where(function ($query) use ($branchId) {
+                    if ($branchId) {
+                        $query->where('branch_id', $branchId);
+                    }
+                }),
+            ],
             'address' => 'nullable|string|max:500',
             'city' => 'nullable|string|max:100',
             'country' => 'nullable|string|max:100',
@@ -75,8 +98,7 @@ class CustomersController extends BaseApiController
             'external_id' => 'nullable|string|max:100',
         ]);
 
-        $store = $this->getStore($request);
-        $validated['branch_id'] = $store?->branch_id;
+        $validated['branch_id'] = $branchId;
 
         $customer = Customer::create($validated);
 
@@ -86,19 +108,43 @@ class CustomersController extends BaseApiController
     public function update(Request $request, int $id): JsonResponse
     {
         $store = $this->getStore($request);
+        $branchId = $store?->branch_id;
 
         $customer = Customer::query()
-            ->when($store?->branch_id, fn ($q) => $q->where('branch_id', $store->branch_id))
+            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->find($id);
 
         if (! $customer) {
             return $this->errorResponse(__('Customer not found'), 404);
         }
 
+        // V22-HIGH-10 FIX: Scope unique validation to branch_id
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'email' => 'nullable|email|max:255|unique:customers,email,'.$customer->id,
-            'phone' => 'nullable|string|max:50',
+            'email' => [
+                'nullable',
+                'email',
+                'max:255',
+                Rule::unique('customers', 'email')
+                    ->ignore($customer->id)
+                    ->where(function ($query) use ($branchId) {
+                        if ($branchId) {
+                            $query->where('branch_id', $branchId);
+                        }
+                    }),
+            ],
+            'phone' => [
+                'nullable',
+                'string',
+                'max:50',
+                Rule::unique('customers', 'phone')
+                    ->ignore($customer->id)
+                    ->where(function ($query) use ($branchId) {
+                        if ($branchId) {
+                            $query->where('branch_id', $branchId);
+                        }
+                    }),
+            ],
             'address' => 'nullable|string|max:500',
             'city' => 'nullable|string|max:100',
             'country' => 'nullable|string|max:100',

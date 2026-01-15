@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class OrdersController extends BaseApiController
@@ -68,15 +69,27 @@ class OrdersController extends BaseApiController
 
     public function store(Request $request): JsonResponse
     {
+        $store = $this->getStore($request);
+        $branchId = $store?->branch_id ?? auth()->user()?->branch_id;
+
+        // V22-HIGH-03 FIX: Scope exists validations to the store's branch
         $validated = $request->validate([
-            'customer_id' => 'nullable|exists:customers,id',
+            'customer_id' => [
+                'nullable',
+                Rule::exists('customers', 'id')->where(function ($query) use ($branchId) {
+                    if ($branchId) {
+                        $query->where('branch_id', $branchId);
+                    }
+                }),
+            ],
             'customer' => 'nullable|array',
             'customer.name' => 'required_with:customer|string|max:255',
             // NEW-CRITICAL-02 FIX: Require at least email or phone to prevent random customer matching
             'customer.email' => 'nullable|required_without:customer.phone|email|max:255',
             'customer.phone' => 'nullable|required_without:customer.email|string|max:50',
             'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required_without:items.*.external_id|exists:products,id',
+            // V22-HIGH-03 FIX: product_id validation is handled in the transaction with branch check
+            'items.*.product_id' => 'required_without:items.*.external_id|integer',
             'items.*.external_id' => 'required_without:items.*.product_id|string',
             'items.*.quantity' => 'required|numeric|min:0.0001',
             'items.*.price' => 'required|numeric|min:0',
@@ -86,15 +99,21 @@ class OrdersController extends BaseApiController
             'shipping' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
             'external_id' => 'nullable|string|max:100',
-            'warehouse_id' => 'nullable|integer|exists:warehouses,id',
+            // V22-HIGH-03 FIX: Scope warehouse validation to the store's branch
+            'warehouse_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('warehouses', 'id')->where(function ($query) use ($branchId) {
+                    if ($branchId) {
+                        $query->where('branch_id', $branchId);
+                    }
+                }),
+            ],
         ]);
 
-        $store = $this->getStore($request);
-
         try {
-            $order = DB::transaction(function () use ($validated, $store) {
-                $branchId = $store?->branch_id ?? auth()->user()?->branch_id;
-
+            $order = DB::transaction(function () use ($validated, $store, $branchId) {
+                // V22-HIGH-03 FIX: Use branchId from closure instead of re-extracting
                 if (! $branchId) {
                     throw ValidationException::withMessages([
                         'branch_id' => [__('Branch is required for order creation.')],
@@ -286,12 +305,11 @@ class OrdersController extends BaseApiController
 
         DB::transaction(function () use ($order, $next) {
             $order->status = $next;
-            // V7-HIGH-N05 FIX: Use computed total_paid from payments instead of paid_amount
-            // paid_amount can be stale or manually edited, leading to wrong payment status
-            // Load payments to get accurate total
-            $order->load('payments');
-            $totalPaid = $order->payments->where('status', 'completed')->sum('amount');
-            
+            // V22-HIGH-04 FIX: Use the Sale::total_paid accessor which considers all valid payment statuses
+            // (completed, posted, paid) instead of hardcoding only 'completed'
+            // This ensures consistency with the Sale model's payment status logic
+            $totalPaid = $order->total_paid;
+
             $order->payment_status = $totalPaid >= $order->total_amount
                 ? 'paid'
                 : ($totalPaid > 0 ? 'partial' : 'unpaid');

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Models\Store;
 use App\Models\StoreToken;
+use App\Services\BranchContextManager;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -22,7 +24,10 @@ class AuthenticateStoreToken
             ], 401);
         }
 
-        $storeToken = StoreToken::where('token', $token)->first();
+        // V22-CRIT-01 FIX: Load StoreToken without BranchScope since there's no auth user
+        // StoreToken table doesn't have branch_id, but the relationship to Store needs
+        // to bypass BranchScope to load properly without authentication
+        $storeToken = StoreToken::withoutGlobalScopes()->where('token', $token)->first();
 
         if (! $storeToken) {
             return response()->json([
@@ -38,13 +43,24 @@ class AuthenticateStoreToken
             ], 401);
         }
 
-        $store = $storeToken->store;
+        // V22-CRIT-01 FIX: Load Store without BranchScope since we're authenticating via token, not user
+        // After loading, we'll set the branch context from the store's branch_id
+        $store = Store::withoutGlobalScopes()
+            ->where('id', $storeToken->store_id)
+            ->first();
 
         if (! $store || ! $store->is_active) {
             return response()->json([
                 'success' => false,
                 'message' => 'Store is not active.',
             ], 403);
+        }
+
+        // V22-CRIT-01 FIX: Set branch context from the store's branch_id
+        // This allows subsequent queries in the request to be properly scoped
+        if ($store->branch_id) {
+            BranchContextManager::setBranchContext($store->branch_id);
+            $request->attributes->set('branch_id', $store->branch_id);
         }
 
         if (empty($abilities) && ! $storeToken->hasAbility('*')) {
@@ -71,6 +87,15 @@ class AuthenticateStoreToken
         ]);
 
         return $next($request);
+    }
+
+    /**
+     * V22-CRIT-01 FIX: Clear branch context after the request is handled
+     * This prevents context leakage between requests
+     */
+    public function terminate(Request $request, Response $response): void
+    {
+        BranchContextManager::clearBranchContext();
     }
 
     protected function getTokenFromRequest(Request $request): ?string
