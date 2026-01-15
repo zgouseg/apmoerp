@@ -107,7 +107,13 @@ class StoreOrderToSaleService
             try {
                 $order->update(['status' => 'processed']);
             } catch (\Throwable $e) {
-                // ignore
+                // V21-MEDIUM-08 Fix: Log the failure instead of silently ignoring
+                // This helps identify when orders remain in wrong state after sale creation
+                Log::warning('StoreOrderToSaleService: failed to update order status to processed', [
+                    'order_id' => $order->getKey(),
+                    'sale_id' => $sale->getKey(),
+                    'error' => $e->getMessage(),
+                ]);
             }
 
             return $sale;

@@ -325,8 +325,19 @@ class Form extends Component
                                 ]);
                             }
 
+                            // V21-CRITICAL-02 Fix: Prevent editing purchases after certain states
+                            // to avoid destroying audit trail and financial data integrity
+                            $nonEditableStatuses = ['posted', 'received', 'closed', 'cancelled'];
+                            if (in_array($this->purchase->status, $nonEditableStatuses)) {
+                                throw ValidationException::withMessages([
+                                    'status' => [__('Cannot edit a purchase with status: :status. Create a debit note or reversal instead.', ['status' => $this->purchase->status])],
+                                ]);
+                            }
+
                             $this->purchase->update($purchaseData);
                             $purchase = $this->purchase;
+                            // V21-CRITICAL-02 Fix: Only delete items for editable purchases
+                            // This is safe because we've already verified the purchase is editable
                             $purchase->items()->delete();
                         } else {
                             $purchaseData['created_by'] = $user->id;

@@ -248,8 +248,10 @@ class CacheService
                 $key = "products.branch.{$branchId}.limit.{$limit}";
 
                 return $this->tags(['products'])->remember($key, function () use ($branchId, $limit) {
+                    // V21-HIGH-07 Fix: Use 'status' column instead of 'is_active'
+                    // The Product model uses 'status' = 'active' (see scopeActive())
                     return \App\Models\Product::where('branch_id', $branchId)
-                        ->where('is_active', true)
+                        ->where('status', 'active')
                         ->orderBy('name')
                         ->limit($limit)
                         ->get()

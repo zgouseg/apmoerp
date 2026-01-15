@@ -360,10 +360,28 @@ class Form extends Component
                                 ]);
                             }
 
+                            // V21-CRITICAL-01 Fix: Prevent editing sales after certain states
+                            // to avoid destroying audit trail and financial data integrity
+                            $nonEditableStatuses = ['completed', 'posted', 'paid', 'closed', 'cancelled', 'refunded'];
+                            if (in_array($this->sale->status, $nonEditableStatuses)) {
+                                throw ValidationException::withMessages([
+                                    'status' => [__('Cannot edit a sale with status: :status. Create a credit note or reversal instead.', ['status' => $this->sale->status])],
+                                ]);
+                            }
+
+                            // V21-CRITICAL-01 Fix: Also check if there are any payments
+                            // Sales with payments should not be modified to preserve financial trail
+                            if ($this->sale->payments()->exists()) {
+                                throw ValidationException::withMessages([
+                                    'payments' => [__('Cannot edit a sale that has payments. Create a credit note or reversal instead.')],
+                                ]);
+                            }
+
                             $this->sale->update($saleData);
                             $sale = $this->sale;
+                            // V21-CRITICAL-01 Fix: Only delete items for draft sales without payments
+                            // This is safe because we've already verified the sale is editable
                             $sale->items()->delete();
-                            $sale->payments()->delete();
                         } else {
                             $saleData['created_by'] = $user->id;
                             $sale = Sale::create($saleData);
@@ -373,7 +391,7 @@ class Form extends Component
                             // SECURITY FIX: Validate price from database to prevent frontend manipulation
                             // Always fetch the current product price from database, never trust client-side values
                             $product = Product::find($item['product_id']);
-                            
+
                             if (! $product) {
                                 throw ValidationException::withMessages([
                                     'items' => [__('Product not found: :id', ['id' => $item['product_id']])],
@@ -382,7 +400,7 @@ class Form extends Component
 
                             // Use the database price, not the client-provided price
                             $validatedPrice = (float) ($product->default_price ?? 0);
-                            
+
                             // Optional: Check if user has permission to override prices
                             if (abs($validatedPrice - ($item['unit_price'] ?? 0)) > PRICE_COMPARISON_TOLERANCE) {
                                 if (! $user->can_modify_price) {

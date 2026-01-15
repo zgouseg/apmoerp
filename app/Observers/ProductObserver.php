@@ -118,6 +118,7 @@ class ProductObserver
             $req = request();
             AuditLog::create([
                 'user_id' => optional(auth()->user())->getKey(),
+                'branch_id' => $product->branch_id, // V21-HIGH-06 Fix: Include branch_id from product
                 'action' => "Product:{$action}",
                 'subject_type' => Product::class,
                 'subject_id' => $product->getKey(),

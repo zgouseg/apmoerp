@@ -222,9 +222,10 @@ class Index extends Component
             ->whereNotNull('sale_id')
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->when($this->search, function ($query) {
+                // V21-HIGH-03 Fix: Use reference_number instead of code column
+                // The 'code' column doesn't exist in the sales table
                 $query->whereHas('sale', function ($q) {
-                    $q->where('code', 'like', '%'.$this->search.'%')
-                        ->orWhere('reference_number', 'like', '%'.$this->search.'%');
+                    $q->where('reference_number', 'like', '%'.$this->search.'%');
                 });
             })
             ->when($this->dateFrom, fn ($q) => $q->whereDate('created_at', '>=', $this->dateFrom))

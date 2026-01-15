@@ -214,9 +214,19 @@ class ScheduledReportService
                     'product_categories.name as category',
                     'products.default_price as price',
                     'products.cost',
-                ])
+                ]);
+
+            // V21-HIGH-04 Fix: Use branch-scoped stock calculation to prevent cross-branch data leakage
+            // The stock calculation now respects branch_id filter for multi-branch ERP systems
+            if (! empty($filters['branch_id'])) {
+                $branchId = (int) $filters['branch_id'];
+                $query->selectRaw('COALESCE((SELECT SUM(quantity) FROM stock_movements sm INNER JOIN warehouses w ON sm.warehouse_id = w.id WHERE sm.product_id = products.id AND w.branch_id = ?), 0) as quantity', [$branchId]);
+                $query->where('products.branch_id', $branchId);
+            } else {
+                // When no branch filter, sum all stock movements but still scope to product's own branch
                 // quantity is signed: positive = in, negative = out
-                ->selectRaw('COALESCE((SELECT SUM(quantity) FROM stock_movements WHERE stock_movements.product_id = products.id), 0) as quantity');
+                $query->selectRaw('COALESCE((SELECT SUM(quantity) FROM stock_movements sm INNER JOIN warehouses w ON sm.warehouse_id = w.id WHERE sm.product_id = products.id AND w.branch_id = products.branch_id), 0) as quantity');
+            }
 
             if (! empty($filters['category_id'])) {
                 $query->where('products.category_id', (int) $filters['category_id']);

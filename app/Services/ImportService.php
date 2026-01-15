@@ -311,13 +311,13 @@ class ImportService
                 // Use chunked reading to avoid memory issues with large files
                 $spreadsheet = IOFactory::load($filePath);
                 $worksheet = $spreadsheet->getActiveSheet();
-                
+
                 // Get headers from first row
                 $headerRow = $worksheet->rangeToArray('A1:'.$worksheet->getHighestColumn().'1')[0];
                 $headers = array_map('strtolower', array_map('trim', $headerRow));
-                
+
                 $highestRow = $worksheet->getHighestRow();
-                
+
                 if ($highestRow < 2) {
                     return [
                         'success' => false,
@@ -331,21 +331,21 @@ class ImportService
                 // Process in chunks to reduce memory usage
                 $chunkSize = 100;
                 $totalRows = $highestRow - 1; // Exclude header row
-                
+
                 for ($startRow = 2; $startRow <= $highestRow; $startRow += $chunkSize) {
                     $endRow = min($startRow + $chunkSize - 1, $highestRow);
-                    
+
                     DB::beginTransaction();
-                    
+
                     try {
                         // Read chunk
                         $range = 'A'.$startRow.':'.$worksheet->getHighestColumn().$endRow;
                         $rows = $worksheet->rangeToArray($range);
-                        
+
                         foreach ($rows as $index => $row) {
                             $rowNum = $startRow + $index;
                             $rowData = [];
-                            
+
                             foreach ($headers as $colIndex => $header) {
                                 $rowData[$header] = isset($row[$colIndex]) ? trim((string) $row[$colIndex]) : null;
                             }
@@ -389,12 +389,12 @@ class ImportService
                                 $this->failedCount++;
                             }
                         }
-                        
+
                         DB::commit();
-                        
+
                         // Clear memory after each chunk
                         unset($rows);
-                        
+
                     } catch (\Exception $e) {
                         DB::rollBack();
                         Log::error('Import chunk failed', [
@@ -405,7 +405,7 @@ class ImportService
                         throw $e;
                     }
                 }
-                
+
                 // Clear spreadsheet from memory
                 $spreadsheet->disconnectWorksheets();
                 unset($spreadsheet);
@@ -556,6 +556,10 @@ class ImportService
 
     protected function sanitizeProductData(array $data, ?int $branchId, ?int $moduleId = null): array
     {
+        // V21-HIGH-07 Fix: Use 'status' column instead of 'is_active'
+        // The Product model uses 'status' = 'active' (see scopeActive())
+        $isActive = filter_var($data['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN);
+
         return [
             'name' => $data['name'],
             'sku' => $data['sku'] ?? null,
@@ -563,7 +567,7 @@ class ImportService
             'default_price' => (float) ($data['default_price'] ?? 0),
             'cost' => (float) ($data['cost'] ?? 0),
             'min_stock' => (int) ($data['min_stock'] ?? 0),
-            'is_active' => filter_var($data['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN),
+            'status' => $isActive ? 'active' : 'inactive', // V21-HIGH-07 Fix
             'branch_id' => $branchId,
             'category_id' => ! empty($data['category_id']) ? (int) $data['category_id'] : null,
             'module_id' => $moduleId ?: (! empty($data['module_id']) ? (int) $data['module_id'] : null),

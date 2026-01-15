@@ -19,7 +19,7 @@ final class ProductRepository extends EloquentBaseRepository implements ProductR
      */
     public function __construct()
     {
-        parent::__construct(new Product());
+        parent::__construct(new Product);
     }
 
     protected function baseBranchQuery(int $branchId): Builder
@@ -45,7 +45,13 @@ final class ProductRepository extends EloquentBaseRepository implements ProductR
         }
 
         if (array_key_exists('is_active', $filters) && $filters['is_active'] !== null && $filters['is_active'] !== '') {
-            $query->where('is_active', (bool) $filters['is_active']);
+            // V21-HIGH-07 Fix: Use 'status' column instead of 'is_active'
+            // The Product model uses 'status' = 'active' (see scopeActive())
+            if ((bool) $filters['is_active']) {
+                $query->where('status', 'active');
+            } else {
+                $query->where('status', '!=', 'active');
+            }
         }
 
         return $query->orderByDesc('id')->paginate($perPage);

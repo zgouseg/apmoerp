@@ -68,6 +68,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\SetLocale::class,
             \App\Http\Middleware\ETag::class,
             \App\Http\Middleware\PaginationSanitizer::class,
+            // V21-MEDIUM-09 Fix: Add ClearBranchContext to API to prevent data leakage
+            // In long-running servers (Octane/Swoole/RoadRunner), BranchContextManager
+            // may retain branch context from previous requests without this cleanup
+            \App\Http\Middleware\ClearBranchContext::class,
         ]);
 
         $middleware->group('api-auth', [
