@@ -129,9 +129,13 @@ class Form extends Component
         // Save items
         $this->transfer->items()->delete();
 
+        // V24-HIGH-01 FIX: Batch load products to avoid N+1 query issue
+        $productIds = collect($this->items)->pluck('product_id')->filter()->unique();
+        $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
+
         foreach ($this->items as $item) {
-            // V24-HIGH-01 FIX: Fetch product to get unit_cost for proper transfer value calculation
-            $product = Product::find($item['product_id']);
+            // V24-HIGH-01 FIX: Get product from pre-loaded collection for unit_cost
+            $product = $products->get($item['product_id']);
             $unitCost = $product ? ($product->cost ?? $product->standard_cost ?? 0) : 0;
             
             TransferItem::create([

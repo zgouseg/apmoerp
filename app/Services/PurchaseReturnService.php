@@ -288,10 +288,18 @@ class PurchaseReturnService
         
         // V24-HIGH-07 FIX: Use correct field names per SupplierPerformanceMetric model
         // and include branch_id to comply with HasBranch trait
+        // Ensure we have a valid branch_id - if not provided, try to get from authenticated user
+        $effectiveBranchId = $branchId ?? (Auth::check() ? Auth::user()->branch_id : null);
+        
+        // If no branch_id available, we cannot create the metric (HasBranch scope would filter it out)
+        if ($effectiveBranchId === null) {
+            return;
+        }
+        
         $metric = SupplierPerformanceMetric::firstOrCreate([
             'supplier_id' => $supplierId,
             'period' => $currentPeriod,
-            'branch_id' => $branchId ?? Auth::user()?->branch_id,
+            'branch_id' => $effectiveBranchId,
         ], [
             'total_orders' => 0,
             'on_time_deliveries' => 0,
