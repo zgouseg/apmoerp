@@ -92,7 +92,7 @@ class Form extends Component
                 ->lockForUpdate()
                 ->orderBy('id', 'desc')
                 ->first();
-            
+
             $seq = $lastShift ? ($lastShift->id % 1000) + 1 : 1;
             $base = sprintf('%03d', $seq);
         }

@@ -117,8 +117,8 @@ class DiscountService implements DiscountServiceInterface
      * Validate that discount stacking doesn't exceed limits
      * Prevents combining incompatible discount types
      *
-     * @param array $discounts Array of discount configurations: [['type' => 'customer', 'value' => 20, 'is_percent' => true], ...]
-     * @param float $baseAmount The base amount before any discounts
+     * @param  array  $discounts  Array of discount configurations: [['type' => 'customer', 'value' => 20, 'is_percent' => true], ...]
+     * @param  float  $baseAmount  The base amount before any discounts
      * @return array ['allowed' => bool, 'reason' => string|null, 'total_discount' => float]
      */
     public function validateDiscountStacking(array $discounts, float $baseAmount): array
@@ -129,7 +129,7 @@ class DiscountService implements DiscountServiceInterface
 
         // Extract discount types
         $types = array_column($discounts, 'type');
-        
+
         // Check for incompatible combinations using configuration
         $incompatibleTypes = config('sales.incompatible_discount_types', [
             'coupon' => ['seasonal'],
@@ -139,10 +139,10 @@ class DiscountService implements DiscountServiceInterface
         foreach ($types as $type) {
             if (isset($incompatibleTypes[$type])) {
                 $conflictingTypes = array_intersect($types, $incompatibleTypes[$type]);
-                if (!empty($conflictingTypes)) {
+                if (! empty($conflictingTypes)) {
                     return [
                         'allowed' => false,
-                        'reason' => "Cannot combine {$type} discounts with " . implode(', ', $conflictingTypes) . " discounts",
+                        'reason' => "Cannot combine {$type} discounts with ".implode(', ', $conflictingTypes).' discounts',
                         'total_discount' => 0.0,
                     ];
                 }
@@ -167,7 +167,7 @@ class DiscountService implements DiscountServiceInterface
 
             // Ensure discount doesn't exceed current amount
             $discountAmount = min($discountAmount, $currentAmount);
-            
+
             $totalDiscountAmount += $discountAmount;
             $currentAmount -= $discountAmount;
         }

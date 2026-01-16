@@ -179,10 +179,10 @@ class PayslipService
      * Previously, the system would use the current salary for the entire month,
      * leading to overpayment when an employee gets promoted late in the month.
      *
-     * @param int $employeeId Employee ID
-     * @param string $period Period in Y-m format
-     * @param array|null $salaryChanges Optional array of salary changes in format:
-     *                   [['effective_date' => 'Y-m-d', 'new_salary' => float], ...]
+     * @param  int  $employeeId  Employee ID
+     * @param  string  $period  Period in Y-m format
+     * @param  array|null  $salaryChanges  Optional array of salary changes in format:
+     *                                     [['effective_date' => 'Y-m-d', 'new_salary' => float], ...]
      * @return array Payroll calculation result
      */
     public function calculatePayroll(int $employeeId, string $period, ?array $salaryChanges = null): array
@@ -241,11 +241,11 @@ class PayslipService
      * Example: If employee had salary 5000 for days 1-24 and got promoted to 10000 on day 25,
      * the calculation would be: (5000 * 24/30) + (10000 * 6/30) = 4000 + 2000 = 6000
      *
-     * @param \App\Models\HREmployee $employee The employee
-     * @param \Carbon\Carbon $periodStart Start of the payroll period
-     * @param \Carbon\Carbon $periodEnd End of the payroll period
-     * @param int $daysInMonth Total days in the month
-     * @param array|null $salaryChanges Explicit salary changes, or null to try auto-detection
+     * @param  \App\Models\HREmployee  $employee  The employee
+     * @param  \Carbon\Carbon  $periodStart  Start of the payroll period
+     * @param  \Carbon\Carbon  $periodEnd  End of the payroll period
+     * @param  int  $daysInMonth  Total days in the month
+     * @param  array|null  $salaryChanges  Explicit salary changes, or null to try auto-detection
      * @return float The pro-rata basic salary
      */
     protected function calculateProRataBasicSalary(
@@ -331,9 +331,9 @@ class PayslipService
     /**
      * Attempt to get salary changes from activity log.
      *
-     * @param \App\Models\HREmployee $employee The employee
-     * @param \Carbon\Carbon $periodStart Start of the payroll period
-     * @param \Carbon\Carbon $periodEnd End of the payroll period
+     * @param  \App\Models\HREmployee  $employee  The employee
+     * @param  \Carbon\Carbon  $periodStart  Start of the payroll period
+     * @param  \Carbon\Carbon  $periodEnd  End of the payroll period
      * @return array Array of salary changes
      */
     protected function getSalaryChangesFromActivityLog(

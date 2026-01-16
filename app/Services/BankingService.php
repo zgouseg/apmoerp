@@ -297,7 +297,7 @@ class BankingService
      * Record a withdrawal transaction
      *
      * @throws \InvalidArgumentException if insufficient balance
-     * V30-MED-06 FIX: Use scale=4 to match decimal:4 balance precision
+     *                                   V30-MED-06 FIX: Use scale=4 to match decimal:4 balance precision
      */
     public function recordWithdrawal(array $data): BankTransaction
     {

@@ -214,31 +214,31 @@ class CostingService
         if ($batch->exists) {
             // Update existing batch - recalculate weighted average cost
             // Formula: new_avg_cost = (old_qty * old_cost + new_qty * new_cost) / (old_qty + new_qty)
-            
+
             // NOTE: We cast to string for bcmath functions to ensure precise decimal calculations
             // BCMath operates on strings to avoid floating-point precision issues with money/inventory
             $oldQty = (string) $batch->quantity;
             $oldCost = (string) $batch->unit_cost;
             $newQty = (string) $quantity;
             $newCost = (string) $unitCost;
-            
+
             // Calculate old total value
             $oldTotalValue = bcmul($oldQty, $oldCost, 4);
-            
+
             // Calculate new addition value
             $newAdditionValue = bcmul($newQty, $newCost, 4);
-            
+
             // Calculate combined total value
             $combinedValue = bcadd($oldTotalValue, $newAdditionValue, 4);
-            
+
             // Calculate combined quantity
             $combinedQty = bcadd($oldQty, $newQty, 4);
-            
+
             // Calculate weighted average cost
-            $weightedAvgCost = bccomp($combinedQty, '0', 4) > 0 
-                ? bcdiv($combinedValue, $combinedQty, 4) 
+            $weightedAvgCost = bccomp($combinedQty, '0', 4) > 0
+                ? bcdiv($combinedValue, $combinedQty, 4)
                 : '0';
-            
+
             $batch->quantity = (float) $combinedQty;
             $batch->unit_cost = (float) $weightedAvgCost;
         } else {
@@ -263,27 +263,27 @@ class CostingService
      * between warehouses were not included in financial reports, causing
      * temporary drops in asset value during transfers.
      *
-     * @param int|null $branchId Branch ID to filter by
-     * @param int|null $warehouseId Warehouse ID to filter by (null for all)
+     * @param  int|null  $branchId  Branch ID to filter by
+     * @param  int|null  $warehouseId  Warehouse ID to filter by (null for all)
      * @return array ['warehouse_value' => float, 'transit_value' => float, 'total_value' => float]
      */
     public function getTotalInventoryValue(?int $branchId = null, ?int $warehouseId = null): array
     {
         // Calculate warehouse inventory value
         $warehouseQuery = InventoryBatch::active();
-        
+
         if ($branchId !== null) {
             $warehouseQuery->where('branch_id', $branchId);
         }
-        
+
         if ($warehouseId !== null) {
             $warehouseQuery->where('warehouse_id', $warehouseId);
         }
-        
+
         $warehouseStats = $warehouseQuery
             ->selectRaw('SUM(quantity * unit_cost) as total_value, SUM(quantity) as total_quantity')
             ->first();
-        
+
         // V30-HIGH-02 FIX: Keep values as strings from DB to avoid float precision issues
         // The system uses decimal:4 widely, so use scale=4 for internal calculations
         $warehouseValue = (string) ($warehouseStats->total_value ?? '0');
@@ -292,11 +292,11 @@ class CostingService
         // BUG FIX: Include inventory in transit
         $transitValue = '0';
         $transitQuantity = '0';
-        
+
         // Check if InventoryTransit model exists (it may be in StockTransferService)
         if (class_exists(\App\Models\InventoryTransit::class)) {
             $transitQuery = \App\Models\InventoryTransit::where('status', 'in_transit');
-            
+
             if ($branchId !== null) {
                 // Include transit records where either from or to warehouse belongs to branch
                 $transitQuery->where(function ($q) use ($branchId) {
@@ -307,11 +307,11 @@ class CostingService
                     });
                 });
             }
-            
+
             $transitStats = $transitQuery
                 ->selectRaw('SUM(quantity * unit_cost) as total_value, SUM(quantity) as total_quantity')
                 ->first();
-            
+
             // V30-HIGH-02 FIX: Keep values as strings from DB
             $transitValue = (string) ($transitStats->total_value ?? '0');
             $transitQuantity = (string) ($transitStats->total_quantity ?? '0');
@@ -342,8 +342,8 @@ class CostingService
      * is then replenished. The old average cost should not be carried
      * forward when there's no stock to average with.
      *
-     * @param int $productId Product ID
-     * @param int $warehouseId Warehouse ID
+     * @param  int  $productId  Product ID
+     * @param  int  $warehouseId  Warehouse ID
      */
     public function resetCostOnZeroStock(int $productId, int $warehouseId): void
     {

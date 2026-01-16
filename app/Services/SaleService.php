@@ -140,7 +140,7 @@ class SaleService implements SaleServiceInterface
                     $referenceNumber = null;
                     $maxRetries = 5;
                     $today = today()->toDateString();
-                    
+
                     for ($attempt = 0; $attempt < $maxRetries; $attempt++) {
                         // Get the last note for today with lock
                         $lastNote = ReturnNote::whereDate('created_at', $today)
@@ -153,16 +153,15 @@ class SaleService implements SaleServiceInterface
                             $seq = ((int) $m[1]) + 1;
                         }
 
+                        // Add attempt number to handle race condition when no lastNote exists
+                        $seq += $attempt;
+
                         $referenceNumber = 'RET-'.date('Ymd').'-'.str_pad((string) $seq, 5, '0', STR_PAD_LEFT);
-                        
+
                         // Check if reference number already exists (race condition scenario)
-                        if (!ReturnNote::where('reference_number', $referenceNumber)->exists()) {
+                        if (! ReturnNote::where('reference_number', $referenceNumber)->exists()) {
                             break;
                         }
-                        
-                        // Reference exists, increment and try again
-                        $seq++;
-                        $referenceNumber = 'RET-'.date('Ymd').'-'.str_pad((string) $seq, 5, '0', STR_PAD_LEFT);
                     }
 
                     $note = ReturnNote::create([

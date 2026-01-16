@@ -74,7 +74,7 @@ class Form extends Component
                 ->lockForUpdate()
                 ->orderBy('id', 'desc')
                 ->first();
-            
+
             $seq = $lastWarehouse ? ($lastWarehouse->id % 1000) + 1 : 1;
             $base = sprintf('%03d', $seq);
         }

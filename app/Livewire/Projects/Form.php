@@ -105,7 +105,7 @@ class Form extends Component
                 ->lockForUpdate()
                 ->orderBy('id', 'desc')
                 ->first();
-            
+
             $seq = $lastProject ? ($lastProject->id % 1000) + 1 : 1;
             $base = sprintf('%03d', $seq);
         }
