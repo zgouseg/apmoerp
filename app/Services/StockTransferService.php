@@ -86,6 +86,13 @@ class StockTransferService
                     'created_by' => auth()->id(),
                 ]);
 
+                // V27-HIGH-02 FIX: Pre-load products to avoid N+1 query issue
+                $productIds = array_column($validated['items'], 'product_id');
+                $products = \App\Models\Product::whereIn('id', $productIds)
+                    ->select('id', 'cost', 'standard_cost')
+                    ->get()
+                    ->keyBy('id');
+
                 // Add items
                 foreach ($validated['items'] as $itemData) {
                     // Validate stock availability
@@ -102,11 +109,11 @@ class StockTransferService
                         "Insufficient stock for product ID {$itemData['product_id']}. Available: {$availableStock}, Requested: {$requestedQty}"
                     );
 
-                    // V27-HIGH-02 FIX: Use provided unit_cost, or fetch from product's cost if not provided
+                    // V27-HIGH-02 FIX: Use provided unit_cost, or fetch from pre-loaded product's cost if not provided
                     // Do NOT default to 0 as that breaks inventory valuation
                     $unitCost = $itemData['unit_cost'] ?? null;
                     if ($unitCost === null) {
-                        $product = \App\Models\Product::find($itemData['product_id']);
+                        $product = $products->get($itemData['product_id']);
                         $unitCost = $product?->cost ?? $product?->standard_cost ?? null;
                     }
 
@@ -187,8 +194,9 @@ class StockTransferService
 
     /**
      * Ship/dispatch the transfer
+     * V27-MED-05 FIX: Added optional userId parameter for CLI/queue context support
      */
-    public function shipTransfer(int $transferId, array $shippingData): StockTransfer
+    public function shipTransfer(int $transferId, array $shippingData, ?int $userId = null): StockTransfer
     {
         // V6-MEDIUM-04 FIX: Explicit validation of payload shape with item IDs
         $validated = validator($shippingData, [
@@ -203,9 +211,10 @@ class StockTransferService
         ])->validate();
 
         return $this->handleServiceOperation(
-            callback: fn () => DB::transaction(function () use ($transferId, $validated) {
+            callback: fn () => DB::transaction(function () use ($transferId, $validated, $userId) {
                 $transfer = StockTransfer::with(['items.product'])->findOrFail($transferId);
-                $userId = auth()->id();
+                // V27-MED-05 FIX: Use provided userId or fall back to auth()->id()
+                $userId = $userId ?? auth()->id();
 
                 abort_if(
                     ! $transfer->canBeShipped(),
@@ -224,9 +233,6 @@ class StockTransferService
                         }
                     }
                 }
-
-                // V27-MED-05 FIX: Get user ID at the start for CLI/queue context support
-                $userId = auth()->id();
 
                 // Move stock from source warehouse to transit table
                 foreach ($transfer->items as $item) {
@@ -306,8 +312,9 @@ class StockTransferService
 
     /**
      * Receive the transfer at destination
+     * V27-MED-05 FIX: Added optional userId parameter for CLI/queue context support
      */
-    public function receiveTransfer(int $transferId, array $receivingData): StockTransfer
+    public function receiveTransfer(int $transferId, array $receivingData, ?int $userId = null): StockTransfer
     {
         // V6-MEDIUM-04 FIX: Explicit validation of payload shape with item IDs
         $validated = validator($receivingData, [
@@ -320,9 +327,10 @@ class StockTransferService
         ])->validate();
 
         return $this->handleServiceOperation(
-            callback: fn () => DB::transaction(function () use ($transferId, $validated) {
+            callback: fn () => DB::transaction(function () use ($transferId, $validated, $userId) {
                 $transfer = StockTransfer::with(['items.product'])->findOrFail($transferId);
-                $userId = auth()->id();
+                // V27-MED-05 FIX: Use provided userId or fall back to auth()->id()
+                $userId = $userId ?? auth()->id();
 
                 abort_if(
                     ! $transfer->canBeReceived(),
