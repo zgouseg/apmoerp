@@ -255,7 +255,8 @@ class StockTransferService
                     $item->update(['qty_shipped' => $qtyToShip]);
 
                     // V27-HIGH-02 FIX: Get unit_cost from transfer item for inventory valuation
-                    $unitCost = $item->unit_cost ?: null;
+                    // Use ?? to preserve zero values (0 is a valid unit_cost)
+                    $unitCost = $item->unit_cost ?? null;
 
                     // Deduct from source warehouse
                     // V27-HIGH-02 FIX: Pass unit_cost for inventory valuation
@@ -386,7 +387,8 @@ class StockTransferService
                     }
 
                     // V27-HIGH-02 FIX: Get unit_cost from transfer item for inventory valuation
-                    $unitCost = $item->unit_cost ?: null;
+                    // Use ?? to preserve zero values (0 is a valid unit_cost)
+                    $unitCost = $item->unit_cost ?? null;
 
                     // Add good stock to destination warehouse
                     // V27-HIGH-02 FIX: Pass unit_cost for inventory valuation
@@ -506,7 +508,8 @@ class StockTransferService
 
                     foreach ($transitRecords as $transitRecord) {
                         // V27-HIGH-02 FIX: Get unit_cost from transit record for inventory valuation
-                        $unitCost = $transitRecord->unit_cost ?: null;
+                        // Use ?? to preserve zero values (0 is a valid unit_cost)
+                        $unitCost = $transitRecord->unit_cost ?? null;
 
                         // Return stock to source warehouse
                         // V27-HIGH-02 FIX: Pass unit_cost for inventory valuation

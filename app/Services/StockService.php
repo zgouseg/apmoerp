@@ -202,7 +202,9 @@ class StockService
 
         // Handle branch ID - either a numeric value or a column reference
         if (is_int($branchIdValueOrColumn)) {
-            $branchCondition = "w.branch_id = {$branchIdValueOrColumn}";
+            // V27-SEC FIX: Explicit cast to int for defense in depth against SQL injection
+            $branchIdValue = (int) $branchIdValueOrColumn;
+            $branchCondition = "w.branch_id = {$branchIdValue}";
         } else {
             // Validate branch column name to prevent SQL injection
             if (! preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$/', $branchIdValueOrColumn)) {
