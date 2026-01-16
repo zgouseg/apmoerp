@@ -263,19 +263,20 @@ class Reconciliation extends Component
         $this->systemBalance = $account ? ($account->current_balance ?? 0) : 0;
 
         // V27-CRIT-03 FIX: Calculate difference using matchedTotal, not systemBalance
-        // The reconciliation process verifies that:
+        //
+        // This implements a simple "matched transactions" reconciliation approach:
         // 1. User enters statement ending balance from bank statement
         // 2. User matches transactions from the system that appear on the statement
-        // 3. The matched transactions' net total should equal:
-        //    (statement_balance - opening_balance) or just match the statement balance if
-        //    we're treating this as a simple reconciliation
+        // 3. The difference = statementBalance - matchedTotal
         //
-        // The difference = statementBalance - matchedTotal shows:
-        // - If 0: All statement transactions are matched
+        // Interpretation of difference:
+        // - If 0: All statement transactions are matched (reconciled)
         // - If positive: Statement shows more money than matched (missing deposits or extra withdrawals)
         // - If negative: Statement shows less money than matched (extra deposits or missing withdrawals)
         //
-        // Previous implementation used systemBalance which ignores what the user actually selected/matched
+        // Previous implementation used systemBalance which ignores what the user actually selected/matched.
+        // That approach was incorrect because the user's selection of matched transactions is the core
+        // of the reconciliation process.
         $this->difference = $this->statementBalance - $this->matchedTotal;
     }
 

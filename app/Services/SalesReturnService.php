@@ -336,6 +336,9 @@ class SalesReturnService
             }
 
             // V27-HIGH-02 FIX: Get unit_cost from the original sale item for proper valuation
+            // SalesReturnItem may have unit_price from the return record, or we fall back to the original
+            // SaleItem's unit_price. This ensures returned stock is valued at the same price it was sold.
+            // If both are null (e.g., service items), inventory valuation is skipped.
             $unitCost = $item->unit_price ?? $item->saleItem?->unit_price ?? null;
 
             // Add stock back to inventory

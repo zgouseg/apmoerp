@@ -111,6 +111,8 @@ class StockTransferService
 
                     // V27-HIGH-02 FIX: Use provided unit_cost, or fetch from pre-loaded product's cost if not provided
                     // Do NOT default to 0 as that breaks inventory valuation
+                    // Fallback order: explicit unit_cost > product.cost (actual cost) > product.standard_cost (standard cost)
+                    // If both are null, inventory valuation will be skipped for this item (acceptable for non-valued transfers)
                     $unitCost = $itemData['unit_cost'] ?? null;
                     if ($unitCost === null) {
                         $product = $products->get($itemData['product_id']);

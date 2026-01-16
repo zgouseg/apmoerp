@@ -236,7 +236,9 @@ class StockService
      * @param  string|null  $notes  Additional notes for the movement
      * @param  int|null  $referenceId  Reference ID for polymorphic relation
      * @param  string|null  $referenceType  Reference type for polymorphic relation
-     * @param  float|null  $unitCost  Unit cost for inventory valuation (V27-HIGH-02 FIX)
+     * @param  float|null  $unitCost  Unit cost for inventory valuation. Null is acceptable for non-valued movements
+     *                                (e.g., service items, adjustments without cost tracking). Inventory valuation
+     *                                reports should handle null unit_cost by excluding those records or using fallbacks.
      * @param  int|null  $userId  User ID for created_by field (V27-MED-05 FIX: supports CLI/queue contexts)
      * @return StockMovement The created stock movement record
      *
