@@ -230,7 +230,8 @@ class Form extends Component
                 default => (string) $this->serviceDuration,
             };
             $calculated = bcmul((string) $this->hourlyRate, $hours, 4);
-            $this->defaultPrice = (float) bcdiv($calculated, '1', 2);
+            // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
+            $this->defaultPrice = (float) bcround($calculated, 2);
         }
     }
 

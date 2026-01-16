@@ -703,8 +703,8 @@ class AccountingService
             }
         }
 
-        // Round to 2 decimal places
-        $totalCost = (float) bcdiv($totalCost, '1', 2);
+        // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
+        $totalCost = (float) bcround($totalCost, 2);
 
         // Skip if total cost is zero or negative
         if ($totalCost <= 0) {

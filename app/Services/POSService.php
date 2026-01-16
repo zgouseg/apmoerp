@@ -210,17 +210,19 @@ class POSService implements POSServiceInterface
                         'cost_price' => $product->cost ?? 0,
                         'discount_amount' => $lineDisc,
                         'tax_amount' => $lineTax,
-                        'line_total' => (float) bcdiv($lineTotal, '1', 2),
+                        // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
+                        'line_total' => (float) bcround($lineTotal, 2),
                     ]);
                 }
 
                 // Use bcmath for grand total calculation
                 $grandTotal = bcadd(bcsub((string) $subtotal, (string) $discountTotal, 4), (string) $taxTotal, 4);
 
-                $sale->subtotal = (float) bcdiv((string) $subtotal, '1', 2);
-                $sale->discount_amount = (float) bcdiv((string) $discountTotal, '1', 2);
-                $sale->tax_amount = (float) bcdiv((string) $taxTotal, '1', 2);
-                $sale->total_amount = (float) bcdiv($grandTotal, '1', 2);
+                // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
+                $sale->subtotal = (float) bcround((string) $subtotal, 2);
+                $sale->discount_amount = (float) bcround((string) $discountTotal, 2);
+                $sale->tax_amount = (float) bcround((string) $taxTotal, 2);
+                $sale->total_amount = (float) bcround($grandTotal, 2);
 
                 $payments = $payload['payments'] ?? [];
                 $paidTotal = '0';
@@ -253,7 +255,8 @@ class POSService implements POSServiceInterface
                     SalePayment::create([
                         'sale_id' => $sale->getKey(),
                         'payment_method' => 'cash',
-                        'amount' => (float) bcdiv($grandTotal, '1', 2),
+                        // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
+                        'amount' => (float) bcround($grandTotal, 2),
                         'payment_date' => now()->toDateString(),
                         'currency' => 'EGP',
                         'status' => 'completed',
@@ -261,8 +264,8 @@ class POSService implements POSServiceInterface
                     $paidTotal = $grandTotal;
                 }
 
-                // Use bcmath for payment calculations
-                $sale->paid_amount = (float) bcdiv($paidTotal, '1', 2);
+                // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
+                $sale->paid_amount = (float) bcround($paidTotal, 2);
                 $sale->payment_status = bccomp($paidTotal, $grandTotal, 2) >= 0 ? 'paid' : 'partial';
                 $sale->save();
 

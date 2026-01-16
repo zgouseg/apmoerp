@@ -78,21 +78,22 @@ class DashboardWidgets extends Component
                 $customersQuery->where('branch_id', $branchId);
             }
 
+            // V30-CRIT-01 FIX: Use sale_date (business date) instead of created_at
+            // This ensures synced/backdated sales appear on the correct business day
             return [
                 'total_sales_today' => (clone $salesQuery)
-                    ->whereDate('created_at', today())
+                    ->whereDate('sale_date', today())
                     ->sum('total_amount') ?? 0,
                 'total_sales_week' => (clone $salesQuery)
-                    ->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])
+                    ->whereBetween('sale_date', [now()->startOfWeek(), now()->endOfWeek()])
                     ->sum('total_amount') ?? 0,
-                // Fix: Add whereYear to prevent summing same month from different years
                 'total_sales_month' => (clone $salesQuery)
-                    ->whereYear('created_at', now()->year)
-                    ->whereMonth('created_at', now()->month)
+                    ->whereYear('sale_date', now()->year)
+                    ->whereMonth('sale_date', now()->month)
                     ->sum('total_amount') ?? 0,
                 'total_revenue_month' => (clone $salesQuery)
-                    ->whereYear('created_at', now()->year)
-                    ->whereMonth('created_at', now()->month)
+                    ->whereYear('sale_date', now()->year)
+                    ->whereMonth('sale_date', now()->month)
                     ->where('status', 'completed')
                     ->sum('total_amount') ?? 0,
                 'total_products' => (clone $productsQuery)->count(),

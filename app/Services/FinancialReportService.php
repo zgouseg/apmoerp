@@ -67,8 +67,9 @@ class FinancialReportService
 
         return [
             'accounts' => $data,
-            'total_debit' => (float) bcdiv($totalDebitStr, '1', 2),
-            'total_credit' => (float) bcdiv($totalCreditStr, '1', 2),
+            // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
+            'total_debit' => (float) bcround($totalDebitStr, 2),
+            'total_credit' => (float) bcround($totalCreditStr, 2),
             'difference' => (float) $difference,
             'is_balanced' => bccomp(str_replace('-', '', $difference), '0.01', 2) < 0,
         ];
@@ -143,11 +144,13 @@ class FinancialReportService
         return [
             'revenue' => [
                 'accounts' => $revenue,
-                'total' => (float) bcdiv((string) $totalRevenue, '1', 2),
+                // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
+                'total' => (float) bcround((string) $totalRevenue, 2),
             ],
             'expenses' => [
                 'accounts' => $expenses,
-                'total' => (float) bcdiv((string) $totalExpenses, '1', 2),
+                // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
+                'total' => (float) bcround((string) $totalExpenses, 2),
             ],
             'net_income' => (float) $netIncome,
         ];
@@ -246,15 +249,18 @@ class FinancialReportService
             'as_of_date' => $asOfDate,
             'assets' => [
                 'accounts' => $assets,
-                'total' => (float) bcdiv((string) $totalAssets, '1', 2),
+                // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
+                'total' => (float) bcround((string) $totalAssets, 2),
             ],
             'liabilities' => [
                 'accounts' => $liabilities,
-                'total' => (float) bcdiv((string) $totalLiabilities, '1', 2),
+                // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
+                'total' => (float) bcround((string) $totalLiabilities, 2),
             ],
             'equity' => [
                 'accounts' => $equity,
-                'total' => (float) bcdiv((string) $totalEquity, '1', 2),
+                // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
+                'total' => (float) bcround((string) $totalEquity, 2),
             ],
             'total_liabilities_and_equity' => (float) $totalLiabilitiesAndEquity,
             'is_balanced' => bccomp(str_replace('-', '', $balanceDiff), '0.01', 2) < 0,
@@ -479,9 +485,10 @@ class FinancialReportService
             ],
             'transactions' => $transactions,
             'summary' => [
-                'total_debit' => (float) bcdiv((string) $totalDebit, '1', 2),
-                'total_credit' => (float) bcdiv((string) $totalCredit, '1', 2),
-                'ending_balance' => (float) bcdiv((string) $runningBalance, '1', 2),
+                // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
+                'total_debit' => (float) bcround((string) $totalDebit, 2),
+                'total_credit' => (float) bcround((string) $totalCredit, 2),
+                'ending_balance' => (float) bcround((string) $runningBalance, 2),
             ],
         ];
     }

@@ -31,8 +31,8 @@ class TaxService implements TaxServiceInterface
         $rateDecimal = bcdiv((string) $r, '100', 6);
         $taxAmount = bcmul((string) $base, $rateDecimal, 4);
 
-        // Round to 2 decimal places at line level for e-invoicing compliance
-        return (float) bcdiv($taxAmount, '1', 2);
+        // V30-MED-08 FIX: Use bcround() for proper half-up rounding
+        return (float) bcround($taxAmount, 2);
     }
 
     public function amountFor(float $base, ?int $taxId): float
@@ -147,7 +147,8 @@ class TaxService implements TaxServiceInterface
 
                 return [
                     'lines' => $lines,
-                    'total_tax' => (float) bcdiv($totalTax, '1', 2),
+                    // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
+                    'total_tax' => (float) bcround($totalTax, 2),
                 ];
             },
             operation: 'calculateTaxLines',
@@ -184,13 +185,15 @@ class TaxService implements TaxServiceInterface
                     $baseExcl = bcdiv((string) $subtotal, $divisor, 6);
                     $taxAmount = bcsub((string) $subtotal, $baseExcl, 6);
 
-                    return (float) bcdiv($taxAmount, '1', 2);
+                    // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
+                    return (float) bcround($taxAmount, 2);
                 }
 
                 // Exclusive: tax = subtotal * (rate / 100)
                 $taxAmount = bcmul((string) $subtotal, bcdiv((string) $rate, '100', 6), 6);
 
-                return (float) bcdiv($taxAmount, '1', 2);
+                // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
+                return (float) bcround($taxAmount, 2);
             },
             operation: 'calculateTotalTax',
             context: ['subtotal' => $subtotal, 'rules' => $taxRateRules],

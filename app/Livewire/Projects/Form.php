@@ -10,6 +10,7 @@ use App\Models\Customer;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
@@ -185,33 +186,37 @@ class Form extends Component
 
     public function save(): mixed
     {
-        // Auto-generate code if empty
-        if (empty($this->code)) {
-            $this->code = $this->generateCode();
-        }
+        // V30-HIGH-03 FIX: Wrap code generation + create in DB transaction
+        // lockForUpdate() has no effect outside a transaction
+        return DB::transaction(function () {
+            // Auto-generate code if empty
+            if (empty($this->code)) {
+                $this->code = $this->generateCode();
+            }
 
-        $this->start_date = $this->coerceDateInput($this->start_date);
-        $this->end_date = $this->coerceDateInput($this->end_date);
-        $this->validate();
+            $this->start_date = $this->coerceDateInput($this->start_date);
+            $this->end_date = $this->coerceDateInput($this->end_date);
+            $this->validate();
 
-        // Server-side enforcement: ensure branch_id is within user's branches
-        $userBranchIds = $this->getUserBranchIds();
-        if (! in_array($this->branch_id, $userBranchIds)) {
-            abort(403, 'You are not authorized to create/edit projects in this branch.');
-        }
+            // Server-side enforcement: ensure branch_id is within user's branches
+            $userBranchIds = $this->getUserBranchIds();
+            if (! in_array($this->branch_id, $userBranchIds)) {
+                abort(403, 'You are not authorized to create/edit projects in this branch.');
+            }
 
-        if ($this->project) {
-            $this->project->update($this->payloadWithNormalizedDates());
-            session()->flash('success', __('Project updated successfully'));
-        } else {
-            Project::create(array_merge(
-                $this->payloadWithNormalizedDates(),
-                ['created_by' => auth()->id()]
-            ));
-            session()->flash('success', __('Project created successfully'));
-        }
+            if ($this->project) {
+                $this->project->update($this->payloadWithNormalizedDates());
+                session()->flash('success', __('Project updated successfully'));
+            } else {
+                Project::create(array_merge(
+                    $this->payloadWithNormalizedDates(),
+                    ['created_by' => auth()->id()]
+                ));
+                session()->flash('success', __('Project created successfully'));
+            }
 
-        $this->redirectRoute('app.projects.index', navigate: true);
+            $this->redirectRoute('app.projects.index', navigate: true);
+        });
     }
 
     protected function payloadWithNormalizedDates(): array

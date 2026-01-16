@@ -135,20 +135,35 @@ class SaleService implements SaleServiceInterface
                         throw new \InvalidArgumentException(__('No valid items to return. Please ensure items exist on the sale and have available quantities.'));
                     }
 
-                    // Create return note with correct column name (total_amount)
-                    // NEW-MEDIUM-10 FIX: Use database locking to prevent reference_number race condition
+                    // V30-MED-07 FIX: Use retry mechanism to handle race condition
+                    // when no ReturnNote exists for today (lockForUpdate won't help)
+                    $referenceNumber = null;
+                    $maxRetries = 5;
                     $today = today()->toDateString();
-                    $lastNote = ReturnNote::whereDate('created_at', $today)
-                        ->lockForUpdate()
-                        ->orderBy('reference_number', 'desc')
-                        ->first();
+                    
+                    for ($attempt = 0; $attempt < $maxRetries; $attempt++) {
+                        // Get the last note for today with lock
+                        $lastNote = ReturnNote::whereDate('created_at', $today)
+                            ->lockForUpdate()
+                            ->orderBy('reference_number', 'desc')
+                            ->first();
 
-                    $seq = 1;
-                    if ($lastNote && preg_match('/-(\d+)$/', $lastNote->reference_number, $m)) {
-                        $seq = ((int) $m[1]) + 1;
+                        $seq = 1;
+                        if ($lastNote && preg_match('/-(\d+)$/', $lastNote->reference_number, $m)) {
+                            $seq = ((int) $m[1]) + 1;
+                        }
+
+                        $referenceNumber = 'RET-'.date('Ymd').'-'.str_pad((string) $seq, 5, '0', STR_PAD_LEFT);
+                        
+                        // Check if reference number already exists (race condition scenario)
+                        if (!ReturnNote::where('reference_number', $referenceNumber)->exists()) {
+                            break;
+                        }
+                        
+                        // Reference exists, increment and try again
+                        $seq++;
+                        $referenceNumber = 'RET-'.date('Ymd').'-'.str_pad((string) $seq, 5, '0', STR_PAD_LEFT);
                     }
-
-                    $referenceNumber = 'RET-'.date('Ymd').'-'.str_pad((string) $seq, 5, '0', STR_PAD_LEFT);
 
                     $note = ReturnNote::create([
                         'branch_id' => $sale->branch_id,

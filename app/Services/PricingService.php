@@ -79,12 +79,12 @@ class PricingService implements PricingServiceInterface
                 // Ensure total never goes below zero (prevent negative pricing)
                 $total = max(0.0, $total);
 
-                // Use bcmath for consistent precision across all line totals
+                // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
                 return [
-                    'subtotal' => (float) bcdiv((string) $subtotal, '1', 2),
-                    'discount' => (float) bcdiv((string) $discount, '1', 2),
-                    'tax' => (float) bcdiv((string) $taxAmount, '1', 2),
-                    'total' => (float) bcdiv((string) $total, '1', 2),
+                    'subtotal' => (float) bcround((string) $subtotal, 2),
+                    'discount' => (float) bcround((string) $discount, 2),
+                    'tax' => (float) bcround((string) $taxAmount, 2),
+                    'total' => (float) bcround((string) $total, 2),
                 ];
             },
             operation: 'lineTotals',

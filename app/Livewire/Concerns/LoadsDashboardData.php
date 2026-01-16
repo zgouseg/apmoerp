@@ -108,13 +108,15 @@ trait LoadsDashboardData
             $salesQuery = $this->scopeQueryToBranch(Sale::query());
             $productsQuery = $this->scopeQueryToBranch(Product::query());
 
+            // V30-CRIT-01 FIX: Use sale_date (business date) instead of created_at
+            // This ensures synced/backdated sales appear on the correct business day
             return [
                 'today_sales' => number_format(
-                    (clone $salesQuery)->whereDate('created_at', $today)->sum('total_amount') ?? 0,
+                    (clone $salesQuery)->whereDate('sale_date', $today)->sum('total_amount') ?? 0,
                     2
                 ),
                 'month_sales' => number_format(
-                    (clone $salesQuery)->where('created_at', '>=', $startOfMonth)->sum('total_amount') ?? 0,
+                    (clone $salesQuery)->where('sale_date', '>=', $startOfMonth)->sum('total_amount') ?? 0,
                     2
                 ),
                 'open_invoices' => (clone $salesQuery)->where('status', 'pending')->count(),
@@ -183,13 +185,14 @@ trait LoadsDashboardData
         $startDate = now()->subDays(6)->startOfDay();
         $endDate = now()->endOfDay();
 
+        // V30-CRIT-01 FIX: Use sale_date (business date) instead of created_at
         // Single query with GROUP BY to get all 7 days' sales data
         $query = $this->scopeQueryToBranch(Sale::query());
         $salesByDate = $query
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->selectRaw('DATE(created_at) as sale_date, SUM(total_amount) as total')
-            ->groupByRaw('DATE(created_at)')
-            ->pluck('total', 'sale_date')
+            ->whereBetween('sale_date', [$startDate, $endDate])
+            ->selectRaw('DATE(sale_date) as business_date, SUM(total_amount) as total')
+            ->groupByRaw('DATE(sale_date)')
+            ->pluck('total', 'business_date')
             ->toArray();
 
         $labels = [];
@@ -208,14 +211,14 @@ trait LoadsDashboardData
 
     /**
      * Build payment methods distribution data
-     * FIX N-07: Add whereYear to prevent mixing data from different years
+     * V30-CRIT-01 FIX: Use sale_date (business date) instead of created_at
      */
     protected function buildPaymentMethodsData(): array
     {
         $raw = DB::table('sale_payments')
             ->join('sales', 'sale_payments.sale_id', '=', 'sales.id')
-            ->whereYear('sales.created_at', now()->year)
-            ->whereMonth('sales.created_at', now()->month)
+            ->whereYear('sales.sale_date', now()->year)
+            ->whereMonth('sales.sale_date', now()->month)
             ->when(! $this->isAdmin && $this->branchId, fn ($q) => $q->where('sales.branch_id', $this->branchId))
             ->whereNull('sales.deleted_at')
             ->select('sale_payments.payment_method', DB::raw('COUNT(*) as count'), DB::raw('SUM(sale_payments.amount) as total'))
@@ -325,6 +328,7 @@ trait LoadsDashboardData
 
     /**
      * Load trend indicators
+     * V30-CRIT-01 FIX: Use sale_date (business date) instead of created_at
      */
     protected function loadTrendIndicators(): void
     {
@@ -334,11 +338,11 @@ trait LoadsDashboardData
             $salesQuery = $this->scopeQueryToBranch(Sale::query());
 
             $currentWeekSales = (clone $salesQuery)
-                ->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])
+                ->whereBetween('sale_date', [now()->startOfWeek(), now()->endOfWeek()])
                 ->sum('total_amount') ?? 0;
 
             $previousWeekSales = (clone $salesQuery)
-                ->whereBetween('created_at', [now()->subWeek()->startOfWeek(), now()->subWeek()->endOfWeek()])
+                ->whereBetween('sale_date', [now()->subWeek()->startOfWeek(), now()->subWeek()->endOfWeek()])
                 ->sum('total_amount') ?? 0;
 
             $invoiceTotal = (clone $salesQuery)->count();

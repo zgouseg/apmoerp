@@ -69,7 +69,8 @@ class DiscountService implements DiscountServiceInterface
                     $discTotal = (string) $subtotal;
                 }
 
-                return (float) bcdiv($discTotal, '1', 2);
+                // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
+                return (float) bcround($discTotal, 2);
             },
             operation: 'lineTotal',
             context: ['qty' => $qty, 'price' => $price, 'discount' => $discount, 'percent' => $percent],

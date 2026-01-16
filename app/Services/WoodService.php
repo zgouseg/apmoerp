@@ -101,6 +101,7 @@ class WoodService implements WoodServiceInterface
         $ratio = bcdiv((string) $out, (string) $in, 6);
         $percentage = bcmul($ratio, '100', 4);
 
-        return (float) bcdiv($percentage, '1', 2);
+        // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
+        return (float) bcround($percentage, 2);
     }
 }

@@ -265,12 +265,13 @@ class BankingService
 
     /**
      * Check if account has sufficient balance for a withdrawal
+     * V30-MED-06 FIX: Use scale=4 to match decimal:4 balance precision
      */
     public function hasSufficientBalance(int $accountId, float $amount): bool
     {
         $balance = $this->getAccountBalance($accountId);
 
-        return bccomp($balance, (string) $amount, 2) >= 0;
+        return bccomp($balance, (string) $amount, 4) >= 0;
     }
 
     /**
@@ -296,15 +297,16 @@ class BankingService
      * Record a withdrawal transaction
      *
      * @throws \InvalidArgumentException if insufficient balance
+     * V30-MED-06 FIX: Use scale=4 to match decimal:4 balance precision
      */
     public function recordWithdrawal(array $data): BankTransaction
     {
         // Check for sufficient balance before withdrawal using bcmath
         // STILL-V7-MEDIUM-N08 FIX: getAccountBalance now returns string for precision
         $availableBalance = $this->getAccountBalance($data['account_id']);
-        if (bccomp($availableBalance, (string) $data['amount'], 2) < 0) {
+        if (bccomp($availableBalance, (string) $data['amount'], 4) < 0) {
             throw new \InvalidArgumentException(sprintf(
-                'Insufficient balance for withdrawal. Available: %.2f, Requested: %.2f',
+                'Insufficient balance for withdrawal. Available: %.4f, Requested: %.4f',
                 (float) $availableBalance,
                 $data['amount']
             ));

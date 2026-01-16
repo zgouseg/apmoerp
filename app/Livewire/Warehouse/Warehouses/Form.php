@@ -7,6 +7,7 @@ namespace App\Livewire\Warehouse\Warehouses;
 use App\Models\Warehouse;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -82,7 +83,8 @@ class Form extends Component
         $counter = 1;
 
         while (Warehouse::where('code', $code)->where('id', '!=', $this->warehouseId)->exists()) {
-            $code = $prefix.$base.$counter;
+            // V30-HIGH-04 FIX: Keep consistent format with `-` separator
+            $code = $prefix.'-'.$base.$counter;
             $counter++;
         }
 
@@ -91,9 +93,10 @@ class Form extends Component
 
     protected function rules(): array
     {
+        // V30-MED-05 FIX: Add unique validation for warehouse code
         return [
             'name' => 'required|string|max:255',
-            'code' => 'nullable|string|max:50',
+            'code' => 'nullable|string|max:50|unique:warehouses,code'.($this->warehouseId ? ','.$this->warehouseId : ''),
             'type' => 'nullable|string|max:50',
             'status' => 'required|in:active,inactive',
             'address' => 'nullable|string|max:500',
@@ -108,35 +111,39 @@ class Form extends Component
 
         $user = auth()->user();
 
-        // Auto-generate code if empty
-        if (empty($this->code)) {
-            $this->code = $this->generateCode();
-        }
-
-        $data = [
-            'name' => $this->name,
-            'code' => $this->code ?: null,
-            'type' => $this->type,
-            'status' => $this->status,
-            'address' => $this->address ?: null,
-            'notes' => $this->notes ?: null,
-            'branch_id' => $user?->branch_id,
-        ];
-
+        // V30-HIGH-03 FIX: Wrap code generation + create in DB transaction
+        // lockForUpdate() has no effect outside a transaction
         try {
-            if ($this->warehouseId) {
-                $warehouse = Warehouse::findOrFail($this->warehouseId);
-                $data['updated_by'] = $user?->id;
-                $warehouse->update($data);
-                session()->flash('success', __('Warehouse updated successfully'));
-            } else {
-                $data['created_by'] = $user?->id;
-                Warehouse::create($data);
-                session()->flash('success', __('Warehouse created successfully'));
-            }
+            DB::transaction(function () use ($user) {
+                // Auto-generate code if empty
+                if (empty($this->code)) {
+                    $this->code = $this->generateCode();
+                }
 
-            Cache::forget('warehouse_stats_'.($user?->branch_id ?? 'all'));
-            Cache::forget('all_warehouses_'.($user?->branch_id ?? 'all'));
+                $data = [
+                    'name' => $this->name,
+                    'code' => $this->code ?: null,
+                    'type' => $this->type,
+                    'status' => $this->status,
+                    'address' => $this->address ?: null,
+                    'notes' => $this->notes ?: null,
+                    'branch_id' => $user?->branch_id,
+                ];
+
+                if ($this->warehouseId) {
+                    $warehouse = Warehouse::findOrFail($this->warehouseId);
+                    $data['updated_by'] = $user?->id;
+                    $warehouse->update($data);
+                    session()->flash('success', __('Warehouse updated successfully'));
+                } else {
+                    $data['created_by'] = $user?->id;
+                    Warehouse::create($data);
+                    session()->flash('success', __('Warehouse created successfully'));
+                }
+
+                Cache::forget('warehouse_stats_'.($user?->branch_id ?? 'all'));
+                Cache::forget('all_warehouses_'.($user?->branch_id ?? 'all'));
+            });
 
             $this->redirectRoute('app.warehouse.index', navigate: true);
         } catch (\Exception $e) {

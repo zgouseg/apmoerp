@@ -7,6 +7,7 @@ namespace App\Livewire\Hrm\Shifts;
 use App\Http\Requests\Traits\HasMultilingualValidation;
 use App\Models\Shift;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -124,36 +125,40 @@ class Form extends Component
     {
         $this->authorize('hrm.manage');
 
-        // Auto-generate code if empty
-        if (empty($this->code)) {
-            $this->code = $this->generateCode();
-        }
+        // V30-HIGH-03 FIX: Wrap code generation + create in DB transaction
+        // lockForUpdate() has no effect outside a transaction
+        return DB::transaction(function () {
+            // Auto-generate code if empty
+            if (empty($this->code)) {
+                $this->code = $this->generateCode();
+            }
 
-        $this->validate();
+            $this->validate();
 
-        $branchId = auth()->user()?->branch_id ?? null;
+            $branchId = auth()->user()?->branch_id ?? null;
 
-        $data = [
-            'name' => $this->name,
-            'code' => $this->code,
-            'start_time' => $this->startTime,
-            'end_time' => $this->endTime,
-            'grace_period_minutes' => $this->gracePeriodMinutes,
-            'working_days' => $this->workingDays,
-            'description' => $this->description,
-            'is_active' => $this->isActive,
-            'branch_id' => $branchId,
-        ];
+            $data = [
+                'name' => $this->name,
+                'code' => $this->code,
+                'start_time' => $this->startTime,
+                'end_time' => $this->endTime,
+                'grace_period_minutes' => $this->gracePeriodMinutes,
+                'working_days' => $this->workingDays,
+                'description' => $this->description,
+                'is_active' => $this->isActive,
+                'branch_id' => $branchId,
+            ];
 
-        if ($this->shiftId) {
-            Shift::findOrFail($this->shiftId)->update($data);
-            session()->flash('success', __('Shift updated successfully'));
-        } else {
-            Shift::create($data);
-            session()->flash('success', __('Shift created successfully'));
-        }
+            if ($this->shiftId) {
+                Shift::findOrFail($this->shiftId)->update($data);
+                session()->flash('success', __('Shift updated successfully'));
+            } else {
+                Shift::create($data);
+                session()->flash('success', __('Shift created successfully'));
+            }
 
-        $this->redirectRoute('app.hrm.shifts.index', navigate: true);
+            $this->redirectRoute('app.hrm.shifts.index', navigate: true);
+        });
     }
 
     #[Layout('layouts.app')]

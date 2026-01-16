@@ -134,17 +134,17 @@ class PurchaseService implements PurchaseServiceInterface
                 // Get header-level shipping if provided
                 $shippingAmount = (float) ($payload['shipping_amount'] ?? 0);
 
-                $p->subtotal = (float) bcdiv($subtotal, '1', 2);
-                $p->tax_amount = (float) bcdiv($totalTax, '1', 2);
-                $p->discount_amount = (float) bcdiv($totalDiscount, '1', 2);
+                // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
+                $p->subtotal = (float) bcround($subtotal, 2);
+                $p->tax_amount = (float) bcround($totalTax, 2);
+                $p->discount_amount = (float) bcround($totalDiscount, 2);
                 // total_amount = subtotal + tax + shipping - discount
-                $p->total_amount = (float) bcdiv(
+                $p->total_amount = (float) bcround(
                     bcadd(
                         bcsub(bcadd($subtotal, $totalTax, 4), $totalDiscount, 4),
                         (string) $shippingAmount,
                         4
                     ),
-                    '1',
                     2
                 );
 

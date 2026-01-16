@@ -162,7 +162,8 @@ class HRMService implements HRMServiceInterface
         // Use bcmath for precise social insurance calculation
         $insurance = bcmul((string) $insurableSalary, (string) $rate, 4);
 
-        return (float) bcdiv($insurance, '1', 2);
+        // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
+        return (float) bcround($insurance, 2);
     }
 
     protected function calculateTax(float $taxableIncome): float
@@ -203,7 +204,8 @@ class HRMService implements HRMServiceInterface
         // Use bcmath for precise monthly tax calculation
         $monthlyTax = bcdiv($annualTaxString, '12', 4);
 
-        return (float) bcdiv($monthlyTax, '1', 2);
+        // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
+        return (float) bcround($monthlyTax, 2);
     }
 
     protected function calculateAbsenceDeduction(HREmployee $emp, string $period): float
