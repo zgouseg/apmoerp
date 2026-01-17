@@ -40,7 +40,8 @@ class Index extends Component
     {
         $policy = TicketSLAPolicy::findOrFail($id);
         $policy->is_active = ! $policy->is_active;
-        $policy->updated_by = auth()->id();
+        // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+        $policy->updated_by = actual_user_id();
         $policy->save();
 
         session()->flash('success', __('SLA Policy status updated'));

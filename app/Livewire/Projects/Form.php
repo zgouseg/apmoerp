@@ -210,7 +210,8 @@ class Form extends Component
             } else {
                 Project::create(array_merge(
                     $this->payloadWithNormalizedDates(),
-                    ['created_by' => auth()->id()]
+                    // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+                    ['created_by' => actual_user_id()]
                 ));
                 session()->flash('success', __('Project created successfully'));
             }
