@@ -305,8 +305,13 @@ class StockService
 
             // V32-CRIT-01 FIX: Update the product's stock_quantity cache
             // This keeps the denormalized stock_quantity field in sync with stock_movements.
-            // Previously, only StockMovementRepository::create() updated this cache, causing
-            // inconsistencies when adjustStock() was used (e.g., by SalesReturnService, StockTransferService).
+            //
+            // Design note: This method uses StockMovement::create() directly rather than
+            // StockMovementRepository::create() because it needs fine-grained control over
+            // quantity sign handling (positive/negative based on movement type), reference
+            // tracking, and stock_before/after calculation. The repository's create() uses
+            // a different abstraction (direction: 'in'/'out') and maps legacy field names.
+            // To maintain consistency, we duplicate the cache update logic here.
             $this->updateProductStockCache($productId);
 
             return $movement;
@@ -319,6 +324,9 @@ class StockService
      *
      * This method mirrors StockMovementRepository::updateProductStockCache() to ensure
      * consistent behavior regardless of which code path creates stock movements.
+     *
+     * Note: This recalculates from all movements. For high-volume products, consider
+     * adding a database index on stock_movements(product_id) for performance.
      */
     protected function updateProductStockCache(int $productId): void
     {

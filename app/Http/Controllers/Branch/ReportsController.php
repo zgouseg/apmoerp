@@ -43,9 +43,8 @@ class ReportsController extends Controller
         // Aging should reflect when current on-hand stock entered the inventory,
         // not when the first movement (which could be an outbound) occurred.
         // This provides more accurate aging buckets and slow-moving inventory decisions.
-        $dateExpr = DB::getDriverName() === 'pgsql'
-            ? 'MIN(CASE WHEN m.quantity > 0 THEN DATE(m.created_at) END)'
-            : 'MIN(CASE WHEN m.quantity > 0 THEN DATE(m.created_at) END)';
+        // Note: CASE expression works the same across MySQL, PostgreSQL, and SQLite.
+        $dateExpr = 'MIN(CASE WHEN m.quantity > 0 THEN DATE(m.created_at) END)';
 
         // Filter by branch through the products table since stock_movements doesn't have branch_id
         $rows = DB::table('stock_movements as m')

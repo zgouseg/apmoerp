@@ -168,7 +168,10 @@ final class StockMovementRepository extends EloquentBaseRepository implements St
                 throw new DomainException("Invalid product_id: {$data['product_id']}");
             }
 
-            // Only validate branch match if product has a branch_id assigned (non-global product)
+            // Only validate branch match if product has a branch_id assigned (non-global product).
+            // Products with branch_id = null are considered "global" products that can have
+            // stock movements in any warehouse across all branches. This is an intentional
+            // business rule for shared inventory items (e.g., central warehouse products).
             if ($product->branch_id !== null && $warehouse->branch_id !== $product->branch_id) {
                 throw new DomainException(
                     "Branch mismatch: Product (branch_id: {$product->branch_id}) cannot have stock movement in warehouse (branch_id: {$warehouse->branch_id})"
