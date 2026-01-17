@@ -261,6 +261,18 @@ class StockService
         ?int $userId = null
     ): StockMovement {
         return DB::transaction(function () use ($productId, $warehouseId, $quantity, $type, $reference, $notes, $referenceId, $referenceType, $unitCost, $userId) {
+            // V32-HIGH-02 FIX: Lock the warehouse row first as a deterministic lock anchor
+            // This ensures proper serialization even when no stock_movements rows exist yet
+            // for this product+warehouse combination, preventing race conditions on first movement.
+            $warehouse = DB::table('warehouses')
+                ->where('id', $warehouseId)
+                ->lockForUpdate()
+                ->first();
+
+            if ($warehouse === null) {
+                throw new \DomainException("Invalid warehouse_id: {$warehouseId}");
+            }
+
             // STILL-V7-HIGH-N07 FIX: Lock the rows for this product+warehouse combination
             // and calculate stock at database level for efficiency
             $stockBefore = (float) DB::table('stock_movements')
@@ -291,7 +303,46 @@ class StockService
                 'created_by' => $createdBy,
             ]);
 
+            // V32-CRIT-01 FIX: Update the product's stock_quantity cache
+            // This keeps the denormalized stock_quantity field in sync with stock_movements.
+            //
+            // Design note: This method uses StockMovement::create() directly rather than
+            // StockMovementRepository::create() because it needs fine-grained control over
+            // quantity sign handling (positive/negative based on movement type), reference
+            // tracking, and stock_before/after calculation. The repository's create() uses
+            // a different abstraction (direction: 'in'/'out') and maps legacy field names.
+            // To maintain consistency, we duplicate the cache update logic here.
+            $this->updateProductStockCache($productId);
+
             return $movement;
         });
+    }
+
+    /**
+     * V32-CRIT-01 FIX: Update the product's stock_quantity cache field
+     * Calculates total stock across all warehouses from stock_movements.
+     *
+     * This method mirrors StockMovementRepository::updateProductStockCache() to ensure
+     * consistent behavior regardless of which code path creates stock movements.
+     *
+     * Note: This recalculates from all movements. For high-volume products, consider
+     * adding a database index on stock_movements(product_id) for performance.
+     */
+    protected function updateProductStockCache(int $productId): void
+    {
+        // Calculate total stock from all warehouses for this product
+        // The quantity column already accounts for direction:
+        // - Positive values = stock added (in)
+        // - Negative values = stock removed (out)
+        $totalStock = (float) StockMovement::where('product_id', $productId)
+            ->sum('quantity');
+
+        // Update the product's stock_quantity field (cached/denormalized value)
+        DB::table('products')
+            ->where('id', $productId)
+            ->update([
+                'stock_quantity' => $totalStock,
+                'updated_at' => now(),
+            ]);
     }
 }

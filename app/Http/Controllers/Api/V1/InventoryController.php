@@ -19,6 +19,13 @@ use Illuminate\Validation\ValidationException;
 
 class InventoryController extends BaseApiController
 {
+    /**
+     * V32-MED-01 FIX: Tolerance for "set" mode to avoid micro stock movements
+     * from float rounding drift (e.g., decimal:4 columns with float math).
+     * Movements with difference below this threshold are treated as no-op.
+     */
+    private const STOCK_SET_TOLERANCE = 0.0001;
+
     public function __construct(
         private readonly StockMovementRepositoryInterface $stockMovementRepo
     ) {}
@@ -113,6 +120,16 @@ class InventoryController extends BaseApiController
             $difference = $newQuantity - $oldQuantity;
             $actualDirection = $difference >= 0 ? 'in' : 'out';
             $actualQty = abs($difference);
+
+            // V32-MED-01 FIX: Check tolerance to avoid micro stock movements from float rounding
+            if ($actualQty < self::STOCK_SET_TOLERANCE) {
+                return $this->successResponse([
+                    'product_id' => $product->id,
+                    'sku' => $product->sku,
+                    'old_quantity' => $oldQuantity,
+                    'new_quantity' => $oldQuantity, // No change
+                ], __('Stock unchanged (difference below threshold)'));
+            }
         } else {
             $actualDirection = $validated['direction'];
             $actualQty = abs((float) $validated['qty']);
