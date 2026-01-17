@@ -154,7 +154,8 @@ class Tasks extends Component
         } else {
             $task = $this->project->tasks()->create(array_merge(
                 $data,
-                ['created_by' => auth()->id()]
+                // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+                ['created_by' => actual_user_id()]
             ));
         }
 

@@ -46,7 +46,8 @@ class Index extends Component
     {
         $category = TicketCategory::findOrFail($id);
         $category->is_active = ! $category->is_active;
-        $category->updated_by = auth()->id();
+        // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+        $category->updated_by = actual_user_id();
         $category->save();
 
         session()->flash('success', __('Category status updated'));

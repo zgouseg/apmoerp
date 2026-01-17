@@ -212,7 +212,8 @@ class ProductsController extends BaseApiController
         // V9-CRITICAL-01 FIX: Create product without stock_quantity and use stock_movements instead
         $product = new Product($validated);
         $product->branch_id = $store->branch_id;
-        $product->created_by = auth()->id();
+        // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+        $product->created_by = actual_user_id();
         // Keep stock_quantity as cached value but also create stock movement
         $product->stock_quantity = $quantity;
         $product->save();
@@ -230,7 +231,8 @@ class ProductsController extends BaseApiController
                 'direction' => 'in',
                 'unit_cost' => $product->cost ?? null,
                 'notes' => 'Initial stock via API product creation',
-                'created_by' => auth()->id(),
+                // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+                'created_by' => actual_user_id(),
             ]);
         }
 
@@ -328,14 +330,16 @@ class ProductsController extends BaseApiController
                         'direction' => $quantityDiff > 0 ? 'in' : 'out',
                         'unit_cost' => $product->cost ?? null,
                         'notes' => 'Stock adjustment via API product update',
-                        'created_by' => auth()->id(),
+                        // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+                        'created_by' => actual_user_id(),
                     ]);
                 }
             }
         }
 
         $product->fill($validated);
-        $product->updated_by = auth()->id();
+        // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+        $product->updated_by = actual_user_id();
         $product->save();
 
         return $this->successResponse($product, __('Product updated successfully'));

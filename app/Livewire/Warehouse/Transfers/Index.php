@@ -106,7 +106,8 @@ class Index extends Component
                     'reference_id' => $transfer->id,
                     'notes' => "Transfer #{$transfer->reference_number} to warehouse ID {$transfer->to_warehouse_id}",
                     'unit_cost' => $item->unit_cost ?? 0,
-                    'created_by' => auth()->id(),
+                    // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+                    'created_by' => actual_user_id(),
                 ]);
 
                 // Create transfer_in movement to destination warehouse
@@ -120,7 +121,8 @@ class Index extends Component
                     'reference_id' => $transfer->id,
                     'notes' => "Transfer #{$transfer->reference_number} from warehouse ID {$transfer->from_warehouse_id}",
                     'unit_cost' => $item->unit_cost ?? 0,
-                    'created_by' => auth()->id(),
+                    // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+                    'created_by' => actual_user_id(),
                 ]);
             }
 
@@ -129,7 +131,8 @@ class Index extends Component
                 'status' => 'completed',
                 'shipped_at' => now(),
                 'received_at' => now(),
-                'received_by' => auth()->id(),
+                // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+                'received_by' => actual_user_id(),
             ]);
         });
 

@@ -99,11 +99,13 @@ class Form extends Component
 
         if ($this->categoryId) {
             $category = TicketCategory::findOrFail($this->categoryId);
-            $data['updated_by'] = auth()->id();
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+            $data['updated_by'] = actual_user_id();
             $category->update($data);
             session()->flash('success', __('Category updated successfully'));
         } else {
-            $data['created_by'] = auth()->id();
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+            $data['created_by'] = actual_user_id();
             TicketCategory::create($data);
             session()->flash('success', __('Category created successfully'));
         }

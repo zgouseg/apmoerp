@@ -127,7 +127,8 @@ class Form extends Component
         ];
 
         if ($this->isEditing) {
-            $data['updated_by'] = auth()->id();
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+            $data['updated_by'] = actual_user_id();
 
             // Check if account has transactions before updating balance
             $hasTransactions = \DB::table('bank_transactions')
@@ -144,7 +145,8 @@ class Form extends Component
 
             session()->flash('success', __('Bank account updated successfully'));
         } else {
-            $data['created_by'] = auth()->id();
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+            $data['created_by'] = actual_user_id();
             $data['current_balance'] = $this->opening_balance;
             BankAccount::create($data);
             session()->flash('success', __('Bank account created successfully'));

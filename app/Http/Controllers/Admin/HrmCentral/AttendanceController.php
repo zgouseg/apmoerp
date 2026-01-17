@@ -42,7 +42,8 @@ class AttendanceController extends Controller
             'type' => $validated['type'],
             'notes' => $validated['notes'] ?? null,
             'status' => 'pending',
-            'created_by' => auth()->id(),
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+            'created_by' => actual_user_id(),
         ]);
 
         return $this->ok($attendance, __('Attendance record created'), 201);

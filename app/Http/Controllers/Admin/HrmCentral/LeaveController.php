@@ -31,7 +31,8 @@ class LeaveController extends Controller
     {
         $leave->status = 'approved';
         $leave->approved_at = now();
-        $leave->approved_by = auth()->id();
+        // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+        $leave->approved_by = actual_user_id();
         $leave->save();
 
         return $this->ok($leave, __('Leave request approved'));

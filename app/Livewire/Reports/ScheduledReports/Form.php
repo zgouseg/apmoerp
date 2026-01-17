@@ -106,7 +106,8 @@ class Form extends Component
             session()->flash('success', __('Schedule updated successfully'));
         } else {
             $data['created_at'] = now();
-            $data['created_by'] = auth()->id();
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+            $data['created_by'] = actual_user_id();
             $data['next_run_at'] = $this->calculateNextRun();
             DB::table('report_schedules')->insert($data);
             session()->flash('success', __('Schedule created successfully'));

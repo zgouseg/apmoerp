@@ -119,7 +119,8 @@ class Form extends Component
 
         // Only set created_by for new records
         if (! $this->editMode) {
-            $validated['created_by'] = auth()->id();
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+            $validated['created_by'] = actual_user_id();
         }
 
         if (empty(self::$customerColumns)) {
