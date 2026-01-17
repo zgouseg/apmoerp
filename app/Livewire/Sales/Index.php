@@ -25,7 +25,8 @@ class Index extends Component
     #[Url]
     public string $search = '';
 
-    public string $sortField = 'created_at';
+    // V34-HIGH-04 FIX: Default to sale_date for business date sorting
+    public string $sortField = 'sale_date';
 
     public string $sortDirection = 'desc';
 
@@ -47,10 +48,11 @@ class Index extends Component
     /**
      * Define allowed sort columns to prevent SQL injection.
      * Use actual migration column names.
+     * V34-HIGH-04 FIX: Added sale_date to allowed sort columns for business date sorting
      */
     protected function allowedSortColumns(): array
     {
-        return ['id', 'reference_number', 'total_amount', 'paid_amount', 'status', 'created_at', 'updated_at'];
+        return ['id', 'reference_number', 'total_amount', 'paid_amount', 'status', 'sale_date', 'created_at', 'updated_at'];
     }
 
     public function updatingSearch(): void
@@ -96,8 +98,9 @@ class Index extends Component
                     ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', "%{$this->search}%"));
             }))
             ->when($this->status, fn ($q) => $q->where('status', $this->status))
-            ->when($this->dateFrom, fn ($q) => $q->whereDate('created_at', '>=', $this->dateFrom))
-            ->when($this->dateTo, fn ($q) => $q->whereDate('created_at', '<=', $this->dateTo))
+            // V34-HIGH-04 FIX: Use sale_date instead of created_at for date filtering
+            ->when($this->dateFrom, fn ($q) => $q->whereDate('sale_date', '>=', $this->dateFrom))
+            ->when($this->dateTo, fn ($q) => $q->whereDate('sale_date', '<=', $this->dateTo))
             ->orderBy($this->getSortField(), $this->getSortDirection())
             ->paginate(15);
 
@@ -124,13 +127,15 @@ class Index extends Component
                     ->orWhere('customers.name', 'like', "%{$this->search}%");
             }))
             ->when($this->status, fn ($q) => $q->where('sales.status', $this->status))
-            ->when($this->dateFrom, fn ($q) => $q->whereDate('sales.created_at', '>=', $this->dateFrom))
-            ->when($this->dateTo, fn ($q) => $q->whereDate('sales.created_at', '<=', $this->dateTo))
+            // V34-HIGH-04 FIX: Use sale_date instead of created_at for date filtering
+            ->when($this->dateFrom, fn ($q) => $q->whereDate('sales.sale_date', '>=', $this->dateFrom))
+            ->when($this->dateTo, fn ($q) => $q->whereDate('sales.sale_date', '<=', $this->dateTo))
             ->orderBy('sales.'.$sortField, $sortDirection)
             ->select([
                 'sales.id',
                 'sales.reference_number as reference',
-                'sales.created_at as posted_at',
+                // V34-HIGH-04 FIX: Use sale_date instead of created_at for posted_at export field
+                'sales.sale_date as posted_at',
                 'customers.name as customer_name',
                 'sales.total_amount as grand_total',
                 'sales.paid_amount as amount_paid',

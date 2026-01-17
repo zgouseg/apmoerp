@@ -34,17 +34,23 @@ class ReportService implements ReportServiceInterface
                 $from = $from ?: now()->startOfMonth()->toDateString();
                 $to = $to ?: now()->endOfMonth()->toDateString();
 
+                // V34-CRIT-01 FIX: Use sale_date instead of created_at for accurate financial reporting
+                // Also filter out non-revenue statuses (draft, cancelled)
                 $sales = DB::table('sales')
                     ->where('branch_id', $branchId)
-                    ->whereDate('created_at', '>=', $from)
-                    ->whereDate('created_at', '<=', $to)
+                    ->whereDate('sale_date', '>=', $from)
+                    ->whereDate('sale_date', '<=', $to)
+                    ->whereNotIn('status', ['draft', 'cancelled'])
                     ->select(DB::raw('COALESCE(SUM(total_amount), 0) as total'), DB::raw('COALESCE(SUM(paid_amount), 0) as paid'))
                     ->first();
 
+                // V34-CRIT-01 FIX: Use purchase_date instead of created_at for accurate financial reporting
+                // Also filter out non-relevant statuses (draft, cancelled)
                 $purchases = DB::table('purchases')
                     ->where('branch_id', $branchId)
-                    ->whereDate('created_at', '>=', $from)
-                    ->whereDate('created_at', '<=', $to)
+                    ->whereDate('purchase_date', '>=', $from)
+                    ->whereDate('purchase_date', '<=', $to)
+                    ->whereNotIn('status', ['draft', 'cancelled'])
                     ->select(DB::raw('COALESCE(SUM(total_amount), 0) as total'), DB::raw('COALESCE(SUM(paid_amount), 0) as paid'))
                     ->first();
 
@@ -168,10 +174,12 @@ class ReportService implements ReportServiceInterface
 
                 $items = $query->get();
 
+                // V34-MED-01 FIX: Calculate actual inventory value using stock_quantity * cost
+                // Previously was computing ($p->default_price ?? 0) * 1 which is meaningless
                 $summary = [
                     'total_products' => $items->count(),
-                    'total_value' => $items->sum(fn ($p) => ($p->default_price ?? 0) * 1),
-                    'total_cost' => $items->sum(fn ($p) => $p->standard_cost ?? 0),
+                    'total_value' => $items->sum(fn ($p) => ((float) ($p->stock_quantity ?? 0)) * ((float) ($p->cost ?? $p->standard_cost ?? 0))),
+                    'total_cost' => $items->sum(fn ($p) => (float) ($p->standard_cost ?? 0)),
                     'by_module' => $items->groupBy('module_id')->map(fn ($g) => $g->count()),
                     'by_status' => $items->groupBy('status')->map(fn ($g) => $g->count()),
                 ];
@@ -201,14 +209,18 @@ class ReportService implements ReportServiceInterface
                     $query->whereIn('sales.branch_id', $branchIds);
                 }
 
-                $this->applyDateFilters($query, $filters, 'sales.created_at');
+                // V34-CRIT-01 FIX: Use sale_date instead of created_at for accurate financial reporting
+                $this->applyDateFilters($query, $filters, 'sales.sale_date');
                 $this->applyBranchFilter($query, $filters, 'sales.branch_id');
 
                 if (! empty($filters['status'])) {
                     $query->where('sales.status', $filters['status']);
+                } else {
+                    // V34-CRIT-01 FIX: Filter out non-revenue statuses by default
+                    $query->whereNotIn('sales.status', ['draft', 'cancelled']);
                 }
 
-                $items = $query->orderBy('sales.created_at', 'desc')->get();
+                $items = $query->orderBy('sales.sale_date', 'desc')->get();
 
                 $summary = [
                     'total_sales' => $items->count(),
@@ -240,10 +252,18 @@ class ReportService implements ReportServiceInterface
                     $query->whereIn('purchases.branch_id', $branchIds);
                 }
 
-                $this->applyDateFilters($query, $filters, 'purchases.created_at');
+                // V34-CRIT-01 FIX: Use purchase_date instead of created_at for accurate financial reporting
+                $this->applyDateFilters($query, $filters, 'purchases.purchase_date');
                 $this->applyBranchFilter($query, $filters, 'purchases.branch_id');
 
-                $items = $query->orderBy('purchases.created_at', 'desc')->get();
+                if (! empty($filters['status'])) {
+                    $query->where('purchases.status', $filters['status']);
+                } else {
+                    // V34-CRIT-01 FIX: Filter out non-relevant statuses by default
+                    $query->whereNotIn('purchases.status', ['draft', 'cancelled']);
+                }
+
+                $items = $query->orderBy('purchases.purchase_date', 'desc')->get();
 
                 return [
                     'items' => $items,
@@ -393,20 +413,31 @@ class ReportService implements ReportServiceInterface
                     ? Branch::active()->get()
                     : $this->branchAccessService->getUserBranches($user);
 
-                $dateFrom = $filters['date_from'] ?? Carbon::now()->startOfMonth();
-                $dateTo = $filters['date_to'] ?? Carbon::now()->endOfMonth();
+                // V34-MED-02 FIX: Parse filter dates into Carbon and apply startOfDay/endOfDay
+                $dateFrom = isset($filters['date_from'])
+                    ? Carbon::parse($filters['date_from'])->startOfDay()
+                    : Carbon::now()->startOfMonth()->startOfDay();
+                $dateTo = isset($filters['date_to'])
+                    ? Carbon::parse($filters['date_to'])->endOfDay()
+                    : Carbon::now()->endOfMonth()->endOfDay();
 
+                // V34-MED-02 FIX: Use sale_date instead of created_at for business reporting
+                // Also filter out non-revenue statuses
                 $salesByBranch = DB::table('sales')
                     ->select('branch_id', DB::raw('COUNT(*) as count'), DB::raw('SUM(total_amount) as total'))
                     ->whereIn('branch_id', $branches->pluck('id'))
-                    ->whereBetween('created_at', [$dateFrom, $dateTo])
+                    ->whereBetween('sale_date', [$dateFrom->toDateString(), $dateTo->toDateString()])
+                    ->whereNotIn('status', ['draft', 'cancelled'])
                     ->groupBy('branch_id')
                     ->get()->keyBy('branch_id');
 
+                // V34-MED-02 FIX: Use purchase_date instead of created_at for business reporting
+                // Also filter out non-relevant statuses
                 $purchasesByBranch = DB::table('purchases')
                     ->select('branch_id', DB::raw('COUNT(*) as count'), DB::raw('SUM(total_amount) as total'))
                     ->whereIn('branch_id', $branches->pluck('id'))
-                    ->whereBetween('created_at', [$dateFrom, $dateTo])
+                    ->whereBetween('purchase_date', [$dateFrom->toDateString(), $dateTo->toDateString()])
+                    ->whereNotIn('status', ['draft', 'cancelled'])
                     ->groupBy('branch_id')
                     ->get()->keyBy('branch_id');
 

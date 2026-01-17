@@ -169,21 +169,23 @@ class KPIDashboardService
             ->whereBetween('created_at', [$previousDates['start'], $previousDates['end']])
             ->count();
 
+        // V34-CRIT-02 FIX: Use sale_date instead of created_at for business reporting
         // Total active customers (purchased in period)
         $activeCustomers = Sale::query()
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
-            ->whereBetween('created_at', [$dates['start'], $dates['end']])
-            ->where('status', '!=', 'cancelled')
+            ->whereBetween('sale_date', [$dates['start'], $dates['end']])
+            ->whereNotIn('status', ['draft', 'cancelled'])
             ->whereNotNull('customer_id')
             ->distinct('customer_id')
             ->count('customer_id');
 
+        // V34-CRIT-02 FIX: Use sale_date instead of created_at for business reporting
         // Repeat customers
         $repeatCustomers = DB::table('sales')
             ->select('customer_id', DB::raw('COUNT(*) as order_count'))
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
-            ->whereBetween('created_at', [$dates['start'], $dates['end']])
-            ->where('status', '!=', 'cancelled')
+            ->whereBetween('sale_date', [$dates['start'], $dates['end']])
+            ->whereNotIn('status', ['draft', 'cancelled'])
             ->whereNotNull('customer_id')
             ->groupBy('customer_id')
             ->having('order_count', '>', 1)
@@ -219,11 +221,12 @@ class KPIDashboardService
      */
     public function getFinancialKPIs(?int $branchId, array $dates, array $previousDates): array
     {
+        // V34-CRIT-02 FIX: Use sale_date instead of created_at for business reporting
         // Revenue and expenses
         $currentRevenue = Sale::query()
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
-            ->whereBetween('created_at', [$dates['start'], $dates['end']])
-            ->where('status', '!=', 'cancelled')
+            ->whereBetween('sale_date', [$dates['start'], $dates['end']])
+            ->whereNotIn('status', ['draft', 'cancelled'])
             ->sum('total_amount');
 
         $currentExpenses = Expense::query()
@@ -232,10 +235,11 @@ class KPIDashboardService
             ->where('status', 'approved')
             ->sum('amount');
 
+        // V34-CRIT-02 FIX: Use sale_date instead of created_at for business reporting
         $previousRevenue = Sale::query()
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
-            ->whereBetween('created_at', [$previousDates['start'], $previousDates['end']])
-            ->where('status', '!=', 'cancelled')
+            ->whereBetween('sale_date', [$previousDates['start'], $previousDates['end']])
+            ->whereNotIn('status', ['draft', 'cancelled'])
             ->sum('total_amount');
 
         $previousExpenses = Expense::query()
@@ -244,21 +248,23 @@ class KPIDashboardService
             ->where('status', 'approved')
             ->sum('amount');
 
+        // V34-CRIT-02 FIX: Use purchase_date instead of created_at for business reporting
         // Purchases (COGS approximation)
         $currentPurchases = Purchase::query()
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
-            ->whereBetween('created_at', [$dates['start'], $dates['end']])
-            ->where('status', '!=', 'cancelled')
+            ->whereBetween('purchase_date', [$dates['start'], $dates['end']])
+            ->whereNotIn('status', ['draft', 'cancelled'])
             ->sum('total_amount');
 
         // Calculate gross profit
         $grossProfit = $currentRevenue - $currentPurchases;
         $netProfit = $grossProfit - $currentExpenses;
 
+        // V34-CRIT-02 FIX: Use purchase_date instead of created_at for business reporting
         $previousGrossProfit = $previousRevenue - Purchase::query()
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
-            ->whereBetween('created_at', [$previousDates['start'], $previousDates['end']])
-            ->where('status', '!=', 'cancelled')
+            ->whereBetween('purchase_date', [$previousDates['start'], $previousDates['end']])
+            ->whereNotIn('status', ['draft', 'cancelled'])
             ->sum('total_amount');
 
         $grossProfitChange = $this->calculateChange($grossProfit, $previousGrossProfit);
@@ -293,6 +299,7 @@ class KPIDashboardService
         // Average time to fulfill order (if tracking exists)
         $avgFulfillmentTime = 0; // Placeholder - implement based on your order tracking
 
+        // V34-CRIT-02 FIX: Use sale_date instead of created_at for business reporting
         // Top selling products
         $topProducts = DB::table('sale_items')
             ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
@@ -303,23 +310,24 @@ class KPIDashboardService
                 DB::raw('SUM(sale_items.line_total) as total_revenue')
             )
             ->when($branchId, fn ($q) => $q->where('sales.branch_id', $branchId))
-            ->whereBetween('sales.created_at', [$dates['start'], $dates['end']])
-            ->where('sales.status', '!=', 'cancelled')
+            ->whereBetween('sales.sale_date', [$dates['start'], $dates['end']])
+            ->whereNotIn('sales.status', ['draft', 'cancelled'])
             ->groupBy('products.id', 'products.name')
             ->orderByDesc('total_revenue')
             ->limit(5)
             ->get();
 
+        // V34-CRIT-02 FIX: Use sale_date instead of created_at for business reporting
         // Daily sales trend
         $dailySales = Sale::query()
             ->select(
-                DB::raw('DATE(created_at) as date'),
+                DB::raw('DATE(sale_date) as date'),
                 DB::raw('SUM(total_amount) as revenue'),
                 DB::raw('COUNT(*) as orders')
             )
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
-            ->whereBetween('created_at', [$dates['start'], $dates['end']])
-            ->where('status', '!=', 'cancelled')
+            ->whereBetween('sale_date', [$dates['start'], $dates['end']])
+            ->whereNotIn('status', ['draft', 'cancelled'])
             ->groupBy('date')
             ->orderBy('date')
             ->get();
@@ -341,13 +349,14 @@ class KPIDashboardService
 
     /**
      * Get sales data for a period
+     * V34-CRIT-02 FIX: Use sale_date instead of created_at for business reporting
      */
     protected function getSalesData(?int $branchId, string $start, string $end): array
     {
         $query = Sale::query()
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
-            ->whereBetween('created_at', [$start, $end])
-            ->where('status', '!=', 'cancelled');
+            ->whereBetween('sale_date', [$start, $end])
+            ->whereNotIn('status', ['draft', 'cancelled']);
 
         $totalRevenue = $query->sum('total_amount');
         $totalOrders = $query->count();

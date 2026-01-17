@@ -25,7 +25,8 @@ class Index extends Component
     #[Url]
     public string $search = '';
 
-    public string $sortField = 'created_at';
+    // V34-HIGH-04 FIX: Default to purchase_date for business date sorting
+    public string $sortField = 'purchase_date';
 
     public string $sortDirection = 'desc';
 
@@ -47,10 +48,11 @@ class Index extends Component
     /**
      * Define allowed sort columns to prevent SQL injection.
      * Use actual migration column names.
+     * V34-HIGH-04 FIX: Added purchase_date to allowed sort columns for business date sorting
      */
     protected function allowedSortColumns(): array
     {
-        return ['id', 'reference_number', 'total_amount', 'paid_amount', 'status', 'created_at', 'updated_at'];
+        return ['id', 'reference_number', 'total_amount', 'paid_amount', 'status', 'purchase_date', 'created_at', 'updated_at'];
     }
 
     public function updatingSearch(): void
@@ -98,13 +100,15 @@ class Index extends Component
                     ->orWhere('suppliers.name', 'like', "%{$this->search}%");
             }))
             ->when($this->status, fn ($q) => $q->where('purchases.status', $this->status))
-            ->when($this->dateFrom, fn ($q) => $q->whereDate('purchases.created_at', '>=', $this->dateFrom))
-            ->when($this->dateTo, fn ($q) => $q->whereDate('purchases.created_at', '<=', $this->dateTo))
+            // V34-HIGH-04 FIX: Use purchase_date instead of created_at for date filtering
+            ->when($this->dateFrom, fn ($q) => $q->whereDate('purchases.purchase_date', '>=', $this->dateFrom))
+            ->when($this->dateTo, fn ($q) => $q->whereDate('purchases.purchase_date', '<=', $this->dateTo))
             ->orderBy('purchases.'.$sortField, $sortDirection)
             ->select([
                 'purchases.id',
                 'purchases.reference_number as reference',
-                'purchases.created_at as posted_at',
+                // V34-HIGH-04 FIX: Use purchase_date instead of created_at for posted_at export field
+                'purchases.purchase_date as posted_at',
                 'suppliers.name as supplier_name',
                 'purchases.total_amount as grand_total',
                 'purchases.paid_amount as amount_paid',
@@ -130,8 +134,9 @@ class Index extends Component
                     ->orWhereHas('supplier', fn ($s) => $s->where('name', 'like', "%{$this->search}%"));
             }))
             ->when($this->status, fn ($q) => $q->where('status', $this->status))
-            ->when($this->dateFrom, fn ($q) => $q->whereDate('created_at', '>=', $this->dateFrom))
-            ->when($this->dateTo, fn ($q) => $q->whereDate('created_at', '<=', $this->dateTo))
+            // V34-HIGH-04 FIX: Use purchase_date instead of created_at for date filtering
+            ->when($this->dateFrom, fn ($q) => $q->whereDate('purchase_date', '>=', $this->dateFrom))
+            ->when($this->dateTo, fn ($q) => $q->whereDate('purchase_date', '<=', $this->dateTo))
             ->orderBy($this->getSortField(), $this->getSortDirection())
             ->paginate(15);
 
