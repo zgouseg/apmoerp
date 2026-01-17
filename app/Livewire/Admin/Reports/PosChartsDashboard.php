@@ -26,27 +26,31 @@ class PosChartsDashboard extends Component
             abort(403);
         }
 
-        $query = Sale::query();
+        // V33-CRIT-01 FIX: Use sale_date (business date) instead of created_at
+        // and exclude all non-valid statuses (cancelled, void, returned, refunded)
+        $query = Sale::query()
+            ->whereNotIn('status', ['cancelled', 'void', 'voided', 'returned', 'refunded']);
 
         if ($this->dateFrom) {
-            $query->whereDate('created_at', '>=', $this->dateFrom);
+            $query->whereDate('sale_date', '>=', $this->dateFrom);
         }
 
         if ($this->dateTo) {
-            $query->whereDate('created_at', '<=', $this->dateTo);
+            $query->whereDate('sale_date', '<=', $this->dateTo);
         }
 
         if ($this->branchId) {
             $query->where('branch_id', $this->branchId);
         }
 
-        $sales = $query->orderBy('created_at')->get();
+        $sales = $query->orderBy('sale_date')->get();
 
         $totalSales = $sales->count();
         $totalRevenue = (float) $sales->sum('grand_total');
 
+        // V33-CRIT-01 FIX: Group by sale_date instead of created_at for accurate daily reporting
         $groupedByDay = $sales->groupBy(function (Sale $sale): string {
-            return optional($sale->created_at)->toDateString() ?? '';
+            return optional($sale->sale_date)->toDateString() ?? '';
         });
 
         $dayLabels = [];

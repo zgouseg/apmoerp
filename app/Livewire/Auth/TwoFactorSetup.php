@@ -57,12 +57,16 @@ class TwoFactorSetup extends Component
             if (class_exists(QrCode::class)) {
                 $this->qrCodeSvg = QrCode::size(200)->generate($qrCodeUrl)->toHtml();
             } else {
+                // A.63/XSS FIX: Escape secret in fallback HTML output
+                $escapedSecret = htmlspecialchars($this->secret, ENT_QUOTES, 'UTF-8');
                 $this->qrCodeSvg = '<div class="p-4 bg-slate-100 rounded text-center text-sm text-slate-600">'.
-                    __('QR Code: Use the secret key below').'<br><code class="text-xs">'.$this->secret.'</code></div>';
+                    __('QR Code: Use the secret key below').'<br><code class="text-xs">'.$escapedSecret.'</code></div>';
             }
         } catch (\Exception $e) {
+            // A.63/XSS FIX: Escape secret in fallback HTML output
+            $escapedSecret = htmlspecialchars($this->secret, ENT_QUOTES, 'UTF-8');
             $this->qrCodeSvg = '<div class="p-4 bg-slate-100 rounded text-center text-sm text-slate-600">'.
-                __('Secret Key').': <code class="text-xs">'.$this->secret.'</code></div>';
+                __('Secret Key').': <code class="text-xs">'.$escapedSecret.'</code></div>';
         }
     }
 

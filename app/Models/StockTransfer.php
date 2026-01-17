@@ -392,6 +392,7 @@ class StockTransfer extends Model
 
     /**
      * Record status change in history
+     * V33-MED-03 FIX: Default to actual_user_id() when userId is null to prevent null audit actor
      */
     protected function recordStatusChange(string $fromStatus, string $toStatus, ?int $userId = null, ?string $notes = null): void
     {
@@ -400,7 +401,7 @@ class StockTransfer extends Model
             'from_status' => $fromStatus,
             'to_status' => $toStatus,
             'notes' => $notes,
-            'changed_by' => $userId,
+            'changed_by' => $userId ?? actual_user_id(),
             'changed_at' => now(),
         ]);
     }

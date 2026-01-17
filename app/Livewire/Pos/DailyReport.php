@@ -56,8 +56,10 @@ class DailyReport extends Component
 
     public function generateReport(): void
     {
-        $query = Sale::whereDate('created_at', $this->date)
-            ->where('status', '!=', 'cancelled');
+        // V33-CRIT-01 FIX: Use sale_date (business date) instead of created_at
+        // and exclude all non-valid statuses (not just cancelled)
+        $query = Sale::whereDate('sale_date', $this->date)
+            ->whereNotIn('status', ['cancelled', 'void', 'voided', 'returned', 'refunded']);
 
         if ($this->branchId) {
             $query->where('branch_id', $this->branchId);
@@ -116,8 +118,10 @@ class DailyReport extends Component
             ? \App\Models\Branch::active()->get()
             : $this->branchAccessService->getUserBranches($user);
 
-        $salesQuery = Sale::whereDate('created_at', $this->date)
-            ->where('status', '!=', 'cancelled')
+        // V33-CRIT-01 FIX: Use sale_date (business date) instead of created_at
+        // and exclude all non-valid statuses (not just cancelled)
+        $salesQuery = Sale::whereDate('sale_date', $this->date)
+            ->whereNotIn('status', ['cancelled', 'void', 'voided', 'returned', 'refunded'])
             ->with(['customer', 'payments', 'createdBy']);
 
         if ($this->branchId) {

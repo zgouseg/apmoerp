@@ -135,11 +135,12 @@ class SaleService implements SaleServiceInterface
                         throw new \InvalidArgumentException(__('No valid items to return. Please ensure items exist on the sale and have available quantities.'));
                     }
 
-                    // V30-MED-07 FIX: Use retry mechanism to handle race condition
-                    // when no ReturnNote exists for today (lockForUpdate won't help)
+                    // V33-HIGH-03 FIX: Use retry mechanism with try-catch on duplicate key
+                    // The exists() + create() pattern is still race-prone; catch duplicate key errors and retry
                     $referenceNumber = null;
-                    $maxRetries = 5;
+                    $maxRetries = 10;
                     $today = today()->toDateString();
+                    $note = null;
 
                     for ($attempt = 0; $attempt < $maxRetries; $attempt++) {
                         // Get the last note for today with lock
@@ -158,25 +159,37 @@ class SaleService implements SaleServiceInterface
 
                         $referenceNumber = 'RET-'.date('Ymd').'-'.str_pad((string) $seq, 5, '0', STR_PAD_LEFT);
 
-                        // Check if reference number already exists (race condition scenario)
-                        if (! ReturnNote::where('reference_number', $referenceNumber)->exists()) {
-                            break;
+                        try {
+                            $note = ReturnNote::create([
+                                'branch_id' => $sale->branch_id,
+                                'sale_id' => $sale->getKey(),
+                                'reference_number' => $referenceNumber,
+                                'type' => 'sale_return',
+                                'warehouse_id' => $sale->warehouse_id,
+                                'customer_id' => $sale->customer_id,
+                                'status' => 'pending',
+                                'return_date' => now()->toDateString(),
+                                'reason' => $reason,
+                                'total_amount' => (float) $refund,
+                                'restock_items' => true,
+                            ]);
+                            break; // Success, exit the retry loop
+                        } catch (\Illuminate\Database\QueryException $e) {
+                            // Check if it's a duplicate key error (MySQL: 1062, PostgreSQL: 23505, SQLite: 19)
+                            $isDuplicateKey = str_contains($e->getMessage(), 'Duplicate entry') 
+                                || str_contains($e->getMessage(), 'UNIQUE constraint failed')
+                                || str_contains($e->getMessage(), '23505');
+                            
+                            if (!$isDuplicateKey || $attempt >= $maxRetries - 1) {
+                                throw $e; // Re-throw if not a duplicate key error or max retries reached
+                            }
+                            // Continue to next attempt
                         }
                     }
 
-                    $note = ReturnNote::create([
-                        'branch_id' => $sale->branch_id,
-                        'sale_id' => $sale->getKey(),
-                        'reference_number' => $referenceNumber,
-                        'type' => 'sale_return',
-                        'warehouse_id' => $sale->warehouse_id,
-                        'customer_id' => $sale->customer_id,
-                        'status' => 'pending',
-                        'return_date' => now()->toDateString(),
-                        'reason' => $reason,
-                        'total_amount' => (float) $refund,
-                        'restock_items' => true,
-                    ]);
+                    if ($note === null) {
+                        throw new \RuntimeException('Failed to generate unique reference number for return note after ' . $maxRetries . ' attempts');
+                    }
 
                     // V25-CRIT-03 FIX: Create stock movements to track returned quantities
                     // This enables proper over-return protection and inventory accuracy
@@ -197,7 +210,8 @@ class SaleService implements SaleServiceInterface
                                 'reference_id' => $itemData['sale_item_id'],
                                 'notes' => "Sale return for Sale #{$sale->code}: {$reason}",
                                 'unit_cost' => $itemData['unit_cost'],
-                                'created_by' => auth()->id(),
+                                // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution
+                                'created_by' => actual_user_id(),
                             ]);
                         }
                     }
@@ -224,15 +238,22 @@ class SaleService implements SaleServiceInterface
                             'reference_number' => $refundRefNumber,
                             'status' => ReturnRefund::STATUS_PENDING,
                             'notes' => "Refund for return #{$referenceNumber}: {$reason}",
-                            'created_by' => auth()->id(),
+                            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution
+                            'created_by' => actual_user_id(),
                         ]);
                     }
 
-                    // V22-HIGH-07 FIX: For simplicity, mark as returned when any return is processed
-                    // Note: The previous logic for tracking partial returns was incomplete.
-                    // A full implementation would track returned quantities per line item in a return_items table.
-                    // For now, we mark the sale as returned when any return is processed.
-                    $sale->status = 'returned';
+                    // V33-HIGH-02 FIX: Properly track partial vs full returns
+                    // Check if all items have been fully returned to determine correct status
+                    $isFullyReturned = $this->isFullyReturned($sale, $returnedItemsData, $previouslyReturned);
+                    
+                    if ($isFullyReturned) {
+                        $sale->status = 'returned';
+                    } else {
+                        // Use 'partially_returned' for partial returns to maintain accurate reporting
+                        $sale->status = 'partially_returned';
+                    }
+                    
                     // V9-HIGH-03 FIX: Do NOT update paid_amount when refund is pending
                     // The paid_amount should only be updated when refund is actually completed
                     // This maintains accurate financial reporting and prevents incorrect balance calculations
@@ -279,6 +300,40 @@ class SaleService implements SaleServiceInterface
         }
 
         return $returned;
+    }
+
+    /**
+     * V33-HIGH-02 FIX: Check if all sale items have been fully returned
+     * 
+     * @param Sale $sale The sale being returned
+     * @param array $currentReturnItems Items being returned in this transaction
+     * @param array $previouslyReturned Previously returned quantities keyed by sale_item_id
+     * @return bool True if all items are fully returned after this return
+     */
+    protected function isFullyReturned(Sale $sale, array $currentReturnItems, array $previouslyReturned): bool
+    {
+        // Build a map of items being returned in this transaction
+        $currentReturnMap = [];
+        foreach ($currentReturnItems as $item) {
+            $saleItemId = $item['sale_item_id'];
+            $currentReturnMap[$saleItemId] = ($currentReturnMap[$saleItemId] ?? 0) + (float) $item['qty'];
+        }
+        
+        // Check each sale item to see if it's fully returned
+        foreach ($sale->items as $saleItem) {
+            $soldQty = (float) $saleItem->quantity;
+            $previouslyReturnedQty = $previouslyReturned[$saleItem->id] ?? 0;
+            $currentlyReturningQty = $currentReturnMap[$saleItem->id] ?? 0;
+            $totalReturnedQty = $previouslyReturnedQty + $currentlyReturningQty;
+            
+            // If any item has unreturned quantity, the sale is not fully returned
+            // Use bcmath for precision comparison
+            if (bccomp((string) $totalReturnedQty, (string) $soldQty, 4) < 0) {
+                return false;
+            }
+        }
+        
+        return true;
     }
 
     /**
@@ -333,7 +388,8 @@ class SaleService implements SaleServiceInterface
                             'direction' => 'in', // Void adds stock back
                             'unit_cost' => $movement->unit_cost,
                             'notes' => "Void reversal for Sale #{$sale->code}",
-                            'created_by' => auth()->id(),
+                            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution
+                            'created_by' => actual_user_id(),
                         ]);
                     }
 
@@ -346,10 +402,13 @@ class SaleService implements SaleServiceInterface
                             // NEW-CRITICAL-01 FIX: Use nullsafe operator to prevent crash when journal entry is deleted/missing
                             $isReversible = $journalEntry?->is_reversible ?? true;
                             if ($journalEntry && $journalEntry->status === 'posted' && $isReversible) {
+                                // V33-CRIT-02 FIX: Use actual_user_id() instead of auth()->id() ?? 1
+                                // This ensures correct audit attribution during impersonation and avoids
+                                // hardcoded fallback that corrupts audit history
                                 $accountingService->reverseJournalEntry(
                                     $journalEntry,
                                     "Sale voided: {$reason}",
-                                    auth()->id() ?? 1
+                                    actual_user_id()
                                 );
                             }
                         } catch (\Exception $e) {
