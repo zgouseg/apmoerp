@@ -111,7 +111,8 @@ class Form extends Component
             $currency->update($data);
             session()->flash('success', __('Currency updated successfully'));
         } else {
-            $data['created_by'] = auth()->id();
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+            $data['created_by'] = actual_user_id();
 
             if ($this->isBase) {
                 Currency::where('is_base', true)->update(['is_base' => false]);

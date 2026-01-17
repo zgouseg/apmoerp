@@ -212,7 +212,8 @@ class ProductsController extends BaseApiController
         // V9-CRITICAL-01 FIX: Create product without stock_quantity and use stock_movements instead
         $product = new Product($validated);
         $product->branch_id = $store->branch_id;
-        $product->created_by = auth()->id();
+        // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+        $product->created_by = actual_user_id();
         // Keep stock_quantity as cached value but also create stock movement
         $product->stock_quantity = $quantity;
         $product->save();

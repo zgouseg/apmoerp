@@ -121,7 +121,8 @@ class Form extends Component
         $validated['reference_number'] = $validated['reference_number'] ?? 'EXP-'.now()->format('YmdHis').'-'.uniqid();
         // V23-MED-05 FIX: Don't overwrite created_by on updates
         if (! $this->editMode) {
-            $validated['created_by'] = auth()->id();
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+            $validated['created_by'] = actual_user_id();
         }
 
         return $this->handleOperation(

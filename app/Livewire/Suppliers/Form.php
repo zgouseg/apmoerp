@@ -128,9 +128,11 @@ class Form extends Component
         $validated['branch_id'] = auth()->user()->branches()->first()?->id;
 
         if ($this->editMode) {
-            $validated['updated_by'] = auth()->id();
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+            $validated['updated_by'] = actual_user_id();
         } else {
-            $validated['created_by'] = auth()->id();
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+            $validated['created_by'] = actual_user_id();
         }
 
         return $this->handleOperation(

@@ -131,10 +131,12 @@ class Form extends Component
         return $this->handleOperation(
             operation: function () use ($data) {
                 if ($this->isEditing) {
-                    $data['updated_by'] = auth()->id();
+                    // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+                    $data['updated_by'] = actual_user_id();
                     $this->asset->update($data);
                 } else {
-                    $data['created_by'] = auth()->id();
+                    // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+                    $data['created_by'] = actual_user_id();
                     FixedAsset::create($data);
                 }
             },
