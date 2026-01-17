@@ -175,10 +175,12 @@ class SaleService implements SaleServiceInterface
                             ]);
                             break; // Success, exit the retry loop
                         } catch (\Illuminate\Database\QueryException $e) {
-                            // Check if it's a duplicate key error (MySQL: 1062, PostgreSQL: 23505, SQLite: 19)
-                            $isDuplicateKey = str_contains($e->getMessage(), 'Duplicate entry')
-                                || str_contains($e->getMessage(), 'UNIQUE constraint failed')
-                                || str_contains($e->getMessage(), '23505');
+                            // V33-HIGH-03 FIX: Check for duplicate key error using error codes and message
+                            // MySQL: 1062, PostgreSQL: 23505, SQLite: 19/2067
+                            $errorCode = (int) $e->getCode();
+                            $isDuplicateKey = in_array($errorCode, [1062, 23505, 19, 2067], true)
+                                || str_contains($e->getMessage(), 'Duplicate entry')
+                                || str_contains($e->getMessage(), 'UNIQUE constraint failed');
 
                             if (! $isDuplicateKey || $attempt >= $maxRetries - 1) {
                                 throw $e; // Re-throw if not a duplicate key error or max retries reached
