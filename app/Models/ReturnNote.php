@@ -181,7 +181,8 @@ class ReturnNote extends BaseModel
 
         return $this->update([
             'status' => self::STATUS_APPROVED,
-            'processed_by' => $userId ?? auth()->id(),
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+            'processed_by' => $userId ?? actual_user_id(),
         ]);
     }
 
@@ -196,7 +197,8 @@ class ReturnNote extends BaseModel
 
         return $this->update([
             'status' => self::STATUS_COMPLETED,
-            'processed_by' => $userId ?? auth()->id(),
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+            'processed_by' => $userId ?? actual_user_id(),
         ]);
     }
 
@@ -211,7 +213,8 @@ class ReturnNote extends BaseModel
 
         return $this->update([
             'status' => self::STATUS_REJECTED,
-            'processed_by' => $userId ?? auth()->id(),
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+            'processed_by' => $userId ?? actual_user_id(),
         ]);
     }
 

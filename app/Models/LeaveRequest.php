@@ -157,7 +157,8 @@ class LeaveRequest extends BaseModel
 
         $data = [
             'status' => self::STATUS_APPROVED,
-            'approved_by' => $userId ?? auth()->id(),
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+            'approved_by' => $userId ?? actual_user_id(),
             'approved_at' => now(),
         ];
 
@@ -182,7 +183,8 @@ class LeaveRequest extends BaseModel
         return $this->update([
             'status' => self::STATUS_REJECTED,
             'rejection_reason' => $reason,
-            'approved_by' => $userId ?? auth()->id(),
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+            'approved_by' => $userId ?? actual_user_id(),
             'approved_at' => now(),
         ]);
     }
@@ -201,7 +203,8 @@ class LeaveRequest extends BaseModel
         if ($reason) {
             $attributes = $this->extra_attributes ?? [];
             $attributes['cancellation_reason'] = $reason;
-            $attributes['cancelled_by'] = $userId ?? auth()->id();
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+            $attributes['cancelled_by'] = $userId ?? actual_user_id();
             $attributes['cancelled_at'] = now()->toDateTimeString();
             $data['extra_attributes'] = $attributes;
         }

@@ -112,9 +112,10 @@ class HelpdeskService
     public function addReply(Ticket $ticket, array $data): TicketReply
     {
         return DB::transaction(function () use ($ticket, $data) {
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
             $reply = $ticket->addReply(
                 $data['message'],
-                $data['user_id'] ?? auth()->id(),
+                $data['user_id'] ?? actual_user_id(),
                 $data['is_internal'] ?? false
             );
 

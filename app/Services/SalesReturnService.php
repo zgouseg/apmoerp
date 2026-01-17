@@ -138,7 +138,8 @@ class SalesReturnService
         return $this->handleServiceOperation(
             callback: fn() => DB::transaction(function () use ($returnId, $userId) {
                 $return = SalesReturn::with(['items.product', 'customer'])->findOrFail($returnId);
-                $userId = $userId ?? auth()->id();
+                // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+                $userId = $userId ?? actual_user_id();
 
                 abort_if(
                     !$return->canBeApproved(),
@@ -275,7 +276,8 @@ class SalesReturnService
         return $this->handleServiceOperation(
             callback: fn() => DB::transaction(function () use ($returnId, $reason, $userId) {
                 $return = SalesReturn::findOrFail($returnId);
-                $userId = $userId ?? auth()->id();
+                // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+                $userId = $userId ?? actual_user_id();
 
                 abort_if(
                     $return->status !== SalesReturn::STATUS_PENDING,

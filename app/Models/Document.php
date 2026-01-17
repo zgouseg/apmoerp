@@ -203,7 +203,8 @@ class Document extends Model
 
         $this->activities()->create([
             'action' => $normalizedAction,
-            'user_id' => $user?->id ?? auth()->id(),
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+            'user_id' => $user?->id ?? actual_user_id(),
             'description' => $description,
             'metadata' => $metadata ?: null,
             'ip_address' => $ipAddress,

@@ -168,7 +168,8 @@ class Ticket extends Model
         $this->save();
 
         if ($resolutionNote) {
-            $this->addReply($resolutionNote, $this->assigned_to ?? auth()->id(), false);
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+            $this->addReply($resolutionNote, $this->assigned_to ?? actual_user_id(), false);
         }
 
         return $this;

@@ -473,9 +473,9 @@ class POSService implements POSServiceInterface
 
                 // Record the closing if PosClosing model exists
                 if (class_exists(PosClosing::class)) {
-                    // V31-HIGH-04 FIX: Accept closedBy parameter instead of relying on auth()->id()
+                    // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
                     // This ensures proper audit trail even when running via CLI/scheduler
-                    $actualClosedBy = $closedBy ?? auth()->id();
+                    $actualClosedBy = $closedBy ?? actual_user_id();
 
                     PosClosing::updateOrCreate(
                         [

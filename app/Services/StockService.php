@@ -283,9 +283,9 @@ class StockService
 
             $stockAfter = $stockBefore + $quantity;
 
-            // V27-MED-05 FIX: Use provided userId or fall back to auth()->id()
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
             // This allows CLI/queue contexts to specify a user ID explicitly
-            $createdBy = $userId ?? auth()->id();
+            $createdBy = $userId ?? actual_user_id();
 
             // Create the stock movement record
             // V27-HIGH-02 FIX: Include unit_cost in the movement record

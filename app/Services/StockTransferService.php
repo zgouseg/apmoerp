@@ -158,7 +158,8 @@ class StockTransferService
         return $this->handleServiceOperation(
             callback: fn () => DB::transaction(function () use ($transferId, $userId) {
                 $transfer = StockTransfer::with(['items.product'])->findOrFail($transferId);
-                $userId = $userId ?? auth()->id();
+                // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+                $userId = $userId ?? actual_user_id();
 
                 abort_if(
                     ! $transfer->canBeApproved(),
@@ -216,8 +217,8 @@ class StockTransferService
         return $this->handleServiceOperation(
             callback: fn () => DB::transaction(function () use ($transferId, $validated, $userId) {
                 $transfer = StockTransfer::with(['items.product'])->findOrFail($transferId);
-                // V27-MED-05 FIX: Use provided userId or fall back to auth()->id()
-                $userId = $userId ?? auth()->id();
+                // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+                $userId = $userId ?? actual_user_id();
 
                 abort_if(
                     ! $transfer->canBeShipped(),
@@ -349,8 +350,8 @@ class StockTransferService
         return $this->handleServiceOperation(
             callback: fn () => DB::transaction(function () use ($transferId, $validated, $userId) {
                 $transfer = StockTransfer::with(['items.product'])->findOrFail($transferId);
-                // V27-MED-05 FIX: Use provided userId or fall back to auth()->id()
-                $userId = $userId ?? auth()->id();
+                // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+                $userId = $userId ?? actual_user_id();
 
                 abort_if(
                     ! $transfer->canBeReceived(),
@@ -531,7 +532,8 @@ class StockTransferService
         return $this->handleServiceOperation(
             callback: fn () => DB::transaction(function () use ($transferId, $reason, $userId) {
                 $transfer = StockTransfer::findOrFail($transferId);
-                $userId = $userId ?? auth()->id();
+                // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+                $userId = $userId ?? actual_user_id();
 
                 abort_if(
                     $transfer->status !== StockTransfer::STATUS_PENDING,
@@ -565,7 +567,8 @@ class StockTransferService
         return $this->handleServiceOperation(
             callback: fn () => DB::transaction(function () use ($transferId, $reason, $userId) {
                 $transfer = StockTransfer::with(['items'])->findOrFail($transferId);
-                $userId = $userId ?? auth()->id();
+                // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+                $userId = $userId ?? actual_user_id();
 
                 $oldStatus = $transfer->status;
 

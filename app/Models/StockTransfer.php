@@ -345,8 +345,8 @@ class StockTransfer extends Model
         }
 
         $this->update(['status' => self::STATUS_COMPLETED]);
-        // V32-HIGH-03 FIX: Use provided userId or fall back to auth()->id()
-        $this->recordStatusChange(self::STATUS_RECEIVED, self::STATUS_COMPLETED, $userId ?? auth()->id());
+        // V33-CRIT-02 FIX: Use provided userId or fall back to actual_user_id() for proper audit attribution
+        $this->recordStatusChange(self::STATUS_RECEIVED, self::STATUS_COMPLETED, $userId ?? actual_user_id());
 
         return true;
     }
