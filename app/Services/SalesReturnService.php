@@ -341,8 +341,8 @@ class SalesReturnService
         // V34-HIGH-02 FIX: Check if warehouse_id is present before attempting to restock
         // If warehouse_id is null, skip restocking with a warning log
         if ($return->warehouse_id === null) {
-            $hasItemsToRestock = $return->items->contains(fn ($item) => $item->shouldRestock());
-            if ($hasItemsToRestock) {
+            // Only log warning if there are items that would need restocking
+            if ($return->items->contains(fn ($item) => $item->shouldRestock())) {
                 Log::warning('Sales return restocking skipped - no warehouse_id specified', [
                     'return_id' => $return->id,
                     'return_number' => $return->return_number,
@@ -373,7 +373,7 @@ class SalesReturnService
                 quantity: $item->qty_returned,
                 type: StockMovement::TYPE_RETURN,
                 reference: "Return: {$return->return_number}",
-                notes: "Restocked from sales return (item: {$item->id}) - Condition: {$item->condition}",
+                notes: "Restocked from sales return (item: {$item->id}) - Condition: ".($item->condition ?? 'unspecified'),
                 referenceId: $return->id,
                 referenceType: SalesReturn::class,
                 unitCost: $unitCost,
