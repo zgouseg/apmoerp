@@ -24,15 +24,15 @@ class SalesReturnService
     /**
      * Create a new sales return
      *
-     * @param array $data {
-     *     @type int $sale_id Original sale ID
-     *     @type int $branch_id Branch ID
-     *     @type int|null $warehouse_id Warehouse for restocking
-     *     @type string $reason Return reason
-     *     @type array $items Array of items to return
-     *     @type string|null $notes Customer notes
-     * }
-     * @return SalesReturn
+     * @param  array  $data  {
+     *
+     * @type int $sale_id Original sale ID
+     * @type int $branch_id Branch ID
+     * @type int|null $warehouse_id Warehouse for restocking
+     * @type string $reason Return reason
+     * @type array $items Array of items to return
+     * @type string|null $notes Customer notes
+     *                   }
      */
     public function createReturn(array $data): SalesReturn
     {
@@ -56,13 +56,13 @@ class SalesReturnService
         ])->validate();
 
         return $this->handleServiceOperation(
-            callback: fn() => DB::transaction(function () use ($validated) {
+            callback: fn () => DB::transaction(function () use ($validated) {
                 // Validate sale exists
                 $sale = Sale::with(['items.product', 'customer'])->findOrFail($validated['sale_id']);
-                
+
                 // Validate branch access
                 abort_if(
-                    !empty($validated['branch_id']) && $sale->branch_id !== $validated['branch_id'],
+                    ! empty($validated['branch_id']) && $sale->branch_id !== $validated['branch_id'],
                     422,
                     'Branch mismatch between sale and return'
                 );
@@ -86,11 +86,11 @@ class SalesReturnService
                 // Add return items
                 foreach ($validated['items'] as $itemData) {
                     $saleItem = $sale->items()->findOrFail($itemData['sale_item_id']);
-                    
+
                     // Validate return quantity
                     $maxQty = $this->getMaxReturnableQty($saleItem);
-                    $qtyToReturn = (float)($itemData['qty'] ?? 0);
-                    
+                    $qtyToReturn = (float) ($itemData['qty'] ?? 0);
+
                     abort_if(
                         $qtyToReturn > $maxQty,
                         422,
@@ -138,13 +138,13 @@ class SalesReturnService
     public function approveReturn(int $returnId, ?int $userId = null): SalesReturn
     {
         return $this->handleServiceOperation(
-            callback: fn() => DB::transaction(function () use ($returnId, $userId) {
+            callback: fn () => DB::transaction(function () use ($returnId, $userId) {
                 $return = SalesReturn::with(['items.product', 'customer'])->findOrFail($returnId);
                 // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
                 $userId = $userId ?? actual_user_id();
 
                 abort_if(
-                    !$return->canBeApproved(),
+                    ! $return->canBeApproved(),
                     422,
                     "Return {$return->return_number} cannot be approved in {$return->status} status"
                 );
@@ -157,7 +157,7 @@ class SalesReturnService
                 // Previous condition was wrong: it created credit notes for cash refunds, causing double credit
                 if ($return->refund_method === 'store_credit' || $return->refund_method === 'credit') {
                     $creditNote = $this->createCreditNote($return, $userId);
-                    
+
                     // Auto-apply to customer balance if configured
                     if ($creditNote->auto_apply && $return->customer_id) {
                         $this->applyToCustomerBalance($creditNote, $return->customer_id);
@@ -199,27 +199,27 @@ class SalesReturnService
         ])->validate();
 
         return $this->handleServiceOperation(
-            callback: fn() => DB::transaction(function () use ($returnId, $validated) {
+            callback: fn () => DB::transaction(function () use ($returnId, $validated) {
                 $return = SalesReturn::with(['creditNotes', 'customer', 'refunds'])->findOrFail($returnId);
                 // V33-CRIT-02 FIX: Use actual_user_id() for correct audit attribution during impersonation
                 $userId = actual_user_id();
 
                 abort_if(
-                    !$return->canBeProcessed(),
+                    ! $return->canBeProcessed(),
                     422,
                     "Return {$return->return_number} cannot be processed in {$return->status} status"
                 );
 
                 // V6-CRITICAL-07 FIX: Validate refund amount doesn't exceed approved refund_amount
                 $requestedAmount = (float) ($validated['amount'] ?? $return->refund_amount);
-                
+
                 // Calculate already refunded amount from existing completed refunds
                 $alreadyRefunded = $return->refunds
                     ->where('status', ReturnRefund::STATUS_COMPLETED)
                     ->sum('amount');
-                
+
                 $remainingRefundable = (float) $return->refund_amount - (float) $alreadyRefunded;
-                
+
                 abort_if(
                     $requestedAmount > $remainingRefundable,
                     422,
@@ -276,7 +276,7 @@ class SalesReturnService
     public function rejectReturn(int $returnId, ?string $reason = null, ?int $userId = null): SalesReturn
     {
         return $this->handleServiceOperation(
-            callback: fn() => DB::transaction(function () use ($returnId, $reason, $userId) {
+            callback: fn () => DB::transaction(function () use ($returnId, $reason, $userId) {
                 $return = SalesReturn::findOrFail($returnId);
                 // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
                 $userId = $userId ?? actual_user_id();
@@ -348,11 +348,12 @@ class SalesReturnService
                     'return_number' => $return->return_number,
                 ]);
             }
+
             return;
         }
 
         foreach ($return->items as $item) {
-            if (!$item->shouldRestock()) {
+            if (! $item->shouldRestock()) {
                 continue;
             }
 
@@ -447,7 +448,7 @@ class SalesReturnService
             // V6-CRITICAL-07 FIX: Use correct payload keys and get real account IDs
             // Get account mappings for sales returns
             $salesReturnsAccount = \App\Models\AccountMapping::getAccount('sales', 'sales_returns', $return->branch_id);
-            
+
             // Determine the refund destination account based on method
             $refundAccount = match ($refund->refund_method ?? 'cash') {
                 'cash' => \App\Models\AccountMapping::getAccount('sales', 'cash_account', $return->branch_id),
@@ -455,7 +456,7 @@ class SalesReturnService
                 'store_credit' => \App\Models\AccountMapping::getAccount('sales', 'customer_credits', $return->branch_id),
                 default => \App\Models\AccountMapping::getAccount('sales', 'accounts_receivable', $return->branch_id),
             };
-            
+
             // Skip if accounts are not configured
             if (! $salesReturnsAccount || ! $refundAccount) {
                 Log::warning('Cannot create refund accounting entry - accounts not configured', [
@@ -464,14 +465,15 @@ class SalesReturnService
                     'has_sales_returns_account' => (bool) $salesReturnsAccount,
                     'has_refund_account' => (bool) $refundAccount,
                 ]);
+
                 return;
             }
-            
+
             // Create journal entry for the refund
             // Typical entries:
             // DR: Sales Returns and Allowances (increase)
             // CR: Cash/Bank/Accounts Receivable (decrease)
-            
+
             $this->accountingService->createJournalEntry([
                 'branch_id' => $return->branch_id,
                 'entry_date' => now()->toDateString(),
@@ -530,17 +532,19 @@ class SalesReturnService
         }
 
         $discountPerUnit = $saleItem->discount / $saleItem->qty;
+
         return $discountPerUnit * $qtyReturned;
     }
 
     protected function calculateItemTax($saleItem, float $qtyReturned): float
     {
-        if ($saleItem->qty <= 0 || !isset($saleItem->line_total)) {
+        if ($saleItem->qty <= 0 || ! isset($saleItem->line_total)) {
             return 0;
         }
 
         // Calculate proportional tax
         $taxPerUnit = ($saleItem->line_total - ($saleItem->unit_price * $saleItem->qty - $saleItem->discount)) / $saleItem->qty;
+
         return $taxPerUnit * $qtyReturned;
     }
 

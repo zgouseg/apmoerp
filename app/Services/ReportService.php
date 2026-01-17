@@ -414,11 +414,11 @@ class ReportService implements ReportServiceInterface
                     : $this->branchAccessService->getUserBranches($user);
 
                 // V34-MED-02 FIX: Parse filter dates into Carbon and apply startOfDay/endOfDay
-                $dateFrom = isset($filters['date_from']) 
-                    ? Carbon::parse($filters['date_from'])->startOfDay() 
+                $dateFrom = isset($filters['date_from'])
+                    ? Carbon::parse($filters['date_from'])->startOfDay()
                     : Carbon::now()->startOfMonth()->startOfDay();
-                $dateTo = isset($filters['date_to']) 
-                    ? Carbon::parse($filters['date_to'])->endOfDay() 
+                $dateTo = isset($filters['date_to'])
+                    ? Carbon::parse($filters['date_to'])->endOfDay()
                     : Carbon::now()->endOfMonth()->endOfDay();
 
                 // V34-MED-02 FIX: Use sale_date instead of created_at for business reporting
