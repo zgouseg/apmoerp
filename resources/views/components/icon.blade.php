@@ -34,5 +34,5 @@ $iconPath = $icons[$name] ?? $icons['x'];
 @endphp
 
 <svg {{ $attributes->merge(['class' => $class]) }} fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-    {!! $iconPath !!}
+    {!! sanitize_svg_icon($iconPath) !!}
 </svg>

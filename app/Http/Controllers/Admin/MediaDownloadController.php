@@ -50,8 +50,17 @@ class MediaDownloadController extends Controller
             'Content-Disposition' => 'inline; filename="'.$filename.'"',
         ];
 
-        $content = $disk->get($path);
+        $stream = $disk->readStream($path);
 
-        return response($content, 200, $headers);
+        if ($stream === false) {
+            abort(404, __('File not found.'));
+        }
+
+        return response()->stream(function () use ($stream): void {
+            fpassthru($stream);
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
+        }, 200, $headers);
     }
 }
