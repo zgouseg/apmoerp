@@ -262,7 +262,7 @@ class CostingService
      * @param  int|null  $branchId  Branch ID to filter by
      * @param  int|null  $warehouseId  Warehouse ID to filter by (null for all)
      * @param  bool  $includeTransit  Whether to include in-transit inventory in totals
-     * @return array ['warehouse_value' => float, 'transit_value' => float, 'total_value' => float]
+     * @return array ['warehouse_value' => float, 'warehouse_quantity' => float, 'transit_value' => float, 'transit_quantity' => float, 'total_value' => float, 'total_quantity' => float, 'breakdown' => array]
      */
     public function getTotalInventoryValue(?int $branchId = null, ?int $warehouseId = null, bool $includeTransit = false): array
     {
@@ -315,8 +315,8 @@ class CostingService
         }
 
         // V30-HIGH-02 FIX: Use scale=4 to match the project-wide decimal:4 standard
-        $totalValue = bcadd($warehouseValue, $transitValue, 4);
-        $totalQuantity = bcadd($warehouseQuantity, $transitQuantity, 4);
+        $totalValue = $includeTransit ? bcadd($warehouseValue, $transitValue, 4) : $warehouseValue;
+        $totalQuantity = $includeTransit ? bcadd($warehouseQuantity, $transitQuantity, 4) : $warehouseQuantity;
 
         return [
             'warehouse_value' => (float) $warehouseValue,
