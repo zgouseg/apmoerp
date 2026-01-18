@@ -151,7 +151,7 @@ class ReportsController extends Controller
         $query = DB::table('purchases')
             ->whereDate('purchase_date', '>=', $from)
             ->whereDate('purchase_date', '<=', $to)
-            ->whereNotIn('status', ['draft', 'cancelled']);
+            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'refunded']);
 
         if ($branchId) {
             $query->where('branch_id', $branchId);
@@ -191,7 +191,7 @@ class ReportsController extends Controller
         $purchasesQuery = DB::table('purchases')
             ->whereDate('purchase_date', '>=', $from)
             ->whereDate('purchase_date', '<=', $to)
-            ->whereNotIn('status', ['draft', 'cancelled']);
+            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'refunded']);
 
         $expensesQuery = DB::table('expenses')
             ->whereDate('expense_date', '>=', $from)
@@ -286,7 +286,7 @@ class ReportsController extends Controller
             $query = DB::table('purchases')
                 ->select(['id', 'total_amount', 'paid_amount', 'purchase_date'])
                 ->whereRaw('paid_amount < total_amount')
-                ->whereNotIn('status', ['draft', 'cancelled']);
+                ->whereNotIn('status', ['draft', 'cancelled', 'void', 'refunded']);
         }
 
         if ($branchId) {
