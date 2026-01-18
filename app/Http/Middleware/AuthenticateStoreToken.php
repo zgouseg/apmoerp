@@ -14,6 +14,11 @@ use Symfony\Component\HttpFoundation\Response;
 
 class AuthenticateStoreToken
 {
+    /**
+     * Deprecation warning message for insecure token methods.
+     */
+    private const DEPRECATION_WARNING = 'API token via query/body is deprecated. Use Authorization: Bearer header.';
+
     public function handle(Request $request, Closure $next, string ...$abilities): Response
     {
         [$token, $tokenSource] = $this->getTokenFromRequest($request);
@@ -106,7 +111,7 @@ class AuthenticateStoreToken
 
             // V37-HIGH-03 FIX: Add deprecation header to response to inform clients
             if ($response instanceof Response) {
-                $response->headers->set('X-Deprecation-Warning', 'API token via query/body is deprecated. Use Authorization: Bearer header.');
+                $response->headers->set('X-Deprecation-Warning', self::DEPRECATION_WARNING);
             }
         }
 
