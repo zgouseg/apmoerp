@@ -112,7 +112,8 @@ class DataValidationService
             return false;
         }
 
-        $amount = (float) $amount;
+        // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+        $amount = decimal_float($amount);
 
         return $amount >= $min && $amount <= $max;
     }
@@ -126,7 +127,8 @@ class DataValidationService
             return false;
         }
 
-        $percentage = (float) $percentage;
+        // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+        $percentage = decimal_float($percentage);
 
         return $percentage >= $min && $percentage <= $max;
     }

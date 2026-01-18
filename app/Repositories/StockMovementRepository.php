@@ -71,8 +71,9 @@ final class StockMovementRepository extends EloquentBaseRepository implements St
             ->whereHas('warehouse', fn ($q) => $q->where('branch_id', $branchId));
 
         // quantity > 0 = in, quantity < 0 = out
-        $in = (float) (clone $baseQuery)->where('quantity', '>', 0)->sum('quantity');
-        $out = (float) abs((clone $baseQuery)->where('quantity', '<', 0)->sum('quantity'));
+        // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+        $in = decimal_float((clone $baseQuery)->where('quantity', '>', 0)->sum('quantity'));
+        $out = decimal_float(abs((clone $baseQuery)->where('quantity', '<', 0)->sum('quantity')));
 
         return [
             'in' => $in,
@@ -88,7 +89,8 @@ final class StockMovementRepository extends EloquentBaseRepository implements St
             ->whereHas('warehouse', fn ($q) => $q->where('branch_id', $branchId));
 
         // Sum all quantities (positive = in, negative = out)
-        return (float) $baseQuery->sum('quantity');
+        // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+        return decimal_float($baseQuery->sum('quantity'));
     }
 
     public function currentStockPerWarehouse(int $branchId, int $productId): Collection
@@ -100,7 +102,8 @@ final class StockMovementRepository extends EloquentBaseRepository implements St
 
         $map = $movements->groupBy('warehouse_id')
             ->map(function ($group) {
-                return (float) $group->sum('quantity');
+                // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+                return decimal_float($group->sum('quantity'));
             });
 
         return $map;
@@ -187,9 +190,10 @@ final class StockMovementRepository extends EloquentBaseRepository implements St
                 ->first();
 
             // Calculate current stock from all movements
-            $currentStock = (float) StockMovement::where('product_id', $data['product_id'])
+            // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+            $currentStock = decimal_float(StockMovement::where('product_id', $data['product_id'])
                 ->where('warehouse_id', $data['warehouse_id'])
-                ->sum('quantity');
+                ->sum('quantity'));
 
             $mappedData['stock_before'] = $currentStock;
             $mappedData['stock_after'] = $currentStock + $qty;
@@ -223,8 +227,9 @@ final class StockMovementRepository extends EloquentBaseRepository implements St
         // - Positive values = stock added (in)
         // - Negative values = stock removed (out)
         // So sum(quantity) gives the correct net stock level
-        $totalStock = (float) StockMovement::where('product_id', $productId)
-            ->sum('quantity');
+        // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+        $totalStock = decimal_float(StockMovement::where('product_id', $productId)
+            ->sum('quantity'));
 
         // Update the product's stock_quantity field (cached/denormalized value)
         DB::table('products')
