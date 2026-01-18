@@ -106,6 +106,10 @@ class WhatsAppService
             return "• {$item->product->name} x{$item->qty} = ".number_format((float) $item->line_total, 2);
         })->join("\n");
 
+        // V37-LOW-01 FIX: Use sale_date (business date) instead of created_at for accurate invoice date
+        // For backdated sales or offline sync, created_at may not reflect the actual sale date
+        $saleDate = $sale->sale_date ?? $sale->created_at;
+
         return __("Invoice #:invoice\n\nDear :customer,\n\nThank you for your purchase!\n\n:items\n\nSubtotal: :subtotal\nTax: :tax\nDiscount: :discount\n\nTotal: :total\n\nDate: :date\n\nThank you for shopping with us!", [
             'invoice' => $sale->code,
             'customer' => $sale->customer?->name ?? __('Customer'),
@@ -114,7 +118,7 @@ class WhatsAppService
             'tax' => number_format((float) $sale->tax_total, 2),
             'discount' => number_format((float) $sale->discount_total, 2),
             'total' => number_format((float) $sale->grand_total, 2),
-            'date' => $sale->created_at->format('Y-m-d H:i'),
+            'date' => $saleDate->format('Y-m-d H:i'),
         ]);
     }
 

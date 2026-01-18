@@ -8,6 +8,7 @@ use App\Models\Branch;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Sale;
+use App\Services\CostingService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
@@ -98,16 +99,24 @@ class Reports extends Component
     /**
      * Get inventory statistics for the branch
      * V35-MED-05 FIX: Use cost instead of default_price (selling price) for inventory asset value
+     * V37-HIGH-03 FIX: Use CostingService for consistent inventory valuation including goods-in-transit
      */
     public function getInventoryStats(): array
     {
         $query = Product::where('branch_id', $this->branch->id);
 
+        // V37-HIGH-03 FIX: Use CostingService for accurate inventory valuation
+        // This ensures consistency with financial reports by including goods-in-transit
+        $costingService = app(CostingService::class);
+        $inventoryValue = $costingService->getTotalInventoryValue($this->branch->id);
+
         return [
             'total_products' => (clone $query)->count(),
-            // V35-MED-05 FIX: Use cost for inventory asset value (not selling price)
-            // Inventory valuation should be based on cost, not potential sales value
-            'total_value' => (clone $query)->sum(DB::raw('COALESCE(cost, standard_cost, 0) * COALESCE(stock_quantity, 0)')),
+            // V37-HIGH-03 FIX: Use CostingService total_value for consistency with financial reports
+            // Breakdown shows warehouse_value and transit_value separately for transparency
+            'total_value' => $inventoryValue['total_value'],
+            'warehouse_value' => $inventoryValue['warehouse_value'],
+            'transit_value' => $inventoryValue['transit_value'],
             'low_stock' => (clone $query)
                 ->whereNotNull('min_stock')
                 ->where('min_stock', '>', 0)

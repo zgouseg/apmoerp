@@ -37,10 +37,11 @@ class AccountingService
             $fiscalPeriod = FiscalPeriod::getCurrentPeriod($sale->branch_id);
 
             // V7-CRITICAL-N01 FIX: Create entry as 'draft' first, then post properly
+            // V37-CRIT-01 FIX: Use sale_date (business date) for journal entry to ensure correct fiscal period
             $entry = JournalEntry::create([
                 'branch_id' => $sale->branch_id,
                 'reference_number' => $this->generateReferenceNumber('SALE', $sale->id),
-                'entry_date' => $sale->posted_at ?? $sale->created_at,
+                'entry_date' => $sale->sale_date ?? $sale->created_at,
                 'description' => "Sale #{$sale->code}",
                 'status' => 'draft', // Start as draft
                 'source_module' => 'sales',
@@ -208,10 +209,11 @@ class AccountingService
             $fiscalPeriod = FiscalPeriod::getCurrentPeriod($purchase->branch_id);
 
             // V7-CRITICAL-N01 FIX: Create entry as 'draft' first, then post properly
+            // V37-CRIT-01 FIX: Use purchase_date (business date) for journal entry to ensure correct fiscal period
             $entry = JournalEntry::create([
                 'branch_id' => $purchase->branch_id,
                 'reference_number' => $this->generateReferenceNumber('PURCH', $purchase->id),
-                'entry_date' => $purchase->posted_at ?? $purchase->created_at,
+                'entry_date' => $purchase->purchase_date ?? $purchase->created_at,
                 'description' => "Purchase Order #{$purchase->code}",
                 'status' => 'draft', // Start as draft
                 'source_module' => 'purchases',
@@ -736,10 +738,11 @@ class AccountingService
             $fiscalPeriod = FiscalPeriod::getCurrentPeriod($sale->branch_id);
 
             // V7-CRITICAL-N01 FIX: Create entry as 'draft' first, then post properly
+            // V37-CRIT-01 FIX: Use sale_date (business date) for journal entry to ensure correct fiscal period
             $entry = JournalEntry::create([
                 'branch_id' => $sale->branch_id,
                 'reference_number' => $this->generateReferenceNumber('COGS', $sale->id),
-                'entry_date' => $sale->posted_at ?? $sale->created_at,
+                'entry_date' => $sale->sale_date ?? $sale->created_at,
                 'description' => "COGS for Sale #{$sale->code}",
                 'status' => 'draft', // Start as draft
                 'source_module' => 'sales',

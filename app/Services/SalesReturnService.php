@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\DomainException;
 use App\Models\CreditNote;
 use App\Models\ReturnRefund;
 use App\Models\Sale;
@@ -61,11 +62,10 @@ class SalesReturnService
                 $sale = Sale::with(['items.product', 'customer'])->findOrFail($validated['sale_id']);
 
                 // Validate branch access
-                abort_if(
-                    ! empty($validated['branch_id']) && $sale->branch_id !== $validated['branch_id'],
-                    422,
-                    'Branch mismatch between sale and return'
-                );
+                // V37-MED-01 FIX: Use DomainException instead of abort_if for testability in jobs/queues/CLI
+                if (! empty($validated['branch_id']) && $sale->branch_id !== $validated['branch_id']) {
+                    throw new DomainException('Branch mismatch between sale and return', 422);
+                }
 
                 // Create the return record
                 $return = SalesReturn::create([
@@ -91,11 +91,10 @@ class SalesReturnService
                     $maxQty = $this->getMaxReturnableQty($saleItem);
                     $qtyToReturn = (float) ($itemData['qty'] ?? 0);
 
-                    abort_if(
-                        $qtyToReturn > $maxQty,
-                        422,
-                        "Cannot return {$qtyToReturn} units of {$saleItem->product->name}. Maximum returnable: {$maxQty}"
-                    );
+                    // V37-MED-01 FIX: Use DomainException instead of abort_if for testability in jobs/queues/CLI
+                    if ($qtyToReturn > $maxQty) {
+                        throw new DomainException("Cannot return {$qtyToReturn} units of {$saleItem->product->name}. Maximum returnable: {$maxQty}", 422);
+                    }
 
                     $returnItem = SalesReturnItem::create([
                         'sales_return_id' => $return->id,
@@ -143,11 +142,10 @@ class SalesReturnService
                 // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
                 $userId = $userId ?? actual_user_id();
 
-                abort_if(
-                    ! $return->canBeApproved(),
-                    422,
-                    "Return {$return->return_number} cannot be approved in {$return->status} status"
-                );
+                // V37-MED-01 FIX: Use DomainException instead of abort_if for testability in jobs/queues/CLI
+                if (! $return->canBeApproved()) {
+                    throw new DomainException("Return {$return->return_number} cannot be approved in {$return->status} status", 422);
+                }
 
                 // Approve the return
                 $return->approve($userId);
@@ -204,11 +202,10 @@ class SalesReturnService
                 // V33-CRIT-02 FIX: Use actual_user_id() for correct audit attribution during impersonation
                 $userId = actual_user_id();
 
-                abort_if(
-                    ! $return->canBeProcessed(),
-                    422,
-                    "Return {$return->return_number} cannot be processed in {$return->status} status"
-                );
+                // V37-MED-01 FIX: Use DomainException instead of abort_if for testability in jobs/queues/CLI
+                if (! $return->canBeProcessed()) {
+                    throw new DomainException("Return {$return->return_number} cannot be processed in {$return->status} status", 422);
+                }
 
                 // V6-CRITICAL-07 FIX: Validate refund amount doesn't exceed approved refund_amount
                 $requestedAmount = (float) ($validated['amount'] ?? $return->refund_amount);
@@ -220,11 +217,10 @@ class SalesReturnService
 
                 $remainingRefundable = (float) $return->refund_amount - (float) $alreadyRefunded;
 
-                abort_if(
-                    $requestedAmount > $remainingRefundable,
-                    422,
-                    "Refund amount ({$requestedAmount}) exceeds remaining refundable amount ({$remainingRefundable})"
-                );
+                // V37-MED-01 FIX: Use DomainException instead of abort_if for testability in jobs/queues/CLI
+                if ($requestedAmount > $remainingRefundable) {
+                    throw new DomainException("Refund amount ({$requestedAmount}) exceeds remaining refundable amount ({$remainingRefundable})", 422);
+                }
 
                 // Create refund record
                 $refund = ReturnRefund::create([
@@ -281,11 +277,10 @@ class SalesReturnService
                 // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
                 $userId = $userId ?? actual_user_id();
 
-                abort_if(
-                    $return->status !== SalesReturn::STATUS_PENDING,
-                    422,
-                    "Return {$return->return_number} cannot be rejected in {$return->status} status"
-                );
+                // V37-MED-01 FIX: Use DomainException instead of abort_if for testability in jobs/queues/CLI
+                if ($return->status !== SalesReturn::STATUS_PENDING) {
+                    throw new DomainException("Return {$return->return_number} cannot be rejected in {$return->status} status", 422);
+                }
 
                 $return->reject($userId, $reason);
 

@@ -117,7 +117,9 @@ class ReportsController extends Controller
 
         // V31-HIGH-03 FIX: Use sale_date instead of created_at for accurate period filtering
         // and exclude non-revenue statuses (draft, cancelled, void, refunded)
+        // V37-CRIT-03 FIX: Exclude soft-deleted records using whereNull('deleted_at')
         $query = DB::table('sales')
+            ->whereNull('deleted_at')
             ->whereDate('sale_date', '>=', $from)
             ->whereDate('sale_date', '<=', $to)
             ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
@@ -151,7 +153,9 @@ class ReportsController extends Controller
 
         // V31-HIGH-03 FIX: Use purchase_date instead of created_at for accurate period filtering
         // and exclude non-relevant statuses (draft, cancelled)
+        // V37-CRIT-03 FIX: Exclude soft-deleted records using whereNull('deleted_at')
         $query = DB::table('purchases')
+            ->whereNull('deleted_at')
             ->whereDate('purchase_date', '>=', $from)
             ->whereDate('purchase_date', '<=', $to)
             ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
@@ -218,11 +222,11 @@ class ReportsController extends Controller
 
         // V31-HIGH-03 FIX: Use bcmath for precise financial calculations
         $totalSalesRaw = $salesQuery->sum('total_amount') ?? 0;
-        
+
         // BUG-1 FIX: Calculate COGS as SUM(cost_price * quantity) from sale_items
         $totalCogsRaw = $cogsQuery->selectRaw('SUM(COALESCE(cost_price, 0) * COALESCE(quantity, 0)) as total_cogs')
             ->value('total_cogs') ?? 0;
-        
+
         $totalExpensesRaw = $expensesQuery->sum('amount') ?? 0;
 
         $totalSales = (string) $totalSalesRaw;
@@ -299,15 +303,19 @@ class ReportsController extends Controller
         if ($type === 'receivables') {
             // V31-HIGH-03 FIX: Use sale_date for aging and filter non-revenue statuses
             // Explicitly select sale_date to ensure the proper date is used for aging
+            // V37-CRIT-03 FIX: Exclude soft-deleted records using whereNull('deleted_at')
             $query = DB::table('sales')
                 ->select(['id', 'total_amount', 'paid_amount', 'sale_date'])
+                ->whereNull('deleted_at')
                 ->whereRaw('paid_amount < total_amount')
                 ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
         } else {
             // V31-HIGH-03 FIX: Use purchase_date for aging and filter non-relevant statuses
             // Explicitly select purchase_date to ensure the proper date is used for aging
+            // V37-CRIT-03 FIX: Exclude soft-deleted records using whereNull('deleted_at')
             $query = DB::table('purchases')
                 ->select(['id', 'total_amount', 'paid_amount', 'purchase_date'])
+                ->whereNull('deleted_at')
                 ->whereRaw('paid_amount < total_amount')
                 ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
         }

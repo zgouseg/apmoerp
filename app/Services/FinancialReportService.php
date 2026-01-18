@@ -314,8 +314,9 @@ class FinancialReportService
                 continue;
             }
 
-            // Calculate due date: use explicit payment_due_date if set, otherwise calculate from sale date + payment terms
-            $saleDate = $sale->posted_at ?? $sale->created_at;
+            // V37-CRIT-02 FIX: Use sale_date (business date) for aging reference instead of posted_at/created_at
+            // This ensures aging buckets align with the actual transaction date
+            $saleDate = $sale->sale_date ?? $sale->created_at;
             $paymentTermsDays = (int) setting('sales.payment_terms_days', 30);
             $referenceDate = $sale->payment_due_date ?? $saleDate->copy()->addDays($paymentTermsDays);
             $asOf = \Carbon\Carbon::parse($asOfDate);
@@ -383,8 +384,9 @@ class FinancialReportService
                 continue;
             }
 
-            // Calculate due date: use explicit payment_due_date if set, otherwise calculate from purchase date + payment terms
-            $purchaseDate = $purchase->posted_at ?? $purchase->created_at;
+            // V37-CRIT-02 FIX: Use purchase_date (business date) for aging reference instead of posted_at/created_at
+            // This ensures aging buckets align with the actual transaction date
+            $purchaseDate = $purchase->purchase_date ?? $purchase->created_at;
             $paymentTermsDays = (int) setting('purchases.payment_terms_days', 30);
             $referenceDate = $purchase->payment_due_date ?? $purchaseDate->copy()->addDays($paymentTermsDays);
             $asOf = \Carbon\Carbon::parse($asOfDate);
