@@ -57,7 +57,6 @@ class DatabaseCompatibilityService
      */
     private const SAFE_DATE_EXPRESSIONS = [
         'NOW()',
-        "NOW()",
         "datetime('now')",
     ];
 
@@ -414,8 +413,12 @@ class DatabaseCompatibilityService
     {
         $this->validateColumnName($column);
 
-        // Validate JSON path - only allow safe characters (alphanumeric, underscore, dot, $, [, ], digits)
-        if (! preg_match('/^[$]?[a-zA-Z0-9_.\[\]]*$/', $path)) {
+        // Validate JSON path - requires valid JSON path structure:
+        // - Optional $ prefix
+        // - Property names (alphanumeric/underscore) separated by dots
+        // - Array indices in brackets [0-9]
+        // Empty paths are not allowed
+        if (empty($path) || ! preg_match('/^\$?[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*|\[\d+\])*$/', $path)) {
             throw new \InvalidArgumentException("Invalid JSON path format: {$path}");
         }
 
@@ -423,7 +426,7 @@ class DatabaseCompatibilityService
         $normalizedPath = str_starts_with($path, '$.') ? $path : "$.{$path}";
 
         return match ($this->getDriver()) {
-            'pgsql' => "{$column}->'{$path}'",
+            'pgsql' => "{$column}->'{$normalizedPath}'",
             'sqlite', 'mysql', 'mariadb' => "JSON_EXTRACT({$column}, '{$normalizedPath}')",
             default => "JSON_EXTRACT({$column}, '{$normalizedPath}')",
         };
