@@ -96,6 +96,11 @@ class QueryOptimizationService
      * Analyze table and suggest missing indexes.
      * Examines query patterns and recommends indexes for performance.
      *
+     * SECURITY NOTE: The $tableName is validated against SQL injection using assertValidIdentifier()
+     * before any SQL operations. The validation ensures only valid table names
+     * (alphanumeric, underscore, with optional schema prefix) are accepted.
+     * The grammar's wrapTable() provides additional escaping.
+     *
      * @param  string  $tableName  Table to analyze
      * @return array Index recommendations
      */
@@ -161,6 +166,9 @@ class QueryOptimizationService
      * Optimize table by analyzing and reorganizing data.
      * Defragments table and rebuilds indexes for better performance.
      *
+     * SECURITY NOTE: The $tableName is validated against SQL injection using assertValidIdentifier()
+     * before any SQL operations. The grammar's wrapTable() provides additional escaping.
+     *
      * @param  string  $tableName  Table to optimize
      * @return array Optimization results
      */
@@ -195,6 +203,13 @@ class QueryOptimizationService
     /**
      * Analyze query execution plan.
      * Uses EXPLAIN to analyze query performance.
+     *
+     * SECURITY NOTE: The $query is validated by assertExplainableQuery() which:
+     * - Removes trailing semicolons
+     * - Rejects empty queries
+     * - Blocks multiple statements (no stacked queries)
+     * - Only allows SELECT/INSERT/UPDATE/DELETE statements
+     * This prevents SQL injection via EXPLAIN statement stacking.
      *
      * @param  string  $query  SQL query to analyze
      * @return array Execution plan details

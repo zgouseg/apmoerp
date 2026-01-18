@@ -256,7 +256,8 @@
                                                         class="{{ $actionClass }}"
                                                         title="{{ __($actionLabel) }}">
                                                     @if ($actionIcon)
-                                                        {{-- Safe: Icons are SVG strings from application code, not user input --}}
+                                                        {{-- SECURITY: $actionIcon is from developer-defined schema array --}}
+                                                        {{-- It is not user input. sanitize_svg_icon provides defense-in-depth --}}
                                                         {!! sanitize_svg_icon($actionIcon) !!}
                                                     @else
                                                         {{ __($actionLabel) }}

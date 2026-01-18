@@ -30,9 +30,16 @@ $icons = [
     'shield-check' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />',
 ];
 
+// SECURITY: $iconPath comes from the hardcoded $icons array above.
+// Even if $name doesn't match, it defaults to 'x' icon (also hardcoded).
+// The sanitize_svg_icon() function provides defense-in-depth by:
+// - Using DOM parsing with a strict element/attribute allow-list
+// - Blocking all event handlers, href attributes, and javascript: URLs
+// - Removing style attributes and dangerous patterns
 $iconPath = $icons[$name] ?? $icons['x'];
 @endphp
 
 <svg {{ $attributes->merge(['class' => $class]) }} fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+    {{-- SECURITY: sanitize_svg_icon uses allow-list based DOM sanitization --}}
     {!! sanitize_svg_icon($iconPath) !!}
 </svg>

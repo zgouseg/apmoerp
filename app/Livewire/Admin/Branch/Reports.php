@@ -73,6 +73,9 @@ class Reports extends Component
      * FIX N-02: Use correct column names (total_amount, paid_amount instead of total, paid)
      * V35-HIGH-02 FIX: Use sale_date instead of created_at for accurate period filtering
      * V35-MED-06 FIX: Exclude soft-deleted sales and non-revenue statuses
+     *
+     * SECURITY NOTE: The selectRaw expression uses only hardcoded column names
+     * (total_amount, paid_amount). No user input is interpolated into SQL.
      */
     public function getSalesStats(): array
     {

@@ -105,6 +105,9 @@ class ReportsController extends Controller
 
     /**
      * NEW-V15-CRITICAL-02 FIX: Finance sales report
+     *
+     * SECURITY NOTE: The selectRaw expressions use only hardcoded column names.
+     * No user input is interpolated into the SQL.
      */
     public function financeSales(Request $request)
     {

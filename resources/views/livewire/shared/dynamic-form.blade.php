@@ -36,6 +36,7 @@
                     @if ($label && $type !== 'hidden')
                         <label for="field-{{ $name }}" class="erp-label flex items-center gap-1.5">
                             @if ($icon)
+                                {{-- SECURITY: sanitize_svg_icon uses allow-list based DOM sanitization --}}
                                 <span class="text-slate-400">{!! sanitize_svg_icon($icon) !!}</span>
                             @endif
                             <span>{{ __($label) }}</span>

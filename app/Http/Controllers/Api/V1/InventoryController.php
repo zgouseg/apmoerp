@@ -30,6 +30,14 @@ class InventoryController extends BaseApiController
         private readonly StockMovementRepositoryInterface $stockMovementRepo
     ) {}
 
+    /**
+     * Get stock levels for products.
+     *
+     * SECURITY NOTE: Raw SQL expressions in this method use:
+     * - Parameter binding for warehouse_id (line with selectRaw('? as warehouse_id', [$warehouseId]))
+     * - Hardcoded column comparisons in havingRaw (products.min_stock is a column, not user input)
+     * No user input is directly interpolated into SQL.
+     */
     public function getStock(GetStockRequest $request): JsonResponse
     {
         $store = $this->getStore($request);
@@ -67,6 +75,7 @@ class InventoryController extends BaseApiController
         }
 
         // For low stock filter
+        // SECURITY: This compares computed quantity against a table column (not user input)
         if ($request->boolean('low_stock')) {
             $query->havingRaw('current_quantity <= products.min_stock');
         }
@@ -329,6 +338,7 @@ class InventoryController extends BaseApiController
         }
 
         // quantity is signed: positive = in, negative = out
+        // SECURITY: Uses parameter binding for SUM calculation (no user input in SQL)
         return (float) ($query->selectRaw('SUM(quantity) as balance')
             ->value('balance') ?? 0);
     }

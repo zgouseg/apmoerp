@@ -222,6 +222,13 @@ class CheckDatabaseIntegrity extends Command
         }
     }
 
+    /**
+     * Check for duplicate values in a column.
+     *
+     * SECURITY NOTE: The $where parameter uses hardcoded values within this file only
+     * (e.g., "email IS NOT NULL AND email != ''"). These are never derived from user input.
+     * The whereRaw is safe because the values are compile-time constants.
+     */
     private function checkDuplicates(string $table, string $column, string $where = ''): void
     {
         if (! Schema::hasTable($table)) {
@@ -234,6 +241,7 @@ class CheckDatabaseIntegrity extends Command
             ->having('count', '>', 1);
 
         if ($where) {
+            // SECURITY: $where contains only hardcoded conditions from within this class
             $query->whereRaw($where);
         }
 
@@ -337,6 +345,14 @@ class CheckDatabaseIntegrity extends Command
         $this->line('═══════════════════════════════════════════════════════');
     }
 
+    /**
+     * Apply auto-generated fixes for missing indexes.
+     *
+     * SECURITY NOTE: The $this->fixes array contains only auto-generated ALTER TABLE
+     * statements constructed from validated table names that exist in the schema.
+     * The table names come from hardcoded $indexChecks array and are verified via
+     * Schema::hasTable() before any fix is generated.
+     */
     private function applyFixes(): void
     {
         $this->newLine();
@@ -345,6 +361,8 @@ class CheckDatabaseIntegrity extends Command
         $fixed = 0;
         foreach ($this->fixes as $fix) {
             try {
+                // SECURITY: $fix contains ALTER TABLE statements with table/column names
+                // that are validated against schema and hardcoded in $indexChecks
                 DB::statement($fix);
                 $fixed++;
                 $this->info("✓ Applied: {$fix}");

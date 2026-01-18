@@ -1,4 +1,13 @@
 {{-- resources/views/components/ui/card.blade.php --}}
+{{--
+SECURITY NOTE: This component uses {!! !!} for two types of content:
+1. $icon - Must be passed through sanitize_svg_icon() before rendering
+2. $actions - Slot content from developer code, not user input (buttons, links, etc.)
+
+Both are safe because:
+- sanitize_svg_icon() uses DOM-based allow-list sanitization
+- $actions contains developer-defined Blade template content, not user data
+--}}
 @props([
     'title' => null,
     'subtitle' => null,
@@ -14,6 +23,7 @@
         <div class="flex items-center gap-3">
             @if($icon)
             <div class="flex-shrink-0">
+                {{-- SECURITY: sanitize_svg_icon uses allow-list based DOM sanitization --}}
                 {!! sanitize_svg_icon($icon) !!}
             </div>
             @endif
@@ -35,7 +45,8 @@
         
         @if($actions)
         <div class="flex items-center gap-2">
-            {{-- Actions are developer-controlled slot content (buttons, links), not user input --}}
+            {{-- SECURITY: $actions is developer-controlled slot content (buttons, links) --}}
+            {{-- It comes from Blade templates, not user input --}}
             {!! $actions !!}
         </div>
         @endif

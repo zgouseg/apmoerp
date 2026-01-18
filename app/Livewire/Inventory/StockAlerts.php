@@ -57,6 +57,8 @@ class StockAlerts extends Component
         }
 
         // Filter by alert type using portable comparison
+        // SECURITY: The whereRaw expressions use only hardcoded column names
+        // (stock_calc.total_stock, products.min_stock). No user input is interpolated.
         if ($this->alertType === 'low') {
             $query->whereRaw('COALESCE(stock_calc.total_stock, 0) <= products.min_stock AND COALESCE(stock_calc.total_stock, 0) > 0');
         } elseif ($this->alertType === 'out') {

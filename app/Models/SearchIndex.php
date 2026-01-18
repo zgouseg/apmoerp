@@ -51,6 +51,10 @@ class SearchIndex extends BaseModel
     /**
      * Search across all indexed content.
      * Dynamically handles MySQL (MATCH AGAINST) and PostgreSQL (ILIKE/to_tsvector).
+     *
+     * SECURITY NOTE: All search expressions use parameterized binding (? placeholders).
+     * The whereRaw expressions with '?' markers receive proper parameter binding
+     * through the second argument to whereRaw(), preventing SQL injection.
      */
     public static function search(string $query, int $branchId, array|string|null $module = null, int $limit = 20): array
     {

@@ -145,6 +145,10 @@ class StockService
      * Get SQL expression for calculating current stock
      * Use this for SELECT queries that need to calculate stock on the fly
      *
+     * SECURITY NOTE: The $productIdColumn is validated against SQL injection using regex.
+     * Only valid table.column format identifiers are accepted.
+     * The resulting expression is safe to use in selectRaw/whereRaw.
+     *
      * @param  string  $productIdColumn  Table.column reference (e.g., 'products.id')
      *
      * @throws \InvalidArgumentException if column name contains invalid characters
@@ -162,6 +166,10 @@ class StockService
 
     /**
      * Get SQL expression for calculating stock in a specific warehouse
+     *
+     * SECURITY NOTE: Both column parameters are validated against SQL injection using regex.
+     * Only valid table.column format identifiers are accepted.
+     * The resulting expression is safe to use in selectRaw/whereRaw.
      *
      * @param  string  $productIdColumn  Table.column reference (e.g., 'products.id')
      * @param  string  $warehouseIdColumn  Table.column reference (e.g., 'warehouses.id')
@@ -187,6 +195,12 @@ class StockService
      * Joins stock_movements through warehouses.branch_id
      *
      * V10-CRITICAL-01 FIX: Add branch-scoped stock calculation expression
+     *
+     * SECURITY NOTE: Both the column parameter and branch ID are validated:
+     * - $productIdColumn: Validated using regex for valid table.column format
+     * - $branchIdValueOrColumn: If int, validated as positive integer and cast
+     * - $branchIdValueOrColumn: If string, validated using regex for valid column format
+     * The resulting expression is safe to use in selectRaw/whereRaw.
      *
      * @param  string  $productIdColumn  Table.column reference (e.g., 'products.id')
      * @param  int|string  $branchIdValueOrColumn  Either an integer branch ID or a column reference (e.g., 'products.branch_id')

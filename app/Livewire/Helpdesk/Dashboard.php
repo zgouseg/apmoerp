@@ -73,6 +73,8 @@ class Dashboard extends Component
         ];
 
         // Get tickets by priority
+        // SECURITY: The DB::raw('count(*) as count') uses a hardcoded expression.
+        // No user input is interpolated into the SQL.
         $ticketsByPriority = Ticket::select('priority_id', DB::raw('count(*) as count'))
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereNotIn('status', ['closed'])

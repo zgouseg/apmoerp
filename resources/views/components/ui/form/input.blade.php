@@ -1,4 +1,13 @@
 {{-- resources/views/components/ui/form/input.blade.php --}}
+{{--
+SECURITY NOTE: This component uses {!! !!} for:
+1. $icon - Must be passed through sanitize_svg_icon() before rendering
+2. $wireDirective - Livewire wire:model directive constructed from validated inputs
+
+Both are safe because:
+- sanitize_svg_icon() uses DOM-based allow-list sanitization
+- $wireDirective is built from $wireModel (validated wire binding) and $wireModifier (enum)
+--}}
 @props([
     'label' => null,
     'name' => null,
@@ -47,6 +56,7 @@
     <div class="relative">
         @if($icon && $iconPosition === 'left')
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            {{-- SECURITY: sanitize_svg_icon uses allow-list based DOM sanitization --}}
             {!! sanitize_svg_icon($icon) !!}
         </div>
         @endif
@@ -58,6 +68,7 @@
             placeholder="{{ $placeholder }}"
             {{ $required ? 'required' : '' }}
             {{ $autocomplete ? "autocomplete=\"$autocomplete\"" : '' }}
+            {{-- SECURITY: $wireDirective is constructed from validated Livewire binding parameters --}}
             @if($wireModel) {!! $wireDirective !!} @endif
             @if($realTimeValidation && $wireModel) wire:blur="validateOnly('{{ $wireModel }}')" @endif
             {{ $attributes->merge([
@@ -75,6 +86,7 @@
 
         @if($icon && $iconPosition === 'right')
         <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+            {{-- SECURITY: sanitize_svg_icon uses allow-list based DOM sanitization --}}
             {!! sanitize_svg_icon($icon) !!}
         </div>
         @elseif($error)
