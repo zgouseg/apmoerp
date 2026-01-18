@@ -25,8 +25,7 @@ use Symfony\Component\HttpFoundation\Response;
  * 3. Request body 'api_token' (DEPRECATED - still insecure)
  *
  * Security can be tightened via config/auth.php 'store_token' settings:
- * - require_bearer_header: true  → Only accepts Authorization: Bearer header
- * - allow_deprecated_methods: false → Rejects query/body tokens entirely
+ * - allow_deprecated_methods: false → Rejects query/body tokens, header only
  *
  * When deprecated methods are used, a warning is logged and X-Deprecation-Warning
  * header is added to the response to inform clients to migrate.
@@ -186,12 +185,13 @@ class AuthenticateStoreToken
             return [substr($authHeader, 7), 'header'];
         }
 
-        // V37-HIGH-03 FIX: Check if header-only mode is required
-        $requireBearerHeader = config('auth.store_token.require_bearer_header', false);
+        // V37-HIGH-03 FIX: Security configuration for deprecated token methods
+        // When both options are false, deprecated methods (query/body) are rejected.
+        // Default: allow_deprecated = true, so legacy clients continue to work.
         $allowDeprecated = config('auth.store_token.allow_deprecated_methods', true);
 
-        // If header is required and deprecated methods are disabled, don't check query/body
-        if ($requireBearerHeader && ! $allowDeprecated) {
+        if (! $allowDeprecated) {
+            // Strict mode: only Authorization: Bearer header is accepted
             return [null, 'none'];
         }
 

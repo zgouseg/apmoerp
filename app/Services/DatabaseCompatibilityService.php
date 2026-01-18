@@ -52,6 +52,13 @@ class DatabaseCompatibilityService
     private const COLUMN_PATTERN = '/^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$/';
 
     /**
+     * Regex pattern for valid JSON path expressions.
+     * Allows: Optional $ prefix, property names, and array indices.
+     * Examples: "key", "$.key", "user.name", "items[0]", "$.data.items[0].name"
+     */
+    private const JSON_PATH_PATTERN = '/^\$?[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*|\[\d+\])*$/';
+
+    /**
      * Whitelist of safe SQL expressions that can be used as date values.
      * These are safe because they are fixed SQL functions with no user input.
      * Note: These correspond to the output of the now() method for different drivers.
@@ -415,12 +422,9 @@ class DatabaseCompatibilityService
     {
         $this->validateColumnName($column);
 
-        // Validate JSON path - requires valid JSON path structure:
-        // - Optional $ prefix
-        // - Property names (alphanumeric/underscore) separated by dots
-        // - Array indices in brackets [0-9]
+        // Validate JSON path using constant pattern
         // Empty paths are not allowed
-        if (empty($path) || ! preg_match('/^\$?[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*|\[\d+\])*$/', $path)) {
+        if (empty($path) || ! preg_match(self::JSON_PATH_PATTERN, $path)) {
             throw new \InvalidArgumentException("Invalid JSON path format: {$path}");
         }
 
