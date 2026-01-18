@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Analytics;
 
+use App\Enums\PurchaseStatus;
+use App\Enums\SaleStatus;
 use App\Models\Customer;
 use App\Models\Expense;
 use App\Models\Product;
@@ -178,7 +180,7 @@ class KPIDashboardService
         $activeCustomers = Sale::query()
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereBetween('sale_date', [$dates['start'], $dates['end']])
-            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
+            ->whereNotIn('status', SaleStatus::nonRevenueStatuses())
             ->whereNotNull('customer_id')
             ->distinct('customer_id')
             ->count('customer_id');
@@ -191,7 +193,7 @@ class KPIDashboardService
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereNull('deleted_at')
             ->whereBetween('sale_date', [$dates['start'], $dates['end']])
-            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
+            ->whereNotIn('status', SaleStatus::nonRevenueStatuses())
             ->whereNotNull('customer_id')
             ->groupBy('customer_id')
             ->having('order_count', '>', 1)
@@ -232,7 +234,7 @@ class KPIDashboardService
         $currentRevenue = Sale::query()
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereBetween('sale_date', [$dates['start'], $dates['end']])
-            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
+            ->whereNotIn('status', SaleStatus::nonRevenueStatuses())
             ->sum('total_amount');
 
         $currentExpenses = Expense::query()
@@ -245,7 +247,7 @@ class KPIDashboardService
         $previousRevenue = Sale::query()
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereBetween('sale_date', [$previousDates['start'], $previousDates['end']])
-            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
+            ->whereNotIn('status', SaleStatus::nonRevenueStatuses())
             ->sum('total_amount');
 
         $previousExpenses = Expense::query()
@@ -259,7 +261,7 @@ class KPIDashboardService
         $currentPurchases = Purchase::query()
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereBetween('purchase_date', [$dates['start'], $dates['end']])
-            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
+            ->whereNotIn('status', PurchaseStatus::nonRelevantStatuses())
             ->sum('total_amount');
 
         // Calculate gross profit
@@ -270,7 +272,7 @@ class KPIDashboardService
         $previousGrossProfit = $previousRevenue - Purchase::query()
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereBetween('purchase_date', [$previousDates['start'], $previousDates['end']])
-            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
+            ->whereNotIn('status', PurchaseStatus::nonRelevantStatuses())
             ->sum('total_amount');
 
         $grossProfitChange = $this->calculateChange($grossProfit, $previousGrossProfit);
@@ -317,7 +319,7 @@ class KPIDashboardService
             )
             ->when($branchId, fn ($q) => $q->where('sales.branch_id', $branchId))
             ->whereBetween('sales.sale_date', [$dates['start'], $dates['end']])
-            ->whereNotIn('sales.status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
+            ->whereNotIn('sales.status', SaleStatus::nonRevenueStatuses())
             ->groupBy('products.id', 'products.name')
             ->orderByDesc('total_revenue')
             ->limit(5)
@@ -333,7 +335,7 @@ class KPIDashboardService
             )
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereBetween('sale_date', [$dates['start'], $dates['end']])
-            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
+            ->whereNotIn('status', SaleStatus::nonRevenueStatuses())
             ->groupBy('date')
             ->orderBy('date')
             ->get();
@@ -362,7 +364,7 @@ class KPIDashboardService
         $query = Sale::query()
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereBetween('sale_date', [$start, $end])
-            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
+            ->whereNotIn('status', SaleStatus::nonRevenueStatuses());
 
         $totalRevenue = $query->sum('total_amount');
         $totalOrders = $query->count();
@@ -461,12 +463,32 @@ class KPIDashboardService
 
     /**
      * Get conversion rate
+     *
+     * V39-MED-06 NOTE: Conversion rate requires a source of truth for tracking.
+     * Possible implementations based on business model:
+     * - Web analytics: Track visits vs orders (requires analytics integration)
+     * - Quotes to orders: Track quote creation vs sales with quote reference
+     * - Leads to customers: Track lead creation vs customer with purchases
+     *
+     * Currently returns 0 as no tracking data source is configured.
+     * To implement, choose a tracking strategy and add the relevant tables/integrations.
      */
     protected function getConversionRate(?int $branchId, array $dates): float
     {
-        // This would typically compare visitors to customers
-        // Simplified: compare quotes/inquiries to sales
-        return 0; // Implement based on your tracking
+        // V39-MED-06 NOTE: Implementation requires tracking data source.
+        // Example implementation for quotes-to-orders:
+        // $quotes = DB::table('quotes')
+        //     ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+        //     ->whereBetween('created_at', [$dates['start'], $dates['end']])
+        //     ->count();
+        // $convertedQuotes = Sale::query()
+        //     ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+        //     ->whereBetween('sale_date', [$dates['start'], $dates['end']])
+        //     ->whereNotNull('quote_id')
+        //     ->count();
+        // return $quotes > 0 ? round(($convertedQuotes / $quotes) * 100, 1) : 0;
+
+        return 0;
     }
 
     /**
