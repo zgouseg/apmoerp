@@ -38,12 +38,14 @@ class AdvancedAnalyticsService
     /**
      * Get sales metrics with advanced calculations
      * FIX N-03: Use total_amount instead of total
+     * V35-HIGH-02 FIX: Use sale_date instead of created_at for accurate period filtering
+     * V35-MED-06 FIX: Exclude non-revenue statuses (already filters to completed)
      */
     protected function getSalesMetrics(?int $branchId, array $dateRange): array
     {
         $query = Sale::query()
             ->where('status', 'completed')
-            ->whereBetween('created_at', $dateRange);
+            ->whereBetween('sale_date', $dateRange);
 
         if ($branchId) {
             $query->where('branch_id', $branchId);
@@ -276,23 +278,30 @@ class AdvancedAnalyticsService
     /**
      * Predict customer churn risk
      * FIX N-03: Use total_amount instead of total
+     * V35-HIGH-02 FIX: Use sale_date instead of created_at for accurate period filtering
+     * V35-MED-06 FIX: Exclude all non-revenue statuses
      */
     protected function predictChurnRisk(?int $branchId): array
     {
+        // V35-MED-06 FIX: Exclude non-revenue statuses in customer churn analysis
         $customers = Customer::query()
             ->when($branchId, function ($q) use ($branchId) {
                 $q->whereHas('sales', fn ($sq) => $sq->where('branch_id', $branchId));
             })
             ->with(['sales' => function ($q) {
-                $q->where('created_at', '>', now()->subMonths(6))
-                    ->orderBy('created_at', 'desc');
+                // V35-HIGH-02 FIX: Use sale_date for customer activity analysis
+                // V35-MED-06 FIX: Exclude non-revenue statuses
+                $q->where('sale_date', '>', now()->subMonths(6))
+                    ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
+                    ->orderBy('sale_date', 'desc');
             }])
             ->get();
 
         $atRisk = [];
         foreach ($customers as $customer) {
+            // V35-HIGH-02 FIX: Use sale_date for days since last purchase calculation
             $daysSinceLastPurchase = $customer->sales->first()
-                ? now()->diffInDays($customer->sales->first()->created_at)
+                ? now()->diffInDays($customer->sales->first()->sale_date)
                 : 999;
 
             $avgDaysBetweenPurchases = $this->calculateAvgDaysBetweenPurchases($customer);

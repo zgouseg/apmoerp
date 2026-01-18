@@ -80,7 +80,7 @@ class ScheduledReportService
                     DB::raw('AVG(total_amount) as avg_order'),
                 ])
                 // V31-MED-05 FIX: Exclude non-revenue statuses
-                ->whereNotIn('status', ['draft', 'cancelled', 'void', 'refunded']);
+                ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
 
             if (! empty($filters['date_from'])) {
                 $query->whereDate('sale_date', '>=', $filters['date_from']);
@@ -147,7 +147,7 @@ class ScheduledReportService
                 ->leftJoin('sales', function ($join) {
                     $join->on('customers.id', '=', 'sales.customer_id')
                         ->whereNull('sales.deleted_at')
-                        ->whereNotIn('sales.status', ['draft', 'cancelled', 'void', 'refunded']);
+                        ->whereNotIn('sales.status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
                 })
                 ->select([
                     'customers.name',
@@ -193,7 +193,7 @@ class ScheduledReportService
                 // V35-CRIT-01 FIX: Filter out soft-deleted sales
                 ->whereNull('sales.deleted_at')
                 // V35-CRIT-01 FIX: Exclude non-revenue statuses by default (matches fetchSalesReportData)
-                ->whereNotIn('sales.status', ['draft', 'cancelled', 'void', 'refunded']);
+                ->whereNotIn('sales.status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
 
             // V35-CRIT-01 FIX: Use sale_date instead of created_at for date filtering
             if (! empty($filters['date_from'])) {

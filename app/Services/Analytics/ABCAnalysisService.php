@@ -48,6 +48,8 @@ class ABCAnalysisService
                 $endDate = $endDate ?? now()->endOfDay()->toDateString();
 
                 // Get product revenue data
+                // V35-HIGH-02 FIX: Use sale_date instead of created_at for accurate period filtering
+                // V35-MED-06 FIX: Exclude soft-deleted sales and all non-revenue statuses
                 $query = SaleItem::query()
                     ->select(
                         'product_id',
@@ -59,8 +61,8 @@ class ABCAnalysisService
                         if ($branchId) {
                             $q->where('branch_id', $branchId);
                         }
-                        $q->whereBetween('created_at', [$startDate, $endDate])
-                            ->where('status', '!=', 'cancelled');
+                        $q->whereBetween('sale_date', [$startDate, $endDate])
+                            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
                     })
                     ->whereNotNull('product_id')
                     ->groupBy('product_id')
@@ -161,6 +163,8 @@ class ABCAnalysisService
                 $startDate = $startDate ?? now()->subYear()->toDateString();
                 $endDate = $endDate ?? now()->toDateString();
 
+                // V35-HIGH-02 FIX: Use sale_date instead of created_at for accurate period filtering
+                // V35-MED-06 FIX: Exclude soft-deleted sales and all non-revenue statuses
                 $query = SaleItem::query()
                     ->select(
                         'product_id',
@@ -171,8 +175,8 @@ class ABCAnalysisService
                         if ($branchId) {
                             $q->where('branch_id', $branchId);
                         }
-                        $q->whereBetween('created_at', [$startDate, $endDate])
-                            ->where('status', '!=', 'cancelled');
+                        $q->whereBetween('sale_date', [$startDate, $endDate])
+                            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
                     })
                     ->whereNotNull('product_id')
                     ->groupBy('product_id')

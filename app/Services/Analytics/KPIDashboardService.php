@@ -174,7 +174,7 @@ class KPIDashboardService
         $activeCustomers = Sale::query()
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereBetween('sale_date', [$dates['start'], $dates['end']])
-            ->whereNotIn('status', ['draft', 'cancelled'])
+            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
             ->whereNotNull('customer_id')
             ->distinct('customer_id')
             ->count('customer_id');
@@ -185,7 +185,7 @@ class KPIDashboardService
             ->select('customer_id', DB::raw('COUNT(*) as order_count'))
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereBetween('sale_date', [$dates['start'], $dates['end']])
-            ->whereNotIn('status', ['draft', 'cancelled'])
+            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
             ->whereNotNull('customer_id')
             ->groupBy('customer_id')
             ->having('order_count', '>', 1)
@@ -226,7 +226,7 @@ class KPIDashboardService
         $currentRevenue = Sale::query()
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereBetween('sale_date', [$dates['start'], $dates['end']])
-            ->whereNotIn('status', ['draft', 'cancelled'])
+            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
             ->sum('total_amount');
 
         $currentExpenses = Expense::query()
@@ -239,7 +239,7 @@ class KPIDashboardService
         $previousRevenue = Sale::query()
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereBetween('sale_date', [$previousDates['start'], $previousDates['end']])
-            ->whereNotIn('status', ['draft', 'cancelled'])
+            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
             ->sum('total_amount');
 
         $previousExpenses = Expense::query()
@@ -253,7 +253,7 @@ class KPIDashboardService
         $currentPurchases = Purchase::query()
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereBetween('purchase_date', [$dates['start'], $dates['end']])
-            ->whereNotIn('status', ['draft', 'cancelled'])
+            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
             ->sum('total_amount');
 
         // Calculate gross profit
@@ -264,7 +264,7 @@ class KPIDashboardService
         $previousGrossProfit = $previousRevenue - Purchase::query()
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereBetween('purchase_date', [$previousDates['start'], $previousDates['end']])
-            ->whereNotIn('status', ['draft', 'cancelled'])
+            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
             ->sum('total_amount');
 
         $grossProfitChange = $this->calculateChange($grossProfit, $previousGrossProfit);
@@ -311,7 +311,7 @@ class KPIDashboardService
             )
             ->when($branchId, fn ($q) => $q->where('sales.branch_id', $branchId))
             ->whereBetween('sales.sale_date', [$dates['start'], $dates['end']])
-            ->whereNotIn('sales.status', ['draft', 'cancelled'])
+            ->whereNotIn('sales.status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
             ->groupBy('products.id', 'products.name')
             ->orderByDesc('total_revenue')
             ->limit(5)
@@ -327,7 +327,7 @@ class KPIDashboardService
             )
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereBetween('sale_date', [$dates['start'], $dates['end']])
-            ->whereNotIn('status', ['draft', 'cancelled'])
+            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
             ->groupBy('date')
             ->orderBy('date')
             ->get();
@@ -356,7 +356,7 @@ class KPIDashboardService
         $query = Sale::query()
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereBetween('sale_date', [$start, $end])
-            ->whereNotIn('status', ['draft', 'cancelled']);
+            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
 
         $totalRevenue = $query->sum('total_amount');
         $totalOrders = $query->count();

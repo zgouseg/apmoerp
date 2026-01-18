@@ -11,10 +11,12 @@
         $from = now()->subDays(14)->toDateString();
 
         $saleModel = '\\App\\Models\\Sale';
+        // V35-HIGH-02 FIX: Use sale_date instead of created_at for accurate financial reporting
+        // V35-MED-06 FIX: Exclude non-revenue statuses
         $salesStats = [
             'count' => class_exists($saleModel) ? $saleModel::count() : 0,
-            'today' => class_exists($saleModel) ? $saleModel::whereDate('created_at', $today)->sum('total_amount') : 0,
-            'total' => class_exists($saleModel) ? $saleModel::sum('total_amount') : 0,
+            'today' => class_exists($saleModel) ? $saleModel::whereDate('sale_date', $today)->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])->sum('total_amount') : 0,
+            'total' => class_exists($saleModel) ? $saleModel::whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])->sum('total_amount') : 0,
         ];
 
         $employeeModel = '\\App\\Models\\HREmployee';
@@ -38,9 +40,12 @@
             'customers' => class_exists($customerModel) ? $customerModel::count() : 0,
         ];
 
+        // V35-HIGH-02 FIX: Use sale_date instead of created_at
+        // V35-MED-06 FIX: Exclude non-revenue statuses
         $salesSeries = class_exists($saleModel)
-            ? $saleModel::selectRaw('DATE(created_at) as day, SUM(total_amount) as total')
-                ->whereDate('created_at', '>=', $from)
+            ? $saleModel::selectRaw('DATE(sale_date) as day, SUM(total_amount) as total')
+                ->whereDate('sale_date', '>=', $from)
+                ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
                 ->groupBy('day')
                 ->orderBy('day')
                 ->get()

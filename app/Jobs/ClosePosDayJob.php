@@ -53,10 +53,11 @@ class ClosePosDayJob implements ShouldQueue
         try {
             // V31-HIGH-04 FIX: Use sale_date instead of created_at to be consistent with POSService
             // V6-MEDIUM-02 FIX: Filter only revenue statuses, exclude cancelled/void/returned sales
+            // V35-MED-06 FIX: Include 'draft' in exclusion list for consistency
             $sales = \App\Models\Sale::query()
                 ->whereDate('sale_date', $date)
                 ->where('branch_id', $branchId)
-                ->whereNotIn('status', ['cancelled', 'void', 'returned', 'refunded'])
+                ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
                 ->get(['total_amount', 'paid_amount']);
 
             // Use bcmath for precise financial totals

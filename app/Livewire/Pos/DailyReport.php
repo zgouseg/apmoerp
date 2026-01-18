@@ -58,8 +58,9 @@ class DailyReport extends Component
     {
         // V33-CRIT-01 FIX: Use sale_date (business date) instead of created_at
         // and exclude all non-valid statuses (not just cancelled)
+        // V35-MED-06 FIX: Include 'draft' in exclusion list for consistency
         $query = Sale::whereDate('sale_date', $this->date)
-            ->whereNotIn('status', ['cancelled', 'void', 'voided', 'returned', 'refunded']);
+            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
 
         if ($this->branchId) {
             $query->where('branch_id', $this->branchId);
@@ -120,8 +121,9 @@ class DailyReport extends Component
 
         // V33-CRIT-01 FIX: Use sale_date (business date) instead of created_at
         // and exclude all non-valid statuses (not just cancelled)
+        // V35-MED-06 FIX: Include 'draft' in exclusion list for consistency
         $salesQuery = Sale::whereDate('sale_date', $this->date)
-            ->whereNotIn('status', ['cancelled', 'void', 'voided', 'returned', 'refunded'])
+            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
             ->with(['customer', 'payments', 'createdBy']);
 
         if ($this->branchId) {

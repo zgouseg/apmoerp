@@ -80,7 +80,7 @@ class SalesForecastingService
                 DB::raw('COALESCE(AVG(total_amount), 0) as avg_order_value'),
             ])
             ->whereNull('deleted_at')
-            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'refunded'])
+            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
             ->where('sale_date', '>=', $startDate)
             ->groupBy(DB::raw($periodExpr))
             ->orderBy('period');
@@ -250,7 +250,7 @@ class SalesForecastingService
             ])
             ->where('sale_items.product_id', $productId)
             ->whereNull('sales.deleted_at')
-            ->whereNotIn('sales.status', ['draft', 'cancelled', 'void', 'refunded'])
+            ->whereNotIn('sales.status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
             ->where('sales.sale_date', '>=', now()->subDays(30))
             ->when($branchId, fn ($q) => $q->where('sales.branch_id', $branchId))
             ->groupBy(DB::raw($dateExpr))

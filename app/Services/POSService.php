@@ -337,10 +337,11 @@ class POSService implements POSServiceInterface
                     abort(422, __('Session is already closed'));
                 }
 
+                // V35-MED-06 FIX: Exclude all non-revenue statuses for accurate session totals
                 $salesQuery = Sale::where('branch_id', $session->branch_id)
                     ->where('created_by', $session->user_id)
                     ->where('created_at', '>=', $session->opened_at)
-                    ->where('status', '!=', 'cancelled');
+                    ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
 
                 $totalSales = (float) $salesQuery->sum('total_amount');
                 $totalTransactions = $salesQuery->count();
@@ -447,9 +448,10 @@ class POSService implements POSServiceInterface
                 // Get all sales for the branch on the given date
                 // V24-HIGH-06 FIX: Use sale_date instead of created_at for proper business date filtering
                 // This ensures backdated or imported sales are counted on their actual sale date
+                // V35-MED-06 FIX: Include 'draft' in exclusion list for consistency
                 $salesQuery = Sale::where('branch_id', $branch->id)
                     ->whereDate('sale_date', $date)
-                    ->whereNotIn('status', ['cancelled', 'void', 'returned', 'refunded']);
+                    ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
 
                 $salesCount = $salesQuery->count();
 
@@ -464,10 +466,11 @@ class POSService implements POSServiceInterface
 
                 // Get receipts count from payments
                 // V24-HIGH-06 FIX: Use sale_date instead of created_at
+                // V35-MED-06 FIX: Include 'draft' in exclusion list for consistency
                 $receiptsCount = SalePayment::whereIn('sale_id',
                     Sale::where('branch_id', $branch->id)
                         ->whereDate('sale_date', $date)
-                        ->whereNotIn('status', ['cancelled', 'void', 'returned', 'refunded'])
+                        ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
                         ->pluck('id')
                 )->count();
 

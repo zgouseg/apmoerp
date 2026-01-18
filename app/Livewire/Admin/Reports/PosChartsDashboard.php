@@ -28,8 +28,9 @@ class PosChartsDashboard extends Component
 
         // V33-CRIT-01 FIX: Use sale_date (business date) instead of created_at
         // and exclude all non-valid statuses (cancelled, void, returned, refunded)
+        // V35-MED-06 FIX: Include 'draft' in exclusion list for consistency
         $query = Sale::query()
-            ->whereNotIn('status', ['cancelled', 'void', 'voided', 'returned', 'refunded']);
+            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
 
         if ($this->dateFrom) {
             $query->whereDate('sale_date', '>=', $this->dateFrom);

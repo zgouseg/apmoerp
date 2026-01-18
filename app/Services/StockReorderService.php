@@ -123,7 +123,7 @@ class StockReorderService
             ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
             ->where('sale_items.product_id', $productId)
             ->whereNull('sales.deleted_at')
-            ->whereNotIn('sales.status', ['draft', 'cancelled', 'void', 'refunded'])
+            ->whereNotIn('sales.status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
             ->where('sales.sale_date', '>=', now()->subDays($days));
 
         // V10-CRITICAL-01 FIX: Filter by branch to get branch-specific sales velocity

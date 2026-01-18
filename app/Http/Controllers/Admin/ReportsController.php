@@ -117,7 +117,7 @@ class ReportsController extends Controller
         $query = DB::table('sales')
             ->whereDate('sale_date', '>=', $from)
             ->whereDate('sale_date', '<=', $to)
-            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'refunded']);
+            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
 
         if ($branchId) {
             $query->where('branch_id', $branchId);
@@ -151,7 +151,7 @@ class ReportsController extends Controller
         $query = DB::table('purchases')
             ->whereDate('purchase_date', '>=', $from)
             ->whereDate('purchase_date', '<=', $to)
-            ->whereNotIn('status', ['draft', 'cancelled']);
+            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
 
         if ($branchId) {
             $query->where('branch_id', $branchId);
@@ -186,12 +186,12 @@ class ReportsController extends Controller
         $salesQuery = DB::table('sales')
             ->whereDate('sale_date', '>=', $from)
             ->whereDate('sale_date', '<=', $to)
-            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'refunded']);
+            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
 
         $purchasesQuery = DB::table('purchases')
             ->whereDate('purchase_date', '>=', $from)
             ->whereDate('purchase_date', '<=', $to)
-            ->whereNotIn('status', ['draft', 'cancelled']);
+            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
 
         $expensesQuery = DB::table('expenses')
             ->whereDate('expense_date', '>=', $from)
@@ -279,14 +279,14 @@ class ReportsController extends Controller
             $query = DB::table('sales')
                 ->select(['id', 'total_amount', 'paid_amount', 'sale_date'])
                 ->whereRaw('paid_amount < total_amount')
-                ->whereNotIn('status', ['draft', 'cancelled', 'void', 'refunded']);
+                ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
         } else {
             // V31-HIGH-03 FIX: Use purchase_date for aging and filter non-relevant statuses
             // Explicitly select purchase_date to ensure the proper date is used for aging
             $query = DB::table('purchases')
                 ->select(['id', 'total_amount', 'paid_amount', 'purchase_date'])
                 ->whereRaw('paid_amount < total_amount')
-                ->whereNotIn('status', ['draft', 'cancelled']);
+                ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
         }
 
         if ($branchId) {

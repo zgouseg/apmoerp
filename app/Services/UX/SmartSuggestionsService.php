@@ -270,7 +270,7 @@ class SmartSuggestionsService
             ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
             ->where('sale_items.product_id', $productId)
             ->whereNull('sales.deleted_at')
-            ->whereNotIn('sales.status', ['draft', 'cancelled', 'void', 'refunded'])
+            ->whereNotIn('sales.status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
             ->where('sales.sale_date', '>=', now()->subDays($days))
             ->sum('sale_items.quantity');
 

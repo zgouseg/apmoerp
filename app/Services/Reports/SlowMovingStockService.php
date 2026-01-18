@@ -36,7 +36,7 @@ class SlowMovingStockService
                 $join->on('sale_items.sale_id', '=', 'sales.id')
                     ->whereNull('sales.deleted_at')
                     // V31-MED-07 FIX: Exclude non-revenue statuses
-                    ->whereNotIn('sales.status', ['draft', 'cancelled', 'void', 'refunded']);
+                    ->whereNotIn('sales.status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
             })
             ->where('products.stock_quantity', '>', 0)
             ->whereNull('products.deleted_at')

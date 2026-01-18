@@ -79,7 +79,7 @@ class Reports extends Component
         // V35-HIGH-02 FIX: Use sale_date instead of created_at
         // V35-MED-06 FIX: Exclude non-revenue statuses
         $query = Sale::where('branch_id', $this->branch->id)
-            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'refunded'])
+            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
             ->whereBetween('sale_date', [$this->fromDate, $this->toDate]);
 
         return [
@@ -146,7 +146,7 @@ class Reports extends Component
             ->where('sales.branch_id', $this->branch->id)
             // V35-MED-06 FIX: Exclude soft-deleted sales and non-revenue statuses
             ->whereNull('sales.deleted_at')
-            ->whereNotIn('sales.status', ['draft', 'cancelled', 'void', 'refunded'])
+            ->whereNotIn('sales.status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
             // V35-HIGH-02 FIX: Use sale_date instead of created_at
             ->whereBetween('sales.sale_date', [$this->fromDate, $this->toDate])
             ->select('products.name', DB::raw('SUM(sale_items.quantity) as total_qty'), DB::raw('SUM(sale_items.line_total) as total_amount'))
@@ -167,7 +167,7 @@ class Reports extends Component
     {
         return Sale::where('branch_id', $this->branch->id)
             // V35-MED-06 FIX: Exclude non-revenue statuses
-            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'refunded'])
+            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
             // V35-HIGH-02 FIX: Use sale_date instead of created_at
             ->whereBetween('sale_date', [$this->fromDate, $this->toDate])
             ->select(DB::raw('DATE(sale_date) as date'), DB::raw('SUM(total_amount) as total'))
