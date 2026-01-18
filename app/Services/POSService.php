@@ -337,10 +337,11 @@ class POSService implements POSServiceInterface
                     abort(422, __('Session is already closed'));
                 }
 
+                // V35-MED-06 FIX: Exclude all non-revenue statuses for accurate session totals
                 $salesQuery = Sale::where('branch_id', $session->branch_id)
                     ->where('created_by', $session->user_id)
                     ->where('created_at', '>=', $session->opened_at)
-                    ->where('status', '!=', 'cancelled');
+                    ->whereNotIn('status', ['draft', 'cancelled', 'void', 'refunded']);
 
                 $totalSales = (float) $salesQuery->sum('total_amount');
                 $totalTransactions = $salesQuery->count();
