@@ -88,6 +88,11 @@ if (! function_exists('impersonation_context')) {
 }
 
 if (! function_exists('money')) {
+    /**
+     * Format a monetary value with currency.
+     * V38-FINANCE-01 FIX: Use BCMath for normalization and bcround before float conversion
+     * to minimize floating-point precision issues.
+     */
     function money(float|string|int $amount, string $currency = 'EGP'): string
     {
         $scales = [
@@ -103,19 +108,26 @@ if (! function_exists('money')) {
         ];
 
         $scale = $scales[$currency] ?? 2;
-        $normalized = bcadd((string) $amount, '0', $scale);
-        $formatted = number_format((float) $normalized, $scale, '.', ',');
+        // V38-FINANCE-01 FIX: Use bcround for proper rounding before conversion
+        $normalized = bcround((string) $amount, $scale);
+        $formatted = number_format(decimal_float($normalized, $scale), $scale, '.', ',');
 
         return $formatted.' '.$currency;
     }
 }
 
 if (! function_exists('percent')) {
+    /**
+     * Format a percentage value.
+     * V38-FINANCE-01 FIX: Use bcround before float conversion
+     * to minimize floating-point precision issues.
+     */
     function percent(float|string|int $value, int $decimals = 2): string
     {
-        $normalized = bcadd((string) $value, '0', $decimals);
+        // V38-FINANCE-01 FIX: Use bcround for proper rounding before conversion
+        $normalized = bcround((string) $value, $decimals);
 
-        return number_format((float) $normalized, $decimals, '.', ',').'%';
+        return number_format(decimal_float($normalized, $decimals), $decimals, '.', ',').'%';
     }
 }
 
@@ -429,5 +441,59 @@ if (! function_exists('bcround')) {
         
         // Restore sign if negative
         return $isNegative ? '-' . $rounded : $rounded;
+    }
+}
+
+if (! function_exists('decimal')) {
+    /**
+     * Convert a numeric value to a safe decimal string for JSON/API output.
+     * V38-FINANCE-01 FIX: Avoid float cast precision loss in financial contexts.
+     *
+     * This function provides a consistent way to output decimal values in API responses
+     * and JSON output without the precision loss that comes from (float) casting.
+     *
+     * For most JSON consumers (JavaScript, etc.), a string representation of a decimal
+     * is actually safer than a float because it preserves exact precision.
+     *
+     * @param mixed $value The value to convert
+     * @param int $precision Number of decimal places (default 2 for currency)
+     * @return string Formatted decimal string suitable for JSON output
+     */
+    function decimal(mixed $value, int $precision = 2): string
+    {
+        if ($value === null || $value === '') {
+            return bcadd('0', '0', $precision);
+        }
+
+        return bcadd((string) $value, '0', $precision);
+    }
+}
+
+if (! function_exists('decimal_float')) {
+    /**
+     * Convert a numeric value to a float with controlled precision.
+     * V38-FINANCE-01 FIX: Use BCMath for rounding before float conversion.
+     *
+     * When float output is absolutely required (e.g., for external APIs that expect numbers),
+     * this function ensures the value is properly rounded using BCMath first, minimizing
+     * floating-point precision issues.
+     *
+     * PREFER using decimal() for API responses when possible, as string representation
+     * is safer for financial data.
+     *
+     * @param mixed $value The value to convert
+     * @param int $precision Number of decimal places (default 2 for currency)
+     * @return float Rounded float value
+     */
+    function decimal_float(mixed $value, int $precision = 2): float
+    {
+        if ($value === null || $value === '') {
+            return 0.0;
+        }
+
+        // First round using BCMath, then convert to float
+        $rounded = bcround((string) $value, $precision);
+
+        return (float) $rounded;
     }
 }

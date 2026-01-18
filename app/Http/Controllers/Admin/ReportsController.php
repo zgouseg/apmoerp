@@ -239,11 +239,12 @@ class ReportsController extends Controller
         return $this->ok([
             'period' => ['from' => $from, 'to' => $to],
             'branch_id' => $branchId ?: 'all',
-            'revenue' => (float) $totalSales,
-            'cost_of_goods' => (float) $totalCogs,
-            'gross_profit' => (float) $grossProfit,
-            'expenses' => (float) $totalExpenses,
-            'net_profit' => (float) $netProfit,
+            // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+            'revenue' => decimal_float($totalSales),
+            'cost_of_goods' => decimal_float($totalCogs),
+            'gross_profit' => decimal_float($grossProfit),
+            'expenses' => decimal_float($totalExpenses),
+            'net_profit' => decimal_float($netProfit),
         ]);
     }
 
@@ -283,9 +284,10 @@ class ReportsController extends Controller
         return $this->ok([
             'period' => ['from' => $from, 'to' => $to],
             'branch_id' => $branchId ?: 'all',
-            'inflows' => (float) $inflows,
-            'outflows' => (float) $outflows,
-            'net_cashflow' => (float) $netCashflow,
+            // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+            'inflows' => decimal_float($inflows),
+            'outflows' => decimal_float($outflows),
+            'net_cashflow' => decimal_float($netCashflow),
         ]);
     }
 
@@ -360,8 +362,8 @@ class ReportsController extends Controller
             }
         }
 
-        // Convert to float for JSON response
-        $agingFloat = array_map(fn ($v) => (float) $v, $aging);
+        // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+        $agingFloat = array_map(fn ($v) => decimal_float($v), $aging);
 
         return $this->ok([
             'type' => $type,

@@ -100,7 +100,8 @@ class PurchaseController extends Controller
         $data = $request->validated();
         $this->requireBranchId($request);
 
-        return $this->ok($this->purchases->pay($purchase, (float) $data['amount']), __('Paid'));
+        // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+        return $this->ok($this->purchases->pay($purchase, decimal_float($data['amount'])), __('Paid'));
     }
 
     public function handleReturn(PurchaseReturnRequest $request, int $purchase)

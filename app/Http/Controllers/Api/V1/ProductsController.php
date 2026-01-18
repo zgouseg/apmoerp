@@ -74,8 +74,9 @@ class ProductsController extends BaseApiController
                 'name' => $product->name,
                 'label' => $product->name, // Frontend fallback
                 'sku' => $product->sku,
-                'price' => (float) $product->default_price,
-                'sale_price' => (float) $product->default_price, // Frontend fallback
+                // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+                'price' => decimal_float($product->default_price),
+                'sale_price' => decimal_float($product->default_price), // Frontend fallback
                 'barcode' => $product->barcode,
                 'tax_id' => $product->tax_id,
             ];
@@ -200,7 +201,8 @@ class ProductsController extends BaseApiController
         // Map API fields to database columns
         $validated['default_price'] = $validated['price'];
         unset($validated['price']);
-        $quantity = (float) $validated['quantity'];
+        // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+        $quantity = decimal_float($validated['quantity']);
         $warehouseId = $validated['warehouse_id'] ?? null;
         unset($validated['quantity']);
 
@@ -306,7 +308,8 @@ class ProductsController extends BaseApiController
         // a fallback cache when stock_movements isn't fully utilized.
         $warehouseId = $validated['warehouse_id'] ?? null;
         if (array_key_exists('quantity', $validated)) {
-            $newQuantity = (float) $validated['quantity'];
+            // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+            $newQuantity = decimal_float($validated['quantity']);
 
             // Update cached stock_quantity
             $product->stock_quantity = $newQuantity;

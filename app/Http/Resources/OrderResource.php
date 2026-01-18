@@ -20,12 +20,13 @@ class OrderResource extends JsonResource
             'branch' => $this->whenLoaded('branch', fn () => new BranchResource($this->branch)),
             'user' => $this->whenLoaded('user', fn () => new UserResource($this->user)),
             'items' => $this->whenLoaded('items', fn () => OrderItemResource::collection($this->items)),
-            'subtotal' => (float) $this->sub_total,
-            'discount' => (float) $this->discount,
-            'tax' => (float) $this->tax,
-            'total' => (float) $this->grand_total,
-            'paid_amount' => (float) ($this->paid_total ?? 0),
-            'due_amount' => (float) $this->due_total,
+            // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+            'subtotal' => decimal_float($this->sub_total),
+            'discount' => decimal_float($this->discount),
+            'tax' => decimal_float($this->tax),
+            'total' => decimal_float($this->grand_total),
+            'paid_amount' => decimal_float($this->paid_total ?? 0),
+            'due_amount' => decimal_float($this->due_total),
             'status' => $this->status,
             'payment_status' => $this->computePaymentStatus(),
             'payment_method' => $this->payment_method,
@@ -47,9 +48,9 @@ class OrderResource extends JsonResource
             return $this->resource->isPaid() ? 'paid' : ($this->paid_total > 0 ? 'partial' : 'unpaid');
         }
 
-        // Fallback: compute from paid_total and grand_total
-        $paidTotal = (float) ($this->paid_total ?? 0);
-        $grandTotal = (float) ($this->grand_total ?? 0);
+        // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+        $paidTotal = decimal_float($this->paid_total ?? 0);
+        $grandTotal = decimal_float($this->grand_total ?? 0);
 
         if ($grandTotal <= 0) {
             return 'unpaid';

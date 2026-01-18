@@ -126,7 +126,8 @@ class InventoryController extends BaseApiController
 
         // Calculate new quantity and direction
         if ($validated['direction'] === 'set') {
-            $newQuantity = (float) $validated['qty'];
+            // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+            $newQuantity = decimal_float($validated['qty']);
             $difference = $newQuantity - $oldQuantity;
             $actualDirection = $difference >= 0 ? 'in' : 'out';
             $actualQty = abs($difference);
@@ -142,7 +143,8 @@ class InventoryController extends BaseApiController
             }
         } else {
             $actualDirection = $validated['direction'];
-            $actualQty = abs((float) $validated['qty']);
+            // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+            $actualQty = abs(decimal_float($validated['qty']));
             $newQuantity = $actualDirection === 'in'
                 ? $oldQuantity + $actualQty
                 : $oldQuantity - $actualQty;
@@ -237,13 +239,15 @@ class InventoryController extends BaseApiController
 
                 // Calculate new quantity and direction
                 if ($item['direction'] === 'set') {
-                    $newQuantity = (float) $item['qty'];
+                    // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+                    $newQuantity = decimal_float($item['qty']);
                     $difference = $newQuantity - $oldQuantity;
                     $actualDirection = $difference >= 0 ? 'in' : 'out';
                     $actualQty = abs($difference);
                 } else {
                     $actualDirection = $item['direction'];
-                    $actualQty = abs((float) $item['qty']);
+                    // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+                    $actualQty = abs(decimal_float($item['qty']));
                     $newQuantity = $actualDirection === 'in'
                         ? $oldQuantity + $actualQty
                         : $oldQuantity - $actualQty;

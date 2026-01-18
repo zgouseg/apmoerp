@@ -205,8 +205,9 @@ class OrdersController extends BaseApiController
                         ]);
                     }
 
-                    $lineSubtotal = (float) $item['price'] * (float) $item['quantity'];
-                    $lineDiscount = max(0, (float) ($item['discount'] ?? 0));
+                    // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+                    $lineSubtotal = decimal_float($item['price']) * decimal_float($item['quantity']);
+                    $lineDiscount = max(0, decimal_float($item['discount'] ?? 0));
                     $lineDiscount = min($lineDiscount, $lineSubtotal);
 
                     $lineTotal = $lineSubtotal - $lineDiscount;

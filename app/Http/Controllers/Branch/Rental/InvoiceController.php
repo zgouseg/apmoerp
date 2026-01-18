@@ -48,7 +48,8 @@ class InvoiceController extends Controller
         return $this->ok(
             $this->rental->collectPayment(
                 $invoice->id,
-                (float) $data['amount'],
+                // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+                decimal_float($data['amount']),
                 $data['method'] ?? 'cash',
                 $data['reference'] ?? null,
                 $branch->id
@@ -65,6 +66,7 @@ class InvoiceController extends Controller
 
         $data = $request->validated();
 
-        return $this->ok($this->rental->applyPenalty($invoice->id, (float) $data['penalty'], $branch->id), __('Penalty applied'));
+        // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+        return $this->ok($this->rental->applyPenalty($invoice->id, decimal_float($data['penalty']), $branch->id), __('Penalty applied'));
     }
 }

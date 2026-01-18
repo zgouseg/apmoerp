@@ -153,14 +153,15 @@ class ExportImportController extends Controller
 
                 try {
                     // Find or create sale
+                    // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
                     $saleData = [
                         'reference_number' => $rowData['reference'] ?? 'IMP-'.date('Ymd').'-'.(string) Str::uuid(),
                         'sale_date' => $rowData['date'],
-                        'total_amount' => (float) $rowData['total'],
-                        'subtotal' => (float) ($rowData['subtotal'] ?? $rowData['total']),
-                        'tax_amount' => (float) ($rowData['tax'] ?? 0),
-                        'discount_amount' => (float) ($rowData['discount'] ?? 0),
-                        'paid_amount' => (float) ($rowData['paid'] ?? 0),
+                        'total_amount' => decimal_float($rowData['total']),
+                        'subtotal' => decimal_float($rowData['subtotal'] ?? $rowData['total']),
+                        'tax_amount' => decimal_float($rowData['tax'] ?? 0),
+                        'discount_amount' => decimal_float($rowData['discount'] ?? 0),
+                        'paid_amount' => decimal_float($rowData['paid'] ?? 0),
                         'status' => $rowData['status'],
                         'branch_id' => auth()->user()->branch_id,
                     ];

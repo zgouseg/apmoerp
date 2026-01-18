@@ -143,7 +143,8 @@ class StoreIntegrationController extends Controller
         $errors = [];
 
         foreach ($validated['items'] as $row) {
-            $qty = (float) $row['qty'];
+            // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+            $qty = decimal_float($row['qty']);
 
             try {
                 $target = null;
@@ -247,7 +248,8 @@ class StoreIntegrationController extends Controller
         // Best-effort stock sync based on items
         try {
             foreach ($validated['items'] as $item) {
-                $qty = (float) $item['qty'];
+                // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+                $qty = decimal_float($item['qty']);
 
                 if ($qty <= 0) {
                     continue;

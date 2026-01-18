@@ -73,20 +73,22 @@ class EnforceDiscountLimit
     {
         // Priority: user attribute -> role/permission meta -> system setting
         if (! is_null($user->max_line_discount) && is_numeric($user->max_line_discount)) {
-            return (float) $user->max_line_discount;
+            // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+            return decimal_float($user->max_line_discount);
         }
 
         // If using spatie permissions meta, you can read from a profile/settings table.
-        return (float) (config('erp.discount.max_line', 15)); // sensible default
+        return decimal_float(config('erp.discount.max_line', 15)); // sensible default
     }
 
     protected function getUserMaxInvoiceDiscount($user): float
     {
         if (! is_null($user->max_invoice_discount) && is_numeric($user->max_invoice_discount)) {
-            return (float) $user->max_invoice_discount;
+            // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+            return decimal_float($user->max_invoice_discount);
         }
 
-        return (float) (config('erp.discount.max_invoice', 20));
+        return decimal_float(config('erp.discount.max_invoice', 20));
     }
 
     protected function error(string $message, int $status): Response
