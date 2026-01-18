@@ -52,7 +52,8 @@ class CurrencyExchangeService
         }
 
         // Use bcmath for precise currency exchange
-        return (float) bcmul((string) $amount, (string) $rate, 4);
+        // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+        return decimal_float(bcmul((string) $amount, (string) $rate, 4), 4);
     }
 
     /**
@@ -92,7 +93,8 @@ class CurrencyExchangeService
             ->orderBy('effective_date', 'desc')
             ->first();
 
-        return $rate ? (float) $rate->rate : null;
+        // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+        return $rate ? decimal_float($rate->rate, 6) : null;
     }
 
     /**
@@ -235,7 +237,8 @@ class CurrencyExchangeService
             ->get()
             ->map(fn ($r) => [
                 'date' => $r->effective_date,
-                'rate' => (float) $r->rate,
+                // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+                'rate' => decimal_float($r->rate, 6),
                 'source' => $r->source,
             ])
             ->toArray();

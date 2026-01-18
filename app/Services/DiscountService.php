@@ -70,7 +70,8 @@ class DiscountService implements DiscountServiceInterface
                 }
 
                 // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
-                return (float) bcround($discTotal, 2);
+                // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+                return decimal_float(bcround($discTotal, 2));
             },
             operation: 'lineTotal',
             context: ['qty' => $qty, 'price' => $price, 'discount' => $discount, 'percent' => $percent],
@@ -85,12 +86,13 @@ class DiscountService implements DiscountServiceInterface
     {
         if ($asPercent) {
             // Check sales config first, then fallback to POS config
-            return (float) config('sales.max_line_discount_percent',
+            // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+            return decimal_float(config('sales.max_line_discount_percent',
                 config('pos.discount.max_percent', 50)
-            );
+            ));
         }
 
-        return (float) config('pos.discount.max_amount', 1000);
+        return decimal_float(config('pos.discount.max_amount', 1000));
     }
 
     /**
@@ -98,9 +100,10 @@ class DiscountService implements DiscountServiceInterface
      */
     public function validateInvoiceDiscount(float $discount, bool $asPercent = true): bool
     {
+        // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
         $maxDiscount = $asPercent
-            ? (float) config('sales.max_invoice_discount_percent', 30)
-            : (float) config('pos.discount.max_amount', 1000);
+            ? decimal_float(config('sales.max_invoice_discount_percent', 30))
+            : decimal_float(config('pos.discount.max_amount', 1000));
 
         if ($discount > $maxDiscount) {
             throw new InvalidDiscountException(
@@ -176,7 +179,8 @@ class DiscountService implements DiscountServiceInterface
         $finalAmount = max(0.0, $baseAmount - $totalDiscountAmount);
 
         // Check if total discount exceeds maximum allowed (e.g., 80% of base)
-        $maxDiscountPercent = (float) config('sales.max_combined_discount_percent', 80);
+        // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+        $maxDiscountPercent = decimal_float(config('sales.max_combined_discount_percent', 80));
         $discountPercent = $baseAmount > 0 ? ($totalDiscountAmount / $baseAmount * 100) : 0;
 
         if ($discountPercent > $maxDiscountPercent) {

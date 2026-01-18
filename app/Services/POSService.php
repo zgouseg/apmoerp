@@ -104,10 +104,11 @@ class POSService implements POSServiceInterface
                 // Also scope by branch_id to ensure accurate limit calculation per branch
                 $previousDailyDiscount = 0.0;
                 if ($user && $user->daily_discount_limit !== null) {
-                    $previousDailyDiscount = (float) Sale::where('created_by', $user->id)
+                    // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+                    $previousDailyDiscount = decimal_float(Sale::where('created_by', $user->id)
                         ->where('branch_id', $branchId)
                         ->whereDate('sale_date', $payload['sale_date'] ?? now()->toDateString())
-                        ->sum('discount_amount');
+                        ->sum('discount_amount'));
                 }
 
                 // Lock all products at once to prevent performance issues and deadlocks
@@ -120,7 +121,8 @@ class POSService implements POSServiceInterface
 
                 foreach ($items as $it) {
                     // Validate quantity is positive (prevent negative quantity exploit)
-                    $qty = (float) ($it['qty'] ?? 1);
+                    // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+                    $qty = decimal_float($it['qty'] ?? 1);
                     if ($qty <= 0) {
                         abort(422, __('Quantity must be positive. Received: :qty', ['qty' => $qty]));
                     }
@@ -136,7 +138,8 @@ class POSService implements POSServiceInterface
                         abort(422, __('Product ":product" is no longer available for sale.', ['product' => $product->name]));
                     }
 
-                    $price = isset($it['price']) ? (float) $it['price'] : (float) ($product->default_price ?? 0);
+                    // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+                    $price = isset($it['price']) ? decimal_float($it['price']) : decimal_float($product->default_price ?? 0);
 
                     // Check stock availability for physical products (not services)
                     // Respect the allow_negative_stock setting from system configuration
@@ -153,18 +156,20 @@ class POSService implements POSServiceInterface
                         }
                     }
 
-                    if ($user && ! $user->can_modify_price && abs($price - (float) ($product->default_price ?? 0)) > 0.001) {
+                    // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+                    if ($user && ! $user->can_modify_price && abs($price - decimal_float($product->default_price ?? 0)) > 0.001) {
                         abort(422, __('You are not allowed to modify prices'));
                     }
 
-                    (new ValidPriceOverride((float) $product->cost, 0.0))->validate('price', $price, function ($m) {
+                    (new ValidPriceOverride(decimal_float($product->cost), 0.0))->validate('price', $price, function ($m) {
                         abort(422, $m);
                     });
 
-                    $itemDiscountPercent = (float) ($it['discount'] ?? 0);
+                    // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+                    $itemDiscountPercent = decimal_float($it['discount'] ?? 0);
 
                     // Check system-wide max discount setting first
-                    $systemMaxDiscount = (float) setting('pos.max_discount_percent', 100);
+                    $systemMaxDiscount = decimal_float(setting('pos.max_discount_percent', 100));
                     if ($itemDiscountPercent > $systemMaxDiscount) {
                         abort(422, __('Discount exceeds the system maximum of :max%', ['max' => $systemMaxDiscount]));
                     }
@@ -222,7 +227,8 @@ class POSService implements POSServiceInterface
                         'discount_amount' => $lineDisc,
                         'tax_amount' => $lineTax,
                         // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
-                        'line_total' => (float) bcround($lineTotal, 2),
+                        // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+                        'line_total' => decimal_float(bcround($lineTotal, 2)),
                     ]);
                 }
 
@@ -230,10 +236,11 @@ class POSService implements POSServiceInterface
                 $grandTotal = bcadd(bcsub((string) $subtotal, (string) $discountTotal, 4), (string) $taxTotal, 4);
 
                 // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
-                $sale->subtotal = (float) bcround((string) $subtotal, 2);
-                $sale->discount_amount = (float) bcround((string) $discountTotal, 2);
-                $sale->tax_amount = (float) bcround((string) $taxTotal, 2);
-                $sale->total_amount = (float) bcround($grandTotal, 2);
+                // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+                $sale->subtotal = decimal_float(bcround((string) $subtotal, 2));
+                $sale->discount_amount = decimal_float(bcround((string) $discountTotal, 2));
+                $sale->tax_amount = decimal_float(bcround((string) $taxTotal, 2));
+                $sale->total_amount = decimal_float(bcround($grandTotal, 2));
 
                 $payments = $payload['payments'] ?? [];
                 $paidTotal = '0';
@@ -243,7 +250,8 @@ class POSService implements POSServiceInterface
 
                 if (! empty($payments)) {
                     foreach ($payments as $payment) {
-                        $amount = (float) ($payment['amount'] ?? 0);
+                        // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+                        $amount = decimal_float($payment['amount'] ?? 0);
                         if ($amount <= 0) {
                             continue;
                         }
@@ -271,7 +279,8 @@ class POSService implements POSServiceInterface
                         'sale_id' => $sale->getKey(),
                         'payment_method' => 'cash',
                         // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
-                        'amount' => (float) bcround($grandTotal, 2),
+                        // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+                        'amount' => decimal_float(bcround($grandTotal, 2)),
                         // V38-MED-01 FIX: Use payload-level date or default
                         'payment_date' => $defaultPaymentDate,
                         'currency' => 'EGP',
@@ -281,7 +290,8 @@ class POSService implements POSServiceInterface
                 }
 
                 // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
-                $sale->paid_amount = (float) bcround($paidTotal, 2);
+                // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+                $sale->paid_amount = decimal_float(bcround($paidTotal, 2));
                 $sale->payment_status = bccomp($paidTotal, $grandTotal, 2) >= 0 ? 'paid' : 'partial';
                 $sale->save();
 
@@ -362,7 +372,8 @@ class POSService implements POSServiceInterface
                     ->where('created_at', '>=', $session->opened_at)
                     ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
 
-                $totalSales = (float) $salesQuery->sum('total_amount');
+                // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+                $totalSales = decimal_float($salesQuery->sum('total_amount'));
                 $totalTransactions = $salesQuery->count();
 
                 $paymentSummary = SalePayment::whereIn('sale_id', $salesQuery->pluck('id'))
@@ -505,8 +516,9 @@ class POSService implements POSServiceInterface
                             'date' => $date->toDateString(),
                         ],
                         [
-                            'gross' => (float) $totalAmountString,
-                            'paid' => (float) $paidAmountString,
+                            // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+                            'gross' => decimal_float($totalAmountString),
+                            'paid' => decimal_float($paidAmountString),
                             'sales_count' => $salesCount,
                             'receipts_count' => $receiptsCount,
                             'closed_at' => now(),
@@ -518,8 +530,9 @@ class POSService implements POSServiceInterface
                 return [
                     'sales' => $salesCount,
                     'receipts' => $receiptsCount,
-                    'total_amount' => (float) $totalAmountString,
-                    'paid_amount' => (float) $paidAmountString,
+                    // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+                    'total_amount' => decimal_float($totalAmountString),
+                    'paid_amount' => decimal_float($paidAmountString),
                     'date' => $date->toDateString(),
                     'branch_id' => $branch->id,
                 ];
