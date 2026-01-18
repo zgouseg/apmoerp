@@ -68,22 +68,27 @@ class ReportsController extends Controller
         $to = $request->input('to', now()->endOfMonth()->toDateString());
 
         // MED-01 FIX: Exclude cancelled/void/returned/refunded sales and purchases for accurate PnL
+        // V38-HIGH-02 FIX: Include 'draft' in exclusion list for consistency with other reports
         // These statuses represent transactions that should not be counted in revenue/expenses
-        $excludedStatuses = ['cancelled', 'void', 'voided', 'returned', 'refunded'];
+        $excludedStatuses = ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'];
 
         // V32-HIGH-01 FIX: Use sale_date instead of created_at for accurate period reporting
         // In ERP, financial reports must use the business transaction date, not the record creation date.
         // This ensures backdated or corrected postings appear in the correct accounting period.
+        // V38-HIGH-02 FIX: Exclude soft-deleted records using whereNull('deleted_at')
         $sales = DB::table('sales')
             ->where('branch_id', $b)
+            ->whereNull('deleted_at')
             ->whereNotIn('status', $excludedStatuses)
             ->whereDate('sale_date', '>=', $from)
             ->whereDate('sale_date', '<=', $to)
             ->sum('total_amount');
 
         // V32-HIGH-01 FIX: Use purchase_date instead of created_at for accurate period reporting
+        // V38-HIGH-02 FIX: Exclude soft-deleted records using whereNull('deleted_at')
         $purchases = DB::table('purchases')
             ->where('branch_id', $b)
+            ->whereNull('deleted_at')
             ->whereNotIn('status', $excludedStatuses)
             ->whereDate('purchase_date', '>=', $from)
             ->whereDate('purchase_date', '<=', $to)

@@ -184,10 +184,12 @@ class KPIDashboardService
             ->count('customer_id');
 
         // V34-CRIT-02 FIX: Use sale_date instead of created_at for business reporting
+        // V38-MED-04 FIX: Exclude soft-deleted records
         // Repeat customers
         $repeatCustomers = DB::table('sales')
             ->select('customer_id', DB::raw('COUNT(*) as order_count'))
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+            ->whereNull('deleted_at')
             ->whereBetween('sale_date', [$dates['start'], $dates['end']])
             ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
             ->whereNotNull('customer_id')

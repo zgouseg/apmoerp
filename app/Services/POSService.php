@@ -81,7 +81,8 @@ class POSService implements POSServiceInterface
                     'warehouse_id' => $payload['warehouse_id'] ?? null,
                     'customer_id' => $payload['customer_id'] ?? null,
                     'client_uuid' => $clientUuid,
-                    'sale_date' => now()->toDateString(),
+                    // V38-MED-01 FIX: Allow sale_date from payload for offline/backdated scenarios
+                    'sale_date' => $payload['sale_date'] ?? now()->toDateString(),
                     'status' => 'completed',
                     'channel' => $payload['channel'] ?? 'pos',
                     'currency' => $payload['currency'] ?? 'EGP',
@@ -99,10 +100,13 @@ class POSService implements POSServiceInterface
                 $discountTotal = '0';
                 $taxTotal = '0';
 
+                // V38-HIGH-04 FIX: Use sale_date instead of created_at for daily discount limit calculation
+                // Also scope by branch_id to ensure accurate limit calculation per branch
                 $previousDailyDiscount = 0.0;
                 if ($user && $user->daily_discount_limit !== null) {
                     $previousDailyDiscount = (float) Sale::where('created_by', $user->id)
-                        ->whereDate('created_at', now()->toDateString())
+                        ->where('branch_id', $branchId)
+                        ->whereDate('sale_date', $payload['sale_date'] ?? now()->toDateString())
                         ->sum('discount_amount');
                 }
 
@@ -233,6 +237,9 @@ class POSService implements POSServiceInterface
 
                 $payments = $payload['payments'] ?? [];
                 $paidTotal = '0';
+                // V38-MED-01 FIX: Allow payment_date from payload for offline/backdated scenarios
+                // Defaults to sale_date if provided, otherwise today
+                $defaultPaymentDate = $payload['payment_date'] ?? $payload['sale_date'] ?? now()->toDateString();
 
                 if (! empty($payments)) {
                     foreach ($payments as $payment) {
@@ -245,7 +252,8 @@ class POSService implements POSServiceInterface
                             'sale_id' => $sale->getKey(),
                             'payment_method' => $payment['method'] ?? 'cash',
                             'amount' => $amount,
-                            'payment_date' => now()->toDateString(),
+                            // V38-MED-01 FIX: Use payment-level date, payload-level date, or default
+                            'payment_date' => $payment['payment_date'] ?? $defaultPaymentDate,
                             'currency' => $payment['currency'] ?? 'EGP',
                             'reference_number' => $payment['reference_no'] ?? null,
                             'card_last_four' => $payment['card_last_four'] ?? null,
@@ -264,7 +272,8 @@ class POSService implements POSServiceInterface
                         'payment_method' => 'cash',
                         // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
                         'amount' => (float) bcround($grandTotal, 2),
-                        'payment_date' => now()->toDateString(),
+                        // V38-MED-01 FIX: Use payload-level date or default
+                        'payment_date' => $defaultPaymentDate,
                         'currency' => 'EGP',
                         'status' => 'completed',
                     ]);
@@ -302,7 +311,8 @@ class POSService implements POSServiceInterface
     public function openSession(int $branchId, int $userId, float $openingCash = 0): PosSession
     {
         return $this->handleServiceOperation(
-            callback: function () use ($branchId, $userId, $openingCash) {
+            // V38-MED-02 FIX: Wrap session creation in a DB transaction with locking to prevent race conditions
+            callback: fn () => DB::transaction(function () use ($branchId, $userId, $openingCash) {
                 $existingSession = PosSession::where('branch_id', $branchId)
                     ->where('user_id', $userId)
                     ->where('status', PosSession::STATUS_OPEN)
@@ -312,9 +322,11 @@ class POSService implements POSServiceInterface
                     return $existingSession;
                 }
 
+                // V38-MED-02 FIX: Use lockForUpdate() to prevent race conditions when generating session numbers
                 // Generate session number: POS-{YYYYMMDD}-{sequence}
                 $date = now()->format('Ymd');
                 $lastSession = PosSession::where('session_number', 'like', "POS-{$date}-%")
+                    ->lockForUpdate()
                     ->orderByDesc('id')
                     ->first();
                 $sequence = $lastSession ? ((int) substr($lastSession->session_number, -4)) + 1 : 1;
@@ -328,7 +340,7 @@ class POSService implements POSServiceInterface
                     'status' => PosSession::STATUS_OPEN,
                     'opened_at' => now(),
                 ]);
-            },
+            }),
             operation: 'openSession',
             context: ['branch_id' => $branchId, 'user_id' => $userId, 'opening_cash' => $openingCash]
         );

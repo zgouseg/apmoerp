@@ -43,8 +43,10 @@ class ReportService implements ReportServiceInterface
 
                 // V34-CRIT-01 FIX: Use sale_date instead of created_at for accurate financial reporting
                 // Also filter out non-revenue statuses (draft, cancelled)
+                // V38-CRIT-02 FIX: Exclude soft-deleted records using whereNull('deleted_at')
                 $sales = DB::table('sales')
                     ->where('branch_id', $branchId)
+                    ->whereNull('deleted_at')
                     ->whereDate('sale_date', '>=', $from)
                     ->whereDate('sale_date', '<=', $to)
                     ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
@@ -53,8 +55,10 @@ class ReportService implements ReportServiceInterface
 
                 // V34-CRIT-01 FIX: Use purchase_date instead of created_at for accurate financial reporting
                 // Also filter out non-relevant statuses (draft, cancelled)
+                // V38-CRIT-02 FIX: Exclude soft-deleted records using whereNull('deleted_at')
                 $purchases = DB::table('purchases')
                     ->where('branch_id', $branchId)
+                    ->whereNull('deleted_at')
                     ->whereDate('purchase_date', '>=', $from)
                     ->whereDate('purchase_date', '<=', $to)
                     ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded'])
@@ -209,7 +213,9 @@ class ReportService implements ReportServiceInterface
                         'branches.name as branch_name',
                     ])
                     ->leftJoin('customers', 'sales.customer_id', '=', 'customers.id')
-                    ->leftJoin('branches', 'sales.branch_id', '=', 'branches.id');
+                    ->leftJoin('branches', 'sales.branch_id', '=', 'branches.id')
+                    // V38-CRIT-02 FIX: Exclude soft-deleted records
+                    ->whereNull('sales.deleted_at');
 
                 if ($user && ! $user->hasAnyRole(['Super Admin', 'super-admin'])) {
                     $branchIds = $this->branchAccessService->getUserBranches($user)->pluck('id');
@@ -252,7 +258,9 @@ class ReportService implements ReportServiceInterface
                 $query = DB::table('purchases')
                     ->select(['purchases.*', 'suppliers.name as supplier_name', 'branches.name as branch_name'])
                     ->leftJoin('suppliers', 'purchases.supplier_id', '=', 'suppliers.id')
-                    ->leftJoin('branches', 'purchases.branch_id', '=', 'branches.id');
+                    ->leftJoin('branches', 'purchases.branch_id', '=', 'branches.id')
+                    // V38-CRIT-02 FIX: Exclude soft-deleted records
+                    ->whereNull('purchases.deleted_at');
 
                 if ($user && ! $user->hasAnyRole(['Super Admin', 'super-admin'])) {
                     $branchIds = $this->branchAccessService->getUserBranches($user)->pluck('id');

@@ -101,6 +101,8 @@ class ScheduledReportService
                     DB::raw('SUM(total_amount) as total_sales'),
                     DB::raw('AVG(total_amount) as avg_order'),
                 ])
+                // V38-HIGH-01 FIX: Exclude soft-deleted records
+                ->whereNull('deleted_at')
                 // V31-MED-05 FIX: Exclude non-revenue statuses
                 ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
 

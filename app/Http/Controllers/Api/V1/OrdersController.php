@@ -23,16 +23,19 @@ class OrdersController extends BaseApiController
         $store = $this->getStore($request);
 
         // NEW-MEDIUM-06 FIX: Validate and cap per_page to prevent DoS
+        // V38-HIGH-03 FIX: Add sale_date to allowed sort_by options
         $validated = $request->validate([
-            'sort_by' => 'sometimes|string|in:created_at,id,status,total_amount',
+            'sort_by' => 'sometimes|string|in:created_at,sale_date,id,status,total_amount',
             'sort_dir' => 'sometimes|string|in:asc,desc',
             'per_page' => 'sometimes|integer|min:1|max:100',
         ]);
 
-        $sortBy = $validated['sort_by'] ?? 'created_at';
+        $sortBy = $validated['sort_by'] ?? 'sale_date';
         $sortDir = $validated['sort_dir'] ?? 'desc';
         $perPage = $validated['per_page'] ?? 50;
 
+        // V38-HIGH-03 FIX: Use sale_date instead of created_at for date filtering
+        // This ensures backdated orders appear correctly in date-filtered results
         $query = Sale::query()
             ->with(['customer:id,name,email,phone', 'items.product:id,name,sku'])
             ->when($store?->branch_id, fn ($q) => $q->where('branch_id', $store->branch_id))
@@ -40,9 +43,9 @@ class OrdersController extends BaseApiController
             )
             ->when($request->filled('customer_id'), fn ($q) => $q->where('customer_id', $request->customer_id)
             )
-            ->when($request->filled('from_date'), fn ($q) => $q->whereDate('created_at', '>=', $request->from_date)
+            ->when($request->filled('from_date'), fn ($q) => $q->whereDate('sale_date', '>=', $request->from_date)
             )
-            ->when($request->filled('to_date'), fn ($q) => $q->whereDate('created_at', '<=', $request->to_date)
+            ->when($request->filled('to_date'), fn ($q) => $q->whereDate('sale_date', '<=', $request->to_date)
             )
             ->orderBy($sortBy, $sortDir);
 
