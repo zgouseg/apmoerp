@@ -12,6 +12,25 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Store Token Authentication Middleware
+ *
+ * SECURITY (V37-HIGH-03): API Token Security
+ * ==========================================
+ * This middleware handles API token authentication for store integrations.
+ *
+ * Token Extraction Priority:
+ * 1. Authorization: Bearer header (SECURE - recommended)
+ * 2. Query parameter 'api_token' (DEPRECATED - leaks via logs/referrers)
+ * 3. Request body 'api_token' (DEPRECATED - still insecure)
+ *
+ * Security can be tightened via config/auth.php 'store_token' settings:
+ * - require_bearer_header: true  → Only accepts Authorization: Bearer header
+ * - allow_deprecated_methods: false → Rejects query/body tokens entirely
+ *
+ * When deprecated methods are used, a warning is logged and X-Deprecation-Warning
+ * header is added to the response to inform clients to migrate.
+ */
 class AuthenticateStoreToken
 {
     /**
@@ -152,6 +171,10 @@ class AuthenticateStoreToken
      * When tokens are passed via query/body, a deprecation warning is logged
      * and a warning header is returned to inform clients to migrate.
      *
+     * Security can be tightened via config/auth.php 'store_token' settings:
+     * - require_bearer_header: When true, only accepts Authorization: Bearer header
+     * - allow_deprecated_methods: When false, rejects query/body tokens entirely
+     *
      * @return array{0: string|null, 1: string} Tuple of [token, source]
      */
     protected function getTokenFromRequest(Request $request): array
@@ -161,6 +184,15 @@ class AuthenticateStoreToken
 
         if ($authHeader && str_starts_with($authHeader, 'Bearer ')) {
             return [substr($authHeader, 7), 'header'];
+        }
+
+        // V37-HIGH-03 FIX: Check if header-only mode is required
+        $requireBearerHeader = config('auth.store_token.require_bearer_header', false);
+        $allowDeprecated = config('auth.store_token.allow_deprecated_methods', true);
+
+        // If header is required and deprecated methods are disabled, don't check query/body
+        if ($requireBearerHeader && ! $allowDeprecated) {
+            return [null, 'none'];
         }
 
         // Deprecated: Query parameter (can leak via logs, referrers, browser history)

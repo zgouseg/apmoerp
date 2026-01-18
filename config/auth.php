@@ -117,4 +117,24 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Store API Token Security
+    |--------------------------------------------------------------------------
+    |
+    | These options control how API tokens are accepted for store integrations.
+    | For enhanced security, it's recommended to set 'require_bearer_header'
+    | to true, which will reject tokens passed via query string or request body.
+    |
+    | - require_bearer_header: When true, only accepts tokens via Authorization: Bearer header
+    | - allow_deprecated_methods: When false (and require_bearer_header is true), rejects
+    |   tokens via query/body. When true, allows deprecated methods but logs warnings.
+    |
+    */
+
+    'store_token' => [
+        'require_bearer_header' => env('STORE_TOKEN_REQUIRE_BEARER_HEADER', false),
+        'allow_deprecated_methods' => env('STORE_TOKEN_ALLOW_DEPRECATED', true),
+    ],
+
 ];
