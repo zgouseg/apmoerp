@@ -129,9 +129,9 @@ class ReportsController extends Controller
             ->limit(10)
             ->get()
             ->map(function ($job) {
-                // Extract job name from payload
-                $payload = json_decode($job->payload, true);
-                $jobName = $payload['displayName'] ?? $payload['job'] ?? 'Unknown';
+                // Extract job name from payload with error handling for malformed JSON
+                $payload = json_decode($job->payload ?? '', true);
+                $jobName = is_array($payload) ? ($payload['displayName'] ?? $payload['job'] ?? 'Unknown') : 'Unknown';
 
                 // Truncate exception message for display
                 $exceptionLines = explode("\n", $job->exception ?? '');
