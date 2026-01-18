@@ -11,6 +11,10 @@ use Illuminate\Support\Facades\Cache;
 
 /**
  * Advanced Analytics Service with AI-powered predictions
+ *
+ * SECURITY NOTE: All raw SQL expressions in this service use only hardcoded column names.
+ * Parameters like $branchId are passed through where() with proper binding.
+ * No user input is interpolated into the SQL expressions.
  */
 class AdvancedAnalyticsService
 {

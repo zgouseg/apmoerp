@@ -16,6 +16,10 @@ use Illuminate\Support\Facades\DB;
  * - A items: Top 20% of products contributing ~80% of revenue (high priority)
  * - B items: Next 30% of products contributing ~15% of revenue (medium priority)
  * - C items: Bottom 50% of products contributing ~5% of revenue (low priority)
+ *
+ * SECURITY NOTE: All raw SQL expressions in this service use only hardcoded column names.
+ * Parameters like $branchId are passed through where() with proper binding.
+ * No user input is interpolated into the SQL expressions.
  */
 class ABCAnalysisService
 {

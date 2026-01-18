@@ -95,6 +95,7 @@ class Index extends Component
                 $stockMovementQuery->whereHas('warehouse', fn ($q) => $q->where('branch_id', $user->branch_id));
             }
             // quantity is signed: positive = in, negative = out
+            // SECURITY: The selectRaw uses hardcoded column names only
             $totalStock = (clone $stockMovementQuery)->sum('quantity');
             $totalValue = (clone $stockMovementQuery)->selectRaw('SUM(quantity * COALESCE(unit_cost, 0)) as value')->value('value') ?? 0;
 

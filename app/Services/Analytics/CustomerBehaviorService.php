@@ -16,6 +16,10 @@ use Illuminate\Support\Facades\DB;
  *
  * Analyzes customer purchasing patterns, preferences, and behavior
  * to provide actionable insights for marketing and sales strategies.
+ *
+ * SECURITY NOTE: All raw SQL expressions in this service use only hardcoded column names.
+ * Parameters like $branchId are passed through where() with proper binding.
+ * No user input is interpolated into the SQL expressions.
  */
 class CustomerBehaviorService
 {

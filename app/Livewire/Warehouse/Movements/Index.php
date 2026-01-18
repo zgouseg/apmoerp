@@ -87,6 +87,7 @@ class Index extends Component
             // quantity > 0 = in, quantity < 0 = out
             'in' => (clone $baseQuery)->where('quantity', '>', 0)->count(),
             'out' => (clone $baseQuery)->where('quantity', '<', 0)->count(),
+            // SECURITY: The selectRaw uses hardcoded column names only
             'total_value' => (clone $baseQuery)->selectRaw('SUM(quantity * COALESCE(unit_cost, 0)) as value')->value('value') ?? 0,
         ];
 

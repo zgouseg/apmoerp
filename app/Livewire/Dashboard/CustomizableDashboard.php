@@ -246,6 +246,7 @@ class CustomizableDashboard extends Component
                 ->where('branch_id', $branchId);
 
             $totalProducts = (clone $productsQuery)->count();
+            // SECURITY: The selectRaw and DB::raw use only hardcoded column names
             $totalValue = (clone $productsQuery)->sum(\Illuminate\Support\Facades\DB::raw('COALESCE(default_price, 0) * COALESCE(stock_quantity, 0)'));
 
             $lowStock = (clone $productsQuery)
@@ -256,7 +257,8 @@ class CustomizableDashboard extends Component
 
             // V35-HIGH-02 FIX: Use sale_date instead of created_at for accurate sales reporting
             // V35-MED-06 FIX: Exclude non-revenue statuses
-            // Get this month's sales for this module
+            // SECURITY: The selectRaw uses hardcoded column names only. $module->id is an integer
+            // from the database (not user input), validated when fetched via findOrFail-like queries.
             $thisMonthSales = \App\Models\Sale::where('branch_id', $branchId)
                 ->whereMonth('sale_date', now()->month)
                 ->whereYear('sale_date', now()->year)
