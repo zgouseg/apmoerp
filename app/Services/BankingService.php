@@ -196,6 +196,7 @@ class BankingService
 
     /**
      * Import transactions from CSV/Excel
+     * BUG-4 FIX: Improve duplicate detection to handle NULL/missing reference_numbers
      */
     public function importTransactions(int $bankAccountId, array $transactions): array
     {
@@ -205,10 +206,25 @@ class BankingService
 
         foreach ($transactions as $txn) {
             try {
-                // Check if transaction already exists
-                $exists = BankTransaction::where('bank_account_id', $bankAccountId)
-                    ->where('reference_number', $txn['reference_number'] ?? '')
-                    ->exists();
+                // BUG-4 FIX: Only check duplicate by reference_number if it's actually provided
+                // If reference_number is missing, check by date+amount+type to avoid false duplicates
+                $exists = false;
+                
+                if (! empty($txn['reference_number'])) {
+                    // If reference number exists, use it for precise duplicate detection
+                    $exists = BankTransaction::where('bank_account_id', $bankAccountId)
+                        ->where('reference_number', $txn['reference_number'])
+                        ->exists();
+                } else {
+                    // If no reference number, check by date+amount+type to detect likely duplicates
+                    // This is more conservative but prevents importing the same transaction twice
+                    $exists = BankTransaction::where('bank_account_id', $bankAccountId)
+                        ->where('transaction_date', $txn['transaction_date'])
+                        ->where('type', $txn['type'])
+                        ->where('amount', $txn['amount'])
+                        ->whereNull('reference_number')
+                        ->exists();
+                }
 
                 if ($exists) {
                     $skipped++;

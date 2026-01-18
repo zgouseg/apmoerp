@@ -177,6 +177,7 @@ class ReportsController extends Controller
     /**
      * NEW-V15-CRITICAL-02 FIX: Finance profit and loss report
      * V31-HIGH-03 FIX: Use proper date columns and exclude non-revenue statuses
+     * BUG-1 FIX: Calculate COGS from actual cost_price in sale_items, not total purchases
      */
     public function financePnl(Request $request)
     {
@@ -184,45 +185,58 @@ class ReportsController extends Controller
         $from = $request->input('from', now()->startOfMonth()->toDateString());
         $to = $request->input('to', now()->endOfMonth()->toDateString());
 
-        // V31-HIGH-03 FIX: Use sale_date/purchase_date instead of created_at
-        // and filter out non-revenue/non-expense statuses
+        // V31-HIGH-03 FIX: Use sale_date instead of created_at
+        // and filter out non-revenue statuses
         $salesQuery = DB::table('sales')
             ->whereDate('sale_date', '>=', $from)
             ->whereDate('sale_date', '<=', $to)
             ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
 
-        $purchasesQuery = DB::table('purchases')
-            ->whereDate('purchase_date', '>=', $from)
-            ->whereDate('purchase_date', '<=', $to)
-            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
+        if ($branchId) {
+            $salesQuery->where('branch_id', $branchId);
+        }
+
+        // BUG-1 FIX: Calculate actual COGS from sale_items.cost_price * quantity
+        // This represents the actual cost of goods that were sold, not total purchases
+        $cogsQuery = DB::table('sale_items')
+            ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
+            ->whereDate('sales.sale_date', '>=', $from)
+            ->whereDate('sales.sale_date', '<=', $to)
+            ->whereNotIn('sales.status', ['draft', 'cancelled', 'void', 'voided', 'returned', 'refunded']);
+
+        if ($branchId) {
+            $cogsQuery->where('sales.branch_id', $branchId);
+        }
 
         $expensesQuery = DB::table('expenses')
             ->whereDate('expense_date', '>=', $from)
             ->whereDate('expense_date', '<=', $to);
 
         if ($branchId) {
-            $salesQuery->where('branch_id', $branchId);
-            $purchasesQuery->where('branch_id', $branchId);
             $expensesQuery->where('branch_id', $branchId);
         }
 
         // V31-HIGH-03 FIX: Use bcmath for precise financial calculations
         $totalSalesRaw = $salesQuery->sum('total_amount') ?? 0;
-        $totalPurchasesRaw = $purchasesQuery->sum('total_amount') ?? 0;
+        
+        // BUG-1 FIX: Calculate COGS as SUM(cost_price * quantity) from sale_items
+        $totalCogsRaw = $cogsQuery->selectRaw('SUM(COALESCE(cost_price, 0) * COALESCE(quantity, 0)) as total_cogs')
+            ->value('total_cogs') ?? 0;
+        
         $totalExpensesRaw = $expensesQuery->sum('amount') ?? 0;
 
         $totalSales = (string) $totalSalesRaw;
-        $totalPurchases = (string) $totalPurchasesRaw;
+        $totalCogs = (string) $totalCogsRaw;
         $totalExpenses = (string) $totalExpensesRaw;
 
-        $grossProfit = bcsub($totalSales, $totalPurchases, 2);
+        $grossProfit = bcsub($totalSales, $totalCogs, 2);
         $netProfit = bcsub($grossProfit, $totalExpenses, 2);
 
         return $this->ok([
             'period' => ['from' => $from, 'to' => $to],
             'branch_id' => $branchId ?: 'all',
             'revenue' => (float) $totalSales,
-            'cost_of_goods' => (float) $totalPurchases,
+            'cost_of_goods' => (float) $totalCogs,
             'gross_profit' => (float) $grossProfit,
             'expenses' => (float) $totalExpenses,
             'net_profit' => (float) $netProfit,
@@ -232,6 +246,7 @@ class ReportsController extends Controller
     /**
      * NEW-V15-CRITICAL-02 FIX: Finance cashflow report
      * STILL-V14-HIGH-01 FIX: Use bank transactions for accurate cashflow
+     * BUG-3 FIX: Handle all transaction types correctly and use bcmath for precision
      */
     public function financeCashflow(Request $request)
     {
@@ -242,26 +257,31 @@ class ReportsController extends Controller
         // STILL-V14-HIGH-01 FIX: Use bank_transactions for accurate cashflow
         $query = DB::table('bank_transactions')
             ->whereDate('transaction_date', '>=', $from)
-            ->whereDate('transaction_date', '<=', $to);
+            ->whereDate('transaction_date', '<=', $to)
+            ->where('status', '!=', 'cancelled'); // BUG-3 FIX: Exclude cancelled transactions
 
         if ($branchId) {
             $query->where('branch_id', $branchId);
         }
 
-        // Calculate inflows (deposits, credits)
-        $inflows = (float) (clone $query)->where('type', 'deposit')->sum('amount');
+        // BUG-3 FIX: Handle all transaction types correctly
+        // Inflows: deposits and interest (credits to account)
+        $inflowsRaw = (clone $query)->whereIn('type', ['deposit', 'interest'])->sum('amount') ?? 0;
 
-        // Calculate outflows (withdrawals, debits)
-        $outflows = (float) (clone $query)->where('type', 'withdrawal')->sum('amount');
+        // Outflows: withdrawals and all other debit types
+        $outflowsRaw = (clone $query)->whereNotIn('type', ['deposit', 'interest'])->sum('amount') ?? 0;
 
-        $netCashflow = $inflows - $outflows;
+        // BUG-3 FIX: Use bcmath for precise financial calculations
+        $inflows = (string) $inflowsRaw;
+        $outflows = (string) $outflowsRaw;
+        $netCashflow = bcsub($inflows, $outflows, 2);
 
         return $this->ok([
             'period' => ['from' => $from, 'to' => $to],
             'branch_id' => $branchId ?: 'all',
-            'inflows' => $inflows,
-            'outflows' => $outflows,
-            'net_cashflow' => $netCashflow,
+            'inflows' => (float) $inflows,
+            'outflows' => (float) $outflows,
+            'net_cashflow' => (float) $netCashflow,
         ]);
     }
 

@@ -66,6 +66,12 @@ class CustomersController extends BaseApiController
         $store = $this->getStore($request);
         $branchId = $store?->branch_id;
 
+        // BUG-2 FIX: Prevent creating customers with NULL branch_id (orphan multi-branch data)
+        // In multi-branch ERP, all customers must be associated with a branch
+        if ($branchId === null) {
+            return $this->errorResponse(__('Invalid store configuration. Branch ID is required.'), 400);
+        }
+
         // V22-HIGH-10 FIX: Scope unique validation to branch_id
         $validated = $request->validate([
             'name' => 'required|string|max:255',
