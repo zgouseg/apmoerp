@@ -7,6 +7,36 @@ namespace App\Services;
 use App\Models\StockMovement;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Stock Service
+ *
+ * Provides stock calculation methods and SQL expressions for inventory management.
+ *
+ * SECURITY (V37-SQL-01): SQL Expression Safety
+ * =============================================
+ * This service generates SQL expressions used in selectRaw(), whereRaw(), orderByRaw(), and groupBy().
+ * All generated expressions are safe because:
+ *
+ * 1. Column names are validated using strict regex patterns that only allow:
+ *    - Alphanumeric characters and underscores
+ *    - Standard table.column notation (e.g., 'products.id')
+ *    - Pattern: /^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$/
+ *
+ * 2. Integer parameters (branch_id) are type-cast to int and validated as positive
+ *
+ * 3. No user-provided input is ever interpolated into the expressions
+ *
+ * 4. All callers pass either:
+ *    - Hardcoded column names (e.g., 'products.id', 'products.branch_id')
+ *    - Type-checked integer IDs from the database or session
+ *
+ * Static analysis tools may flag these patterns as SQL injection risks because they see
+ * variable interpolation into raw SQL. This is a false positive - the variables contain
+ * only validated column names or type-safe integers, never user input.
+ *
+ * @see getBranchStockCalculationExpression() for the primary calculation method
+ * @see getStockCalculationExpression() for global (non-branch-scoped) calculations
+ */
 class StockService
 {
     /**

@@ -16,6 +16,32 @@ use Illuminate\Support\Facades\DB;
  * - MySQL 8.4+
  * - PostgreSQL 13+
  * - SQLite 3.35+
+ *
+ * SECURITY (V37-SQL-02): SQL Expression Safety
+ * =============================================
+ * This service generates SQL expressions used in selectRaw(), whereRaw(), orderByRaw(), and groupBy().
+ * All generated expressions are safe because:
+ *
+ * 1. All expressions are constructed from hardcoded SQL syntax based on the database driver
+ *
+ * 2. Column name parameters ($column) passed to these methods come from:
+ *    - Hardcoded strings in the calling code (e.g., 'sale_date', 'created_at')
+ *    - Never from user input or request parameters
+ *
+ * 3. The returned expressions are pattern-matched database functions:
+ *    - DATE(), HOUR(), MONTH(), DATE_TRUNC(), strftime(), etc.
+ *    - No dynamic SQL construction beyond column name substitution
+ *
+ * Static analysis tools may flag these patterns as SQL injection risks because they see
+ * variable interpolation. This is a false positive - the variables contain only hardcoded
+ * column names from the codebase, never user-provided input.
+ *
+ * IMPORTANT: Callers must ensure they only pass hardcoded column names to these methods.
+ * Never pass user-provided input as the column parameter.
+ *
+ * @see hourExpression() for hour extraction
+ * @see dateExpression() for date truncation
+ * @see daysDifference() for date difference calculation
  */
 class DatabaseCompatibilityService
 {

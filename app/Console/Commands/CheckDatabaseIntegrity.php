@@ -12,6 +12,25 @@ use Illuminate\Support\Facades\Schema;
  * Database Integrity Check Command
  *
  * Validates database schema, indexes, foreign keys, and data integrity.
+ *
+ * SECURITY (V37-SQL-03): SQL Expression Safety
+ * =============================================
+ * This command uses whereRaw() and DB::statement() with variable interpolation.
+ * All interpolated values are safe because:
+ *
+ * 1. checkDuplicates() $where parameter: Contains only hardcoded conditions defined
+ *    within this class (e.g., "email IS NOT NULL AND email != ''"). These are
+ *    compile-time constants, never derived from user input.
+ *
+ * 2. applyFixes() ALTER TABLE statements: Generated from validated table/column names
+ *    that exist in the hardcoded $indexChecks array and are verified via Schema::hasTable()
+ *    before any statement is generated.
+ *
+ * 3. getTableIndexes() SHOW INDEX query: Uses table names from the validated
+ *    $indexChecks array, not user input.
+ *
+ * This command runs via artisan CLI with elevated privileges and is not exposed
+ * to web requests or user input.
  */
 class CheckDatabaseIntegrity extends Command
 {

@@ -1,4 +1,15 @@
 {{-- resources/views/components/ui/empty-state.blade.php --}}
+{{--
+SECURITY (V37-XSS-03): XSS Prevention via sanitize_svg_icon()
+=============================================================
+This component uses {!! !!} for SVG icons. This is safe because:
+1. Content containing HTML/SVG markup is detected and passed through sanitize_svg_icon()
+2. sanitize_svg_icon() uses DOM-based allow-list sanitization
+3. Plain text/emoji content is rendered with {{ }} which auto-escapes
+
+Static analysis tools may flag {!! !!} as XSS risks. This is a false positive
+when the content is passed through sanitize_svg_icon().
+--}}
 @props([
     'icon' => '📭',
     'title' => __('No data found'),

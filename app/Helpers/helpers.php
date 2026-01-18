@@ -143,6 +143,37 @@ if (! function_exists('sanitize_svg_icon')) {
      * Sanitize SVG icon content using a strict allow-list approach.
      * Only allows safe SVG elements and attributes to prevent XSS.
      *
+     * SECURITY (V37-XSS-01): XSS Prevention via DOM-based Sanitization
+     * ================================================================
+     * This function is designed to safely render SVG icons in Blade templates
+     * using {!! sanitize_svg_icon($icon) !!} syntax.
+     *
+     * Security measures implemented:
+     *
+     * 1. ALLOW-LIST ELEMENTS: Only explicitly safe SVG elements are permitted:
+     *    svg, path, circle, rect, line, polyline, polygon, ellipse, g, defs,
+     *    symbol, title, desc, lineargradient, radialgradient, stop, clippath, mask
+     *    - Dangerous elements like <script>, <foreignObject>, <use> are blocked
+     *
+     * 2. ALLOW-LIST ATTRIBUTES: Only safe presentational attributes are permitted:
+     *    - Structural: id, class, width, height, viewbox, xmlns
+     *    - Visual: fill, stroke, stroke-width, opacity, transform
+     *    - Geometry: d, cx, cy, r, rx, ry, x, y, points
+     *    - Event handlers (on*) are explicitly blocked
+     *    - href/xlink:href/src/data are explicitly blocked (javascript: vectors)
+     *    - style attribute is blocked (CSS-based exploits)
+     *
+     * 3. VALUE SANITIZATION: Attribute values are checked for malicious patterns:
+     *    - javascript:, data:, expression(), vbscript:, behavior:, binding:
+     *    - Control characters are stripped
+     *    - Whitespace is normalized
+     *
+     * 4. DOM-BASED PARSING: Uses DOMDocument for proper HTML/SVG parsing,
+     *    preventing parser differential attacks
+     *
+     * Static analysis tools flag {!! !!} as XSS risks. This is a false positive when
+     * the content is passed through this sanitizer, as all dangerous content is removed.
+     *
      * @param  string|null  $svg  The SVG content to sanitize
      * @return string Sanitized SVG or empty string
      */

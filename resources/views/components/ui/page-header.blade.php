@@ -1,4 +1,16 @@
 {{-- resources/views/components/ui/page-header.blade.php --}}
+{{--
+SECURITY (V37-XSS-04): XSS Prevention via sanitize_svg_icon()
+=============================================================
+This component uses {!! !!} for the $icon prop. This is safe because:
+1. $icon content is passed through sanitize_svg_icon() which uses DOM-based
+   allow-list sanitization (see app/Helpers/helpers.php for details)
+2. The sanitizer blocks all event handlers, javascript: URLs, and dangerous patterns
+3. Only whitelisted SVG elements and attributes are permitted
+
+Static analysis tools may flag {!! !!} as XSS risks. This is a false positive
+when the content is passed through sanitize_svg_icon().
+--}}
 @props([
     'title',
     'subtitle' => null,

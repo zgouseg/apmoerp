@@ -4,6 +4,25 @@ namespace App\Services\Reports;
 
 use App\Models\Customer;
 
+/**
+ * CustomerSegmentationService - Customer segmentation analysis with RFM scoring
+ *
+ * SECURITY (V37-SQL-09): SQL Expression Safety
+ * =============================================
+ * This service uses selectRaw() with variable interpolation for $datediffExpr.
+ * All interpolated values are safe because:
+ *
+ * 1. $datediffExpr: Constructed using a match expression with hardcoded SQL patterns
+ *    based on the database driver. No user input is involved in the expression.
+ *
+ * 2. Column names used (sales.sale_date, customers.id, etc.) are all hardcoded.
+ *
+ * 3. The match expression returns one of three hardcoded strings for pgsql, sqlite,
+ *    or default (MySQL/MariaDB).
+ *
+ * Static analysis tools may flag these patterns as SQL injection risks. This is a
+ * false positive - the expressions are constructed from hardcoded SQL patterns.
+ */
 class CustomerSegmentationService
 {
     /**
