@@ -20,7 +20,7 @@ class TaxService implements TaxServiceInterface
         $tax = Tax::find($taxId);
 
         // NEW-HIGH-02 FIX: Use nullsafe operator to prevent crash when tax is deleted/missing
-        return (float) ($tax?->rate ?? 0.0);
+        return decimal_float($tax?->rate ?? 0.0);
     }
 
     public function compute(float $base, ?int $taxId): float
@@ -32,7 +32,7 @@ class TaxService implements TaxServiceInterface
         $taxAmount = bcmul((string) $base, $rateDecimal, 4);
 
         // V30-MED-08 FIX: Use bcround() for proper half-up rounding
-        return (float) bcround($taxAmount, 2);
+        return decimal_float(bcround($taxAmount, 2));
     }
 
     public function amountFor(float $base, ?int $taxId): float
@@ -127,7 +127,7 @@ class TaxService implements TaxServiceInterface
                 $totalTax = '0';
 
                 foreach ($items as $index => $item) {
-                    $subtotal = (float) ($item['subtotal'] ?? $item['line_total'] ?? 0);
+                    $subtotal = decimal_float($item['subtotal'] ?? $item['line_total'] ?? 0);
                     $taxId = $item['tax_id'] ?? null;
 
                     $taxAmount = $taxId ? $this->amountFor($subtotal, $taxId) : 0.0;
@@ -139,7 +139,7 @@ class TaxService implements TaxServiceInterface
                         'tax_id' => $taxId,
                         'tax_rate' => $taxRate,
                         'tax_amount' => $taxAmount,
-                        'total_with_tax' => (float) bcadd((string) $subtotal, (string) $taxAmount, 4),
+                        'total_with_tax' => decimal_float(bcadd((string) $subtotal, (string) $taxAmount, 4)),
                     ];
 
                     $totalTax = bcadd($totalTax, (string) $taxAmount, 4);
@@ -172,7 +172,7 @@ class TaxService implements TaxServiceInterface
                     return 0.0;
                 }
 
-                $rate = (float) ($taxRateRules['rate'] ?? 0);
+                $rate = decimal_float($taxRateRules['rate'] ?? 0);
                 $isInclusive = (bool) ($taxRateRules['is_inclusive'] ?? false);
 
                 if ($rate <= 0) {
@@ -186,7 +186,7 @@ class TaxService implements TaxServiceInterface
                     $taxAmount = bcsub((string) $subtotal, $baseExcl, 6);
 
                     // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
-                    return (float) bcround($taxAmount, 2);
+                    return decimal_float(bcround($taxAmount, 2));
                 }
 
                 // Exclusive: tax = subtotal * (rate / 100)

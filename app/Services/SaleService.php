@@ -68,7 +68,7 @@ class SaleService implements SaleServiceInterface
                         // sale_item_id is preferred as it correctly identifies the specific line item
                         $saleItemId = $it['sale_item_id'] ?? null;
                         $productId = $it['product_id'] ?? null;
-                        $requestedQty = (float) ($it['qty'] ?? 0);
+                        $requestedQty = decimal_float($it['qty'] ?? 0);
 
                         // Validate required fields
                         if ((! $saleItemId && ! $productId) || $requestedQty <= 0) {

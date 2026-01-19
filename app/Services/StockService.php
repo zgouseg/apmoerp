@@ -127,7 +127,7 @@ class StockService
 
         // Calculate value: SUM(quantity * unit_cost)
         // COALESCE handles NULL unit_cost values (cross-database compatible)
-        return (float) ($query->selectRaw('SUM(quantity * COALESCE(unit_cost, 0)) as value')
+        return decimal_float($query->selectRaw('SUM(quantity * COALESCE(unit_cost, 0)) as value')
             ->value('value') ?? 0);
     }
 
