@@ -216,7 +216,7 @@ class PurchaseService implements PurchaseServiceInterface
                     }
 
                     // Use correct migration column names
-                    $remainingDue = max(0, (float) $p->total_amount - (float) $p->paid_amount);
+                    $remainingDue = max(0, decimal_float($p->total_amount) - decimal_float($p->paid_amount));
                     if ($amount > $remainingDue) {
                         throw new \InvalidArgumentException(sprintf(
                             'Payment amount (%.2f) exceeds remaining due (%.2f)',
@@ -249,12 +249,12 @@ class PurchaseService implements PurchaseServiceInterface
 
                     // Critical ERP: Use bcmath for precise money calculations
                     $newPaidAmount = bcadd((string) $p->paid_amount, (string) $amount, 2);
-                    $p->paid_amount = (float) $newPaidAmount;
+                    $p->paid_amount = decimal_float($newPaidAmount);
 
                     // Update payment status
-                    if ((float) $p->paid_amount >= (float) $p->total_amount) {
+                    if (decimal_float($p->paid_amount) >= decimal_float($p->total_amount)) {
                         $p->payment_status = 'paid';
-                    } elseif ((float) $p->paid_amount > 0) {
+                    } elseif (decimal_float($p->paid_amount) > 0) {
                         $p->payment_status = 'partial';
                     } else {
                         $p->payment_status = 'unpaid';
@@ -279,7 +279,7 @@ class PurchaseService implements PurchaseServiceInterface
                 if ($p->status === 'received' || $p->status === 'completed') {
                     throw new \InvalidArgumentException('Cannot cancel a received purchase. Please create a return instead.');
                 }
-                if ($p->payment_status === 'paid' || (float) $p->paid_amount > 0) {
+                if ($p->payment_status === 'paid' || decimal_float($p->paid_amount) > 0) {
                     throw new \InvalidArgumentException('Cannot cancel a paid purchase. Please refund first.');
                 }
                 if ($p->status === 'cancelled') {

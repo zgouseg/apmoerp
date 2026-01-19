@@ -36,7 +36,7 @@ class WoodService implements WoodServiceInterface
                     'input_qty' => $payload['input_qty'],
                     'output_uom' => $payload['output_uom'],
                     'output_qty' => $payload['output_qty'],
-                    'efficiency' => $this->efficiency((float) $payload['input_qty'], (float) $payload['output_qty']),
+                    'efficiency' => $this->efficiency(decimal_float($payload['input_qty']), decimal_float($payload['output_qty'])),
                     'created_at' => now(), 'updated_at' => now(),
                 ]);
             },
@@ -53,7 +53,7 @@ class WoodService implements WoodServiceInterface
                 if (! $row) {
                     return;
                 }
-                $eff = $this->efficiency((float) $row->input_qty, (float) $row->output_qty);
+                $eff = $this->efficiency(decimal_float($row->input_qty), decimal_float($row->output_qty));
                 DB::table('wood_conversions')->where('id', $conversionId)->update(['efficiency' => $eff, 'updated_at' => now()]);
             },
             operation: 'recalc',
@@ -102,6 +102,6 @@ class WoodService implements WoodServiceInterface
         $percentage = bcmul($ratio, '100', 4);
 
         // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
-        return (float) bcround($percentage, 2);
+        return decimal_float(bcround($percentage, 2));
     }
 }

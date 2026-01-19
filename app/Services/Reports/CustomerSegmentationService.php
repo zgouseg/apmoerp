@@ -149,9 +149,9 @@ class CustomerSegmentationService
 
             $summary[$name] = [
                 'count' => count($customers),
-                'total_revenue' => (float) $totalRevenue,
+                'total_revenue' => decimal_float($totalRevenue),
                 'avg_revenue' => count($customers) > 0
-                    ? (float) bcdiv($totalRevenue, (string) count($customers), 2)
+                    ? decimal_float(bcdiv($totalRevenue, (string) count($customers), 2))
                     : 0,
             ];
         }
@@ -189,7 +189,7 @@ class CustomerSegmentationService
                 ];
             }),
             'total_at_risk' => $at_risk->count(),
-            'revenue_at_risk' => (float) $at_risk->sum('lifetime_revenue'),
+            'revenue_at_risk' => decimal_float($at_risk->sum('lifetime_revenue')),
         ];
     }
 

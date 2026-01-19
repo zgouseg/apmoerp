@@ -99,7 +99,7 @@ class StockReorderService
     {
         // Use predefined reorder quantity if available
         if ($product->reorder_qty && $product->reorder_qty > 0) {
-            return (float) $product->reorder_qty;
+            return decimal_float($product->reorder_qty);
         }
 
         // V10-CRITICAL-01 FIX: Calculate sales velocity for the product's branch
@@ -111,20 +111,20 @@ class StockReorderService
 
             // Respect minimum order quantity
             if ($product->minimum_order_quantity && $optimalQty < $product->minimum_order_quantity) {
-                return (float) $product->minimum_order_quantity;
+                return decimal_float($product->minimum_order_quantity);
             }
 
             // Respect maximum order quantity
             if ($product->maximum_order_quantity && $optimalQty > $product->maximum_order_quantity) {
-                return (float) $product->maximum_order_quantity;
+                return decimal_float($product->maximum_order_quantity);
             }
 
             // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
-            return (float) bcround((string) $optimalQty, 2);
+            return decimal_float(bcround((string) $optimalQty, 2));
         }
 
         // Fallback: reorder to bring stock to 2x reorder point
-        return $product->reorder_point ? ((float) $product->reorder_point * 2) : 50;
+        return $product->reorder_point ? (decimal_float($product->reorder_point) * 2) : 50;
     }
 
     /**
@@ -149,7 +149,7 @@ class StockReorderService
 
         $totalSold = $query->sum('sale_items.quantity');
 
-        return $totalSold ? ((float) $totalSold / $days) : 0;
+        return $totalSold ? (decimal_float($totalSold) / $days) : 0;
     }
 
     /**
@@ -184,7 +184,7 @@ class StockReorderService
                 'suggested_quantity' => $reorderQty,
                 'estimated_cost' => $reorderQty * ($product->standard_cost ?? 0),
                 // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
-                'sales_velocity' => (float) bcround((string) $salesVelocity, 2),
+                'sales_velocity' => decimal_float(bcround((string) $salesVelocity, 2)),
                 'days_until_stockout' => $daysUntilStockout,
                 'priority' => $this->calculatePriority($product, $daysUntilStockout),
                 'branch_id' => $product->branch_id,
@@ -305,7 +305,7 @@ class StockReorderService
             'products_low_stock' => $lowStock,
             'products_out_of_stock' => $outOfStock,
             // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
-            'total_estimated_cost' => (float) bcround((string) $totalEstimatedCost, 2),
+            'total_estimated_cost' => decimal_float(bcround((string) $totalEstimatedCost, 2)),
             'high_priority_count' => collect($suggestions)->where('priority', '>=', 4)->count(),
         ];
     }

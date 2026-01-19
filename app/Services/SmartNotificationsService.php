@@ -196,7 +196,7 @@ class SmartNotificationsService
                         $customerName = $invoice->customer?->name ?? __('Walk-in');
                         $daysOverdue = now()->diffInDays($invoice->due_date);
                         // Calculate due_total from actual columns
-                        $dueTotal = max(0, (float) $invoice->total_amount - (float) $invoice->paid_amount);
+                        $dueTotal = max(0, decimal_float($invoice->total_amount) - decimal_float($invoice->paid_amount));
 
                         $user->notify(new GeneralNotification(
                             type: 'overdue_invoice',
@@ -262,7 +262,7 @@ class SmartNotificationsService
                 foreach ($users as $user) {
                     $customerName = $invoice->customer?->name ?? __('Walk-in');
                     // Calculate due_total from actual columns
-                    $dueTotal = max(0, (float) $invoice->total_amount - (float) $invoice->paid_amount);
+                    $dueTotal = max(0, decimal_float($invoice->total_amount) - decimal_float($invoice->paid_amount));
 
                     $user->notify(new GeneralNotification(
                         type: 'payment_reminder',

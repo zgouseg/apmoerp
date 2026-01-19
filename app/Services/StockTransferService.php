@@ -233,7 +233,7 @@ class StockTransferService
                         // Support both indexed array with 'id' field and associative array keyed by item ID
                         $itemId = $itemData['id'] ?? $key;
                         if (is_numeric($itemId) && isset($itemData['qty_shipped'])) {
-                            $itemQuantities[(int) $itemId] = (float) $itemData['qty_shipped'];
+                            $itemQuantities[(int) $itemId] = decimal_float($itemData['qty_shipped']);
                         }
                     }
                 }
