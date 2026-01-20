@@ -21,11 +21,28 @@ final class Money
     }
 
     /**
-     * Create Money instance from float
+     * Create Money instance from a numeric value
+     *
+     * V48-FINANCE-01 FIX: Accept string|int instead of float to avoid floating-point precision issues.
+     * String values should be decimal representations (e.g., "100.50").
+     * Integer values represent whole units (e.g., 100 = 100.00).
+     *
+     * @param  string|int  $amount  Decimal string (e.g., "100.50") or integer representing whole units
+     * @param  string  $currency  Currency code (default: EGP)
      */
-    public static function from(float $amount, string $currency = 'EGP'): self
+    public static function from(string|int $amount, string $currency = 'EGP'): self
     {
-        return new self(number_format($amount, 2, '.', ''), $currency);
+        if (is_int($amount)) {
+            return new self(number_format($amount, 2, '.', ''), $currency);
+        }
+
+        // Validate string is a valid numeric value
+        if (! is_numeric($amount)) {
+            throw new InvalidArgumentException('Amount must be a valid numeric string or integer');
+        }
+
+        // Use bcadd with 0 to normalize the decimal string to 2 decimal places
+        return new self(bcadd($amount, '0', 2), $currency);
     }
 
     /**
@@ -56,11 +73,21 @@ final class Money
 
     /**
      * Multiply by a factor
+     *
+     * V48-FINANCE-01 FIX: Accept string|int instead of float to avoid floating-point precision issues.
+     *
+     * @param  string|int  $factor  Multiplier as a decimal string (e.g., "1.5") or integer
      */
-    public function multiply(float $factor): Money
+    public function multiply(string|int $factor): Money
     {
+        $factorStr = is_int($factor) ? (string) $factor : $factor;
+
+        if (! is_numeric($factorStr)) {
+            throw new InvalidArgumentException('Factor must be a valid numeric string or integer');
+        }
+
         return new self(
-            bcmul($this->amount, (string) $factor, 2),
+            bcmul($this->amount, $factorStr, 2),
             $this->currency
         );
     }
