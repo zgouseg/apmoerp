@@ -187,7 +187,8 @@ class CustomerSegmentationService
             ->leftJoin('sales', 'customers.id', '=', 'sales.customer_id')
             ->whereNull('sales.deleted_at')
             ->groupBy('customers.id')
-            ->havingRaw('days_since_purchase > 60')
+            // V45-NEW-02 FIX: Use expression instead of alias in HAVING for PostgreSQL compatibility
+            ->havingRaw("{$datediffExpr} > 60")
             ->orderBy('days_since_purchase', 'desc')
             ->limit(50)
             ->get();
