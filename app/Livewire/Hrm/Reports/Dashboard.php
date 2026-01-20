@@ -60,15 +60,24 @@ class Dashboard extends Component
         $days = (int) ($this->filters['attendance_days'] ?? 14);
         $fromDate = now()->subDays($days)->toDateString();
 
+        // V48-CRIT-02 FIX: Use canonical column 'attendance_date' instead of 'date'
+        // and add branch scoping for multi-branch security
         $builder = $model::query();
-        $builder->whereDate('date', '>=', $fromDate);
+        $builder->whereDate('attendance_date', '>=', $fromDate);
+
+        // V48-CRIT-02 FIX: Add branch scoping to prevent cross-branch data leakage
+        if (auth()->check() && auth()->user()->branch_id) {
+            $builder->where('branch_id', auth()->user()->branch_id);
+        }
 
         $summary = [
             'total' => (clone $builder)->count(),
-            'today' => (clone $builder)->whereDate('date', now()->toDateString())->count(),
+            // V48-CRIT-02 FIX: Use canonical column 'attendance_date'
+            'today' => (clone $builder)->whereDate('attendance_date', now()->toDateString())->count(),
         ];
 
-        $attendanceRecords = (clone $builder)->get(['status', 'date']);
+        // V48-CRIT-02 FIX: Use canonical column 'attendance_date'
+        $attendanceRecords = (clone $builder)->get(['status', 'attendance_date']);
 
         $statusCounts = $attendanceRecords->groupBy('status')
             ->map->count()
@@ -76,7 +85,8 @@ class Dashboard extends Component
 
         $summary['by_status'] = $statusCounts;
 
-        $series = $attendanceRecords->groupBy('date')
+        // V48-CRIT-02 FIX: Use canonical column 'attendance_date'
+        $series = $attendanceRecords->groupBy('attendance_date')
             ->sortKeys()
             ->map(function ($group, $day) {
                 return [
@@ -106,6 +116,11 @@ class Dashboard extends Component
         }
 
         $builder = $model::query();
+
+        // V48-CRIT-02 FIX: Add branch scoping to prevent cross-branch data leakage
+        if (auth()->check() && auth()->user()->branch_id) {
+            $builder->where('branch_id', auth()->user()->branch_id);
+        }
 
         if (! empty($this->filters['payroll_period'])) {
             $builder->where('period', $this->filters['payroll_period']);
