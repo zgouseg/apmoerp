@@ -48,12 +48,15 @@ class ReportsController extends Controller
         // Note: CASE expression works the same across MySQL, PostgreSQL, and SQLite.
         // B.1 FIX: Inline the SQL expression to avoid false positive from security scanners
         // Filter by branch through the products table since stock_movements doesn't have branch_id
+        // V44-HIGH-03 FIX: Exclude soft-deleted stock_movements and products
         $rows = DB::table('stock_movements as m')
             ->join('products as p', 'p.id', '=', 'm.product_id')
             ->select('p.id', 'p.name')
             ->selectRaw('SUM(m.quantity) as qty')
             ->selectRaw('MIN(CASE WHEN m.quantity > 0 THEN DATE(m.created_at) END) as first_inbound')
             ->where('p.branch_id', $branchId)
+            ->whereNull('m.deleted_at')
+            ->whereNull('p.deleted_at')
             ->whereDate('m.created_at', '<=', $asOf)
             ->groupBy('p.id', 'p.name')
             ->havingRaw('SUM(m.quantity) > 0') // Only include products with positive on-hand stock
@@ -124,16 +127,20 @@ class ReportsController extends Controller
 
         // STILL-V14-HIGH-01 FIX: Compute cashflow from bank transactions instead of sales/purchases paid_amount
         // This provides accurate cashflow including refunds, bank fees, journals, adjustments, opening balances, transfers, partial payments, etc.
+        // V44-HIGH-02 FIX: Exclude soft-deleted bank_transactions
         $inflows = DB::table('bank_transactions')
             ->where('branch_id', $b)
+            ->whereNull('deleted_at')
             ->whereDate('transaction_date', '>=', $from)
             ->whereDate('transaction_date', '<=', $to)
             ->where('type', 'deposit')
             ->where('status', '!=', 'cancelled')
             ->sum('amount');
 
+        // V44-HIGH-02 FIX: Exclude soft-deleted bank_transactions
         $outflows = DB::table('bank_transactions')
             ->where('branch_id', $b)
+            ->whereNull('deleted_at')
             ->whereDate('transaction_date', '>=', $from)
             ->whereDate('transaction_date', '<=', $to)
             ->where('type', 'withdrawal')

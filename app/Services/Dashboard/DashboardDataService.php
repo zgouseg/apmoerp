@@ -217,8 +217,10 @@ class DashboardDataService
     public function generateLowStockAlertsData(?int $branchId): array
     {
         // Calculate current stock from stock_movements (source of truth)
+        // V44-HIGH-03 FIX: Exclude soft-deleted stock_movements
         $stockSubquery = DB::table('stock_movements')
             ->select('product_id', DB::raw('COALESCE(SUM(quantity), 0) as current_stock'))
+            ->whereNull('deleted_at')
             ->groupBy('product_id');
 
         $query = DB::table('products')
@@ -232,6 +234,7 @@ class DashboardDataService
                 DB::raw('COALESCE(stock.current_stock, 0) as stock_quantity'),
                 'products.stock_alert_threshold'
             )
+            ->whereNull('products.deleted_at')
             ->whereNotNull('products.stock_alert_threshold')
             ->whereRaw('COALESCE(stock.current_stock, 0) <= products.stock_alert_threshold')
             ->where('products.status', 'active')
@@ -245,14 +248,17 @@ class DashboardDataService
         $products = $query->get()->toArray();
 
         // Count query for total alerts
+        // V44-HIGH-03 FIX: Exclude soft-deleted stock_movements
         $countStockSubquery = DB::table('stock_movements')
             ->select('product_id', DB::raw('COALESCE(SUM(quantity), 0) as current_stock'))
+            ->whereNull('deleted_at')
             ->groupBy('product_id');
 
         $countQuery = DB::table('products')
             ->leftJoinSub($countStockSubquery, 'stock', function ($join) {
                 $join->on('products.id', '=', 'stock.product_id');
             })
+            ->whereNull('products.deleted_at')
             ->whereNotNull('products.stock_alert_threshold')
             ->whereRaw('COALESCE(stock.current_stock, 0) <= products.stock_alert_threshold')
             ->where('products.status', 'active');
@@ -306,6 +312,7 @@ class DashboardDataService
 
     /**
      * Generate cash and bank balance data.
+     * V44-MED-04 FIX: Exclude soft-deleted bank accounts
      */
     public function generateCashBankBalanceData(?int $branchId): array
     {
@@ -317,7 +324,8 @@ class DashboardDataService
                 'current_balance as balance',
                 'currency',
             ])
-            ->where('status', 'active');
+            ->where('status', 'active')
+            ->whereNull('deleted_at');
 
         if ($branchId) {
             $query->where('branch_id', $branchId);

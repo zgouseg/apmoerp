@@ -160,17 +160,21 @@ class SmartSuggestionsService
     public function suggestProductBundles(int $productId, int $limit = 5): Collection
     {
         // Find products frequently purchased together
+        // V44-HIGH-02 FIX: Exclude soft-deleted sale_items and products
         $frequentlyBoughtTogether = DB::table('sale_items as si1')
             ->join('sale_items as si2', 'si1.sale_id', '=', 'si2.sale_id')
             ->join('products', 'si2.product_id', '=', 'products.id')
             ->where('si1.product_id', $productId)
             ->where('si2.product_id', '!=', $productId)
+            ->whereNull('si1.deleted_at')
+            ->whereNull('si2.deleted_at')
+            ->whereNull('products.deleted_at')
             ->select(
                 'si2.product_id',
                 'products.name',
                 'products.default_price',
                 DB::raw('COUNT(*) as frequency'),
-                DB::raw('AVG(si2.qty) as avg_quantity')
+                DB::raw('AVG(si2.quantity) as avg_quantity')
             )
             ->groupBy('si2.product_id', 'products.name', 'products.default_price')
             ->orderByDesc('frequency')
@@ -218,9 +222,12 @@ class SmartSuggestionsService
     public function suggestUpsellOpportunities(Customer $customer, int $limit = 5): Collection
     {
         // Get customer's purchase history
+        // V44-HIGH-02 FIX: Exclude soft-deleted sale_items and sales
         $purchasedProducts = DB::table('sale_items')
             ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
             ->where('sales.customer_id', $customer->id)
+            ->whereNull('sale_items.deleted_at')
+            ->whereNull('sales.deleted_at')
             ->pluck('sale_items.product_id')
             ->unique();
 
@@ -287,8 +294,10 @@ class SmartSuggestionsService
     protected function getCurrentStock(int $productId): float
     {
         // quantity is signed: positive = in, negative = out
+        // V44-HIGH-03 FIX: Exclude soft-deleted stock_movements
         $totalStock = DB::table('stock_movements')
             ->where('product_id', $productId)
+            ->whereNull('deleted_at')
             ->sum('quantity');
 
         return decimal_float($totalStock ?? 0);

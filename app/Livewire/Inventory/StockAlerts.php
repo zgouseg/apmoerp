@@ -31,11 +31,12 @@ class StockAlerts extends Component
     public function render()
     {
         // Using subquery approach to avoid column ambiguity issues with joins
-        // Note: stock_movements table has no status/deleted_at columns per migration
-        // All movements are valid - quantity is signed: positive = in, negative = out
+        // V44-HIGH-03 FIX: Exclude soft-deleted stock_movements
+        // The StockMovement model extends BaseModel which uses SoftDeletes
         $stockSubquery = DB::table('stock_movements')
             ->select('stock_movements.product_id')
             ->selectRaw('SUM(stock_movements.quantity) as total_stock')
+            ->whereNull('stock_movements.deleted_at')
             ->groupBy('stock_movements.product_id');
 
         $query = Product::query()
