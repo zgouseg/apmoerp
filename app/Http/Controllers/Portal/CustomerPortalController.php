@@ -44,6 +44,7 @@ class CustomerPortalController extends Controller
 
         // V43-MED-02 FIX: Only look up customers with portal access enabled
         // This reduces ambiguity when duplicate emails exist across branches
+        // Note: portal_enabled check is done in query for efficiency
         $customer = Customer::where('email', $request->email)
             ->where('portal_enabled', true)
             ->first();
@@ -51,6 +52,14 @@ class CustomerPortalController extends Controller
         if (! $customer || ! Hash::check($request->password, $customer->portal_password)) {
             return back()->withErrors([
                 'email' => __('The provided credentials do not match our records.'),
+            ]);
+        }
+
+        // Re-check portal_enabled to handle race condition where status changes
+        // between query and session creation (defence in depth)
+        if (! $customer->portal_enabled) {
+            return back()->withErrors([
+                'email' => __('Portal access is not enabled for this account. Please contact support.'),
             ]);
         }
 
