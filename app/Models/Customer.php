@@ -149,7 +149,14 @@ class Customer extends BaseModel
     }
 
     // Business logic methods
-    public function hasAvailableCredit(float $amount = 0): bool
+    /**
+     * Check if customer has available credit for a purchase.
+     *
+     * V48-FINANCE-02 FIX: Use string for amount and BCMath for arithmetic to avoid float precision issues.
+     *
+     * @param  string  $amount  Amount as a decimal string (e.g., "100.50"), defaults to "0"
+     */
+    public function hasAvailableCredit(string $amount = '0'): bool
     {
         if ($this->is_blocked) {
             return false;
@@ -161,37 +168,74 @@ class Customer extends BaseModel
             return true;
         }
 
-        if ($this->credit_limit == 0) {
+        // Use bccomp to compare credit_limit to 0
+        if (bccomp((string) $this->credit_limit, '0', 4) === 0) {
             return false;
         }
 
-        $availableCredit = $this->credit_limit - $this->balance;
+        // V48-FINANCE-02 FIX: Use bcsub for subtraction and bccomp for comparison
+        $availableCredit = bcsub((string) $this->credit_limit, (string) $this->balance, 4);
 
-        return $availableCredit >= $amount;
+        return bccomp($availableCredit, $amount, 4) >= 0;
     }
 
+    /**
+     * Get credit utilization percentage.
+     *
+     * V48-FINANCE-02 FIX: Use BCMath for arithmetic to avoid float precision issues.
+     */
     public function getCreditUtilizationAttribute(): float
     {
-        if (! $this->credit_limit || $this->credit_limit <= 0) {
-            return 0;
+        if ($this->credit_limit === null || bccomp((string) $this->credit_limit, '0', 4) <= 0) {
+            return 0.0;
         }
 
-        return ($this->balance / $this->credit_limit) * 100;
+        // V48-FINANCE-02 FIX: Use bcdiv and bcmul for percentage calculation
+        $utilization = bcmul(
+            bcdiv((string) $this->balance, (string) $this->credit_limit, 6),
+            '100',
+            2
+        );
+
+        return (float) $utilization;
     }
 
-    public function canPurchase(float $amount): bool
+    /**
+     * Check if customer can make a purchase.
+     *
+     * V48-FINANCE-02 FIX: Use string for amount to maintain precision consistency.
+     *
+     * @param  string  $amount  Amount as a decimal string (e.g., "100.50")
+     */
+    public function canPurchase(string $amount): bool
     {
         return $this->hasAvailableCredit($amount) && $this->is_active && ! $this->is_blocked;
     }
 
-    public function addBalance(float $amount): void
+    /**
+     * Add to customer balance.
+     *
+     * V48-FINANCE-02 FIX: Use string for amount to maintain precision consistency.
+     *
+     * @param  string  $amount  Amount as a decimal string (e.g., "100.50")
+     */
+    public function addBalance(string $amount): void
     {
-        $this->increment('balance', $amount);
+        $newBalance = bcadd((string) ($this->balance ?? '0'), $amount, 4);
+        $this->update(['balance' => $newBalance]);
     }
 
-    public function subtractBalance(float $amount): void
+    /**
+     * Subtract from customer balance.
+     *
+     * V48-FINANCE-02 FIX: Use string for amount to maintain precision consistency.
+     *
+     * @param  string  $amount  Amount as a decimal string (e.g., "100.50")
+     */
+    public function subtractBalance(string $amount): void
     {
-        $this->decrement('balance', $amount);
+        $newBalance = bcsub((string) ($this->balance ?? '0'), $amount, 4);
+        $this->update(['balance' => $newBalance]);
     }
 
     // Backward compatibility accessors

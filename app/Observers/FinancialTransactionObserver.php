@@ -53,9 +53,11 @@ class FinancialTransactionObserver
         if ($model->wasChanged('total_amount')) {
             $oldTotal = $model->getOriginal('total_amount');
             $newTotal = $model->total_amount;
-            $difference = $newTotal - $oldTotal;
+            // V48-FINANCE-02 FIX: Use bcsub for difference calculation to maintain precision
+            $difference = bcsub((string) $newTotal, (string) $oldTotal, 4);
 
-            if ($difference != 0) {
+            // V48-FINANCE-02 FIX: Use bccomp for comparison instead of !=
+            if (bccomp($difference, '0', 4) !== 0) {
                 $this->adjustRelatedBalance($model, $difference);
 
                 // V7-MEDIUM-N09 FIX: Use reference_number or id instead of code
@@ -132,25 +134,30 @@ class FinancialTransactionObserver
 
     /**
      * Update customer or supplier balance.
+     * V48-FINANCE-02 FIX: Pass string amounts instead of floats for BCMath precision
      */
     private function updateRelatedBalance(Sale|Purchase $model, string $operation): void
     {
         if ($model instanceof Sale && $model->customer_id) {
             $customer = Customer::find($model->customer_id);
             if ($customer) {
+                // V48-FINANCE-02 FIX: Use string amount for BCMath precision
+                $amount = (string) $model->total_amount;
                 if ($operation === 'add') {
-                    $customer->addBalance(decimal_float($model->total_amount));
+                    $customer->addBalance($amount);
                 } else {
-                    $customer->subtractBalance(decimal_float($model->total_amount));
+                    $customer->subtractBalance($amount);
                 }
             }
         } elseif ($model instanceof Purchase && $model->supplier_id) {
             $supplier = Supplier::find($model->supplier_id);
             if ($supplier) {
+                // V48-FINANCE-02 FIX: Use string amount for BCMath precision
+                $amount = (string) $model->total_amount;
                 if ($operation === 'add') {
-                    $supplier->addBalance(decimal_float($model->total_amount));
+                    $supplier->addBalance($amount);
                 } else {
-                    $supplier->subtractBalance(decimal_float($model->total_amount));
+                    $supplier->subtractBalance($amount);
                 }
             }
         }
@@ -158,25 +165,32 @@ class FinancialTransactionObserver
 
     /**
      * Adjust balance when amount changes.
+     * V48-FINANCE-02 FIX: Use string for difference to maintain BCMath precision
      */
-    private function adjustRelatedBalance(Sale|Purchase $model, float $difference): void
+    private function adjustRelatedBalance(Sale|Purchase $model, string $difference): void
     {
         if ($model instanceof Sale && $model->customer_id) {
             $customer = Customer::find($model->customer_id);
             if ($customer) {
-                if ($difference > 0) {
+                // V48-FINANCE-02 FIX: Use bccomp for comparison
+                if (bccomp($difference, '0', 4) > 0) {
                     $customer->addBalance($difference);
                 } else {
-                    $customer->subtractBalance(abs($difference));
+                    // For negative difference, use absolute value
+                    $absDifference = bcmul($difference, '-1', 4);
+                    $customer->subtractBalance($absDifference);
                 }
             }
         } elseif ($model instanceof Purchase && $model->supplier_id) {
             $supplier = Supplier::find($model->supplier_id);
             if ($supplier) {
-                if ($difference > 0) {
+                // V48-FINANCE-02 FIX: Use bccomp for comparison
+                if (bccomp($difference, '0', 4) > 0) {
                     $supplier->addBalance($difference);
                 } else {
-                    $supplier->subtractBalance(abs($difference));
+                    // For negative difference, use absolute value
+                    $absDifference = bcmul($difference, '-1', 4);
+                    $supplier->subtractBalance($absDifference);
                 }
             }
         }

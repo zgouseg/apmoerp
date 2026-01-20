@@ -137,14 +137,30 @@ class Supplier extends BaseModel
         $this->save();
     }
 
-    public function addBalance(float $amount): void
+    /**
+     * Add to supplier balance.
+     *
+     * V48-FINANCE-02 FIX: Use string for amount to maintain precision consistency.
+     *
+     * @param  string  $amount  Amount as a decimal string (e.g., "100.50")
+     */
+    public function addBalance(string $amount): void
     {
-        $this->increment('balance', $amount);
+        $newBalance = bcadd((string) ($this->balance ?? '0'), $amount, 4);
+        $this->update(['balance' => $newBalance]);
     }
 
-    public function subtractBalance(float $amount): void
+    /**
+     * Subtract from supplier balance.
+     *
+     * V48-FINANCE-02 FIX: Use string for amount to maintain precision consistency.
+     *
+     * @param  string  $amount  Amount as a decimal string (e.g., "100.50")
+     */
+    public function subtractBalance(string $amount): void
     {
-        $this->decrement('balance', $amount);
+        $newBalance = bcsub((string) ($this->balance ?? '0'), $amount, 4);
+        $this->update(['balance' => $newBalance]);
     }
 
     public function canReceiveOrders(): bool

@@ -155,57 +155,15 @@ class BackupService implements BackupServiceInterface
                 $connection = config('database.default');
                 $config = config("database.connections.{$connection}");
 
-                if ($config['driver'] !== 'mysql') {
-                    throw new \RuntimeException('Only MySQL database restore is supported');
+                if ($config['driver'] !== 'mysql' && $config['driver'] !== 'pgsql') {
+                    throw new \RuntimeException('Only MySQL and PostgreSQL database restore is supported');
                 }
 
-                $host = $config['host'];
-                $port = $config['port'] ?? 3306;
-                $database = $config['database'];
-                $username = $config['username'];
-                $password = $config['password'] ?? '';
-
-                // Set password via environment variable to avoid exposure in process list
-                if ($password !== '') {
-                    putenv('MYSQL_PWD='.$password);
-                }
-
-                try {
-                    // Build the mysql restore command properly
-                    // Use separate commands connected by pipe for compressed files
-                    if ($isCompressed) {
-                        // For compressed files: gunzip -c file.sql.gz | mysql ...
-                        $command = sprintf(
-                            'gunzip -c %s | mysql -h %s -P %s -u %s %s 2>&1',
-                            escapeshellarg($fullPath),
-                            escapeshellarg($host),
-                            escapeshellarg((string) $port),
-                            escapeshellarg($username),
-                            escapeshellarg($database)
-                        );
-                    } else {
-                        // For uncompressed files: mysql ... < file.sql
-                        $command = sprintf(
-                            'mysql -h %s -P %s -u %s %s < %s 2>&1',
-                            escapeshellarg($host),
-                            escapeshellarg((string) $port),
-                            escapeshellarg($username),
-                            escapeshellarg($database),
-                            escapeshellarg($fullPath)
-                        );
-                    }
-
-                    // Execute restore
-                    $output = [];
-                    $returnVar = 0;
-                    exec($command, $output, $returnVar);
-
-                    if ($returnVar !== 0) {
-                        throw new \RuntimeException('Restore failed: '.implode("\n", $output));
-                    }
-                } finally {
-                    // Always clear the password from environment
-                    putenv('MYSQL_PWD');
+                // OLD-UNSOLVED-01 FIX: Support PostgreSQL restore
+                if ($config['driver'] === 'pgsql') {
+                    $this->restorePostgres($config, $fullPath, $isCompressed);
+                } else {
+                    $this->restoreMysql($config, $fullPath, $isCompressed);
                 }
 
                 // Clear all caches after restore
@@ -221,6 +179,116 @@ class BackupService implements BackupServiceInterface
             operation: 'restore',
             context: ['path' => $validPath]
         );
+    }
+
+    /**
+     * Restore MySQL database from backup
+     * OLD-UNSOLVED-01 FIX: Extracted from restore() for better organization
+     */
+    protected function restoreMysql(array $config, string $fullPath, bool $isCompressed): void
+    {
+        $host = $config['host'];
+        $port = $config['port'] ?? 3306;
+        $database = $config['database'];
+        $username = $config['username'];
+        $password = $config['password'] ?? '';
+
+        // Set password via environment variable to avoid exposure in process list
+        if ($password !== '') {
+            putenv('MYSQL_PWD='.$password);
+        }
+
+        try {
+            // Build the mysql restore command properly
+            if ($isCompressed) {
+                // For compressed files: gunzip -c file.sql.gz | mysql ...
+                $command = sprintf(
+                    'gunzip -c %s | mysql -h %s -P %s -u %s %s 2>&1',
+                    escapeshellarg($fullPath),
+                    escapeshellarg($host),
+                    escapeshellarg((string) $port),
+                    escapeshellarg($username),
+                    escapeshellarg($database)
+                );
+            } else {
+                // For uncompressed files: mysql ... < file.sql
+                $command = sprintf(
+                    'mysql -h %s -P %s -u %s %s < %s 2>&1',
+                    escapeshellarg($host),
+                    escapeshellarg((string) $port),
+                    escapeshellarg($username),
+                    escapeshellarg($database),
+                    escapeshellarg($fullPath)
+                );
+            }
+
+            // Execute restore
+            $output = [];
+            $returnVar = 0;
+            exec($command, $output, $returnVar);
+
+            if ($returnVar !== 0) {
+                throw new \RuntimeException('MySQL restore failed: '.implode("\n", $output));
+            }
+        } finally {
+            // Always clear the password from environment
+            putenv('MYSQL_PWD');
+        }
+    }
+
+    /**
+     * Restore PostgreSQL database from backup
+     * OLD-UNSOLVED-01 FIX: Added PostgreSQL restore support
+     */
+    protected function restorePostgres(array $config, string $fullPath, bool $isCompressed): void
+    {
+        $host = $config['host'];
+        $port = $config['port'] ?? 5432;
+        $database = $config['database'];
+        $username = $config['username'];
+        $password = $config['password'] ?? '';
+
+        // Set password via environment variable to avoid exposure in process list
+        if ($password !== '') {
+            putenv('PGPASSWORD='.$password);
+        }
+
+        try {
+            // Build the psql restore command properly
+            if ($isCompressed) {
+                // For compressed files: gunzip -c file.sql.gz | psql ...
+                $command = sprintf(
+                    'gunzip -c %s | psql -h %s -p %s -U %s %s 2>&1',
+                    escapeshellarg($fullPath),
+                    escapeshellarg($host),
+                    escapeshellarg((string) $port),
+                    escapeshellarg($username),
+                    escapeshellarg($database)
+                );
+            } else {
+                // For uncompressed files: psql ... < file.sql
+                $command = sprintf(
+                    'psql -h %s -p %s -U %s %s < %s 2>&1',
+                    escapeshellarg($host),
+                    escapeshellarg((string) $port),
+                    escapeshellarg($username),
+                    escapeshellarg($database),
+                    escapeshellarg($fullPath)
+                );
+            }
+
+            // Execute restore
+            $output = [];
+            $returnVar = 0;
+            exec($command, $output, $returnVar);
+
+            if ($returnVar !== 0) {
+                throw new \RuntimeException('PostgreSQL restore failed: '.implode("\n", $output));
+            }
+        } finally {
+            // Always clear the password from environment
+            putenv('PGPASSWORD');
+        }
     }
 
     /**

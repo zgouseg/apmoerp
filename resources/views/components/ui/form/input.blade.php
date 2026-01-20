@@ -6,7 +6,9 @@ SECURITY NOTE: This component uses unescaped Blade output for:
 
 Both are safe because:
 - sanitize_svg_icon() uses DOM-based allow-list sanitization
-- $wireDirective is built from $wireModel (validated wire binding) and $wireModifier (enum)
+- V48-SEC-03 FIX: $wireModel is validated against regex pattern ^[A-Za-z_][A-Za-z0-9_.]*$
+- V48-SEC-03 FIX: $wireModifier is validated against explicit allowlist (live, blur, change, defer)
+- $wireDirective is only output if both validations pass
 --}}
 @props([
     'label' => null,
@@ -30,9 +32,17 @@ Both are safe because:
     $hasValue = $attributes->get('value');
     $isValid = !$error && $hasValue && $showSuccess;
     
-    // Build wire:model directive
+    // V48-SEC-03 FIX: Validate $wireModel against allowed pattern to prevent attribute injection
+    // Only allow valid PHP/JS property names: starts with letter/underscore, contains alphanumeric/underscore/dot
+    $validWireModel = $wireModel && preg_match('/^[A-Za-z_][A-Za-z0-9_.]*$/', $wireModel);
+    
+    // V48-SEC-03 FIX: Validate $wireModifier against explicit allowlist
+    $allowedModifiers = ['live', 'blur', 'change', 'defer'];
+    $validWireModifier = in_array($wireModifier, $allowedModifiers, true);
+    
+    // Build wire:model directive only if both wireModel and wireModifier are valid
     $wireDirective = '';
-    if ($wireModel) {
+    if ($validWireModel && $validWireModifier) {
         $wireDirective = match($wireModifier) {
             'live' => "wire:model.live=\"{$wireModel}\"",
             'blur' => "wire:model.blur=\"{$wireModel}\"",
@@ -69,8 +79,9 @@ Both are safe because:
             {{ $required ? 'required' : '' }}
             {{ $autocomplete ? "autocomplete=\"$autocomplete\"" : '' }}
             {{-- SECURITY: $wireDirective is constructed from validated Livewire binding parameters --}}
-            @if($wireModel) {!! $wireDirective !!} @endif
-            @if($realTimeValidation && $wireModel) wire:blur="validateOnly('{{ $wireModel }}')" @endif
+            {{-- V48-SEC-03 FIX: Only output wireDirective if wireModel passed validation --}}
+            @if($validWireModel && $validWireModifier) {!! $wireDirective !!} @endif
+            @if($realTimeValidation && $validWireModel) wire:blur="validateOnly('{{ $wireModel }}')" @endif
             {{ $attributes->merge([
                 'class' => 'block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 focus:ring-emerald-500 focus:border-emerald-500 placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm min-h-[44px] text-sm sm:text-base transition-colors ' .
                 ($icon && $iconPosition === 'left' ? 'pl-10 ' : '') .
