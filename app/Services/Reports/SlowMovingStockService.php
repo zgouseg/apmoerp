@@ -67,7 +67,8 @@ class SlowMovingStockService
             ->where('products.stock_quantity', '>', 0)
             ->whereNull('products.deleted_at')
             ->groupBy('products.id')
-            ->havingRaw('COALESCE(days_since_sale, 999) > ?', [$days])
+            // V45-NEW-02 FIX: Use expression instead of alias in HAVING for PostgreSQL compatibility
+            ->havingRaw("COALESCE({$daysDiffExpr}, 999) > ?", [$days])
             ->orderBy('days_since_sale', 'desc')
             ->get();
 

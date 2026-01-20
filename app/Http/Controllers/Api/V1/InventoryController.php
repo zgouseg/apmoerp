@@ -76,8 +76,9 @@ class InventoryController extends BaseApiController
 
         // For low stock filter
         // SECURITY: This compares computed quantity against a table column (not user input)
+        // V45-NEW-03 FIX: Use expression instead of alias in HAVING for PostgreSQL compatibility
         if ($request->boolean('low_stock')) {
-            $query->havingRaw('current_quantity <= products.min_stock');
+            $query->havingRaw('COALESCE(SUM(sm.quantity), 0) <= products.min_stock');
         }
 
         $products = $query->paginate($validated['per_page'] ?? 100);

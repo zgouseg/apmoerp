@@ -38,6 +38,7 @@ use Illuminate\Support\Facades\DB;
  * identifiers can be used. This pattern is intentional and has been security-reviewed for V40.
  *
  * @security-reviewed V40 - SQL injection protection via regex validation
+ *
  * @see hourExpression() for hour extraction
  * @see dateExpression() for date truncation
  * @see daysDifference() for date difference calculation
@@ -444,6 +445,32 @@ class DatabaseCompatibilityService
             'pgsql' => "{$column}->'{$plainPath}'",
             'sqlite', 'mysql', 'mariadb' => "JSON_EXTRACT({$column}, '{$normalizedPath}')",
             default => "JSON_EXTRACT({$column}, '{$normalizedPath}')",
+        };
+    }
+
+    /**
+     * Get SQL expression to subtract dynamic minutes from current timestamp.
+     *
+     * This method generates a SQL expression that subtracts a column value
+     * (representing minutes) from the current timestamp. Useful for checking
+     * if a datetime column is older than a variable number of minutes.
+     *
+     * @param  string  $minutesColumn  The column containing minutes to subtract (must be a valid SQL identifier)
+     * @return string SQL expression for (NOW() - minutes_column minutes)
+     *
+     * @throws \InvalidArgumentException if column name is invalid
+     */
+    public function subtractMinutesFromNow(string $minutesColumn): string
+    {
+        $this->validateColumnName($minutesColumn);
+
+        return match ($this->getDriver()) {
+            // PostgreSQL: Use INTERVAL with concatenation
+            'pgsql' => "(NOW() - ({$minutesColumn} || ' minutes')::interval)",
+            // SQLite: Use datetime function with modifier
+            'sqlite' => "datetime('now', '-' || {$minutesColumn} || ' minutes')",
+            // MySQL/MariaDB: Use DATE_SUB with INTERVAL
+            default => "DATE_SUB(NOW(), INTERVAL {$minutesColumn} MINUTE)",
         };
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Services\DatabaseCompatibilityService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -88,12 +89,17 @@ class AlertRule extends BaseModel
 
     /**
      * Scope: Due for check.
+     * V45-NEW-01 FIX: Use DatabaseCompatibilityService for PostgreSQL/MySQL/SQLite compatibility
      */
     public function scopeDueForCheck(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
     {
-        return $query->where(function ($q) {
+        /** @var DatabaseCompatibilityService $dbCompat */
+        $dbCompat = app(DatabaseCompatibilityService::class);
+        $subtractExpr = $dbCompat->subtractMinutesFromNow('check_frequency_minutes');
+
+        return $query->where(function ($q) use ($subtractExpr) {
             $q->whereNull('last_checked_at')
-                ->orWhereRaw('last_checked_at < DATE_SUB(NOW(), INTERVAL check_frequency_minutes MINUTE)');
+                ->orWhereRaw("last_checked_at < {$subtractExpr}");
         });
     }
 
