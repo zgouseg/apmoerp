@@ -60,6 +60,8 @@ class Form extends Component
         ];
     }
 
+    // Note: This property is a simplified fallback for real-time validation.
+    // Full validation including BranchScopedExists is in getRules() method.
     protected array $rules = [
         'subject' => 'required|string|max:255',
         'priority' => 'required|in:low,medium,high,urgent',
