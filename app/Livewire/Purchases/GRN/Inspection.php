@@ -5,6 +5,7 @@ namespace App\Livewire\Purchases\GRN;
 use App\Models\GoodsReceivedNote;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -82,25 +83,28 @@ class Inspection extends Component
             return null;
         }
 
-        // Update GRN status
-        // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
-        $this->grn->update([
-            'status' => 'approved',
-            'inspection_notes' => $this->inspectorNotes,
-            'inspected_at' => now(),
-            'inspected_by' => actual_user_id(),
-        ]);
+        // V58-CONSISTENCY-01 FIX: Wrap multi-write operations in transaction for atomicity
+        DB::transaction(function () {
+            // Update GRN status
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+            $this->grn->update([
+                'status' => 'approved',
+                'inspection_notes' => $this->inspectorNotes,
+                'inspected_at' => now(),
+                'inspected_by' => actual_user_id(),
+            ]);
 
-        // Update item inspection results
-        foreach ($this->inspectionData as $itemId => $data) {
-            $item = $this->grn->items()->find($itemId);
-            if ($item) {
-                $item->update([
-                    'inspection_pass' => $data['pass'] ?? true,
-                    'inspection_notes' => $data['notes'] ?? null,
-                ]);
+            // Update item inspection results
+            foreach ($this->inspectionData as $itemId => $data) {
+                $item = $this->grn->items()->find($itemId);
+                if ($item) {
+                    $item->update([
+                        'inspection_pass' => $data['pass'] ?? true,
+                        'inspection_notes' => $data['notes'] ?? null,
+                    ]);
+                }
             }
-        }
+        });
 
         session()->flash('success', __('GRN inspection completed and approved.'));
 
@@ -155,27 +159,30 @@ class Inspection extends Component
             return null;
         }
 
-        // Update GRN status to partial
-        // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
-        $this->grn->update([
-            'status' => 'partial',
-            'inspection_notes' => $this->inspectorNotes,
-            'inspected_at' => now(),
-            'inspected_by' => actual_user_id(),
-        ]);
+        // V58-CONSISTENCY-01 FIX: Wrap multi-write operations in transaction for atomicity
+        DB::transaction(function () {
+            // Update GRN status to partial
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+            $this->grn->update([
+                'status' => 'partial',
+                'inspection_notes' => $this->inspectorNotes,
+                'inspected_at' => now(),
+                'inspected_by' => actual_user_id(),
+            ]);
 
-        // Update individual item results
-        foreach ($this->inspectionData as $itemId => $data) {
-            $item = $this->grn->items()->find($itemId);
-            if ($item) {
-                $item->update([
-                    'inspection_pass' => $data['pass'] ?? false,
-                    'defect_category' => $data['defect_category'] ?? null,
-                    'defect_description' => $data['defect_description'] ?? null,
-                    'inspection_notes' => $data['notes'] ?? null,
-                ]);
+            // Update individual item results
+            foreach ($this->inspectionData as $itemId => $data) {
+                $item = $this->grn->items()->find($itemId);
+                if ($item) {
+                    $item->update([
+                        'inspection_pass' => $data['pass'] ?? false,
+                        'defect_category' => $data['defect_category'] ?? null,
+                        'defect_description' => $data['defect_description'] ?? null,
+                        'inspection_notes' => $data['notes'] ?? null,
+                    ]);
+                }
             }
-        }
+        });
 
         session()->flash('success', __('GRN marked as partial acceptance.'));
 

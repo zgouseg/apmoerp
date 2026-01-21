@@ -9,6 +9,7 @@ use App\Models\PurchaseRequisition;
 use App\Models\PurchaseRequisitionItem;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -172,24 +173,27 @@ class Form extends Component
             'status' => 'draft',
         ];
 
-        if ($this->isEdit && $this->requisition) {
-            $this->requisition->update($data);
-            // Delete existing items and recreate
-            $this->requisition->items()->delete();
-        } else {
-            $this->requisition = PurchaseRequisition::create($data);
-        }
+        // V58-CONSISTENCY-01 FIX: Wrap multi-write operations in transaction for atomicity
+        DB::transaction(function () use ($data) {
+            if ($this->isEdit && $this->requisition) {
+                $this->requisition->update($data);
+                // Delete existing items and recreate
+                $this->requisition->items()->delete();
+            } else {
+                $this->requisition = PurchaseRequisition::create($data);
+            }
 
-        // Create items
-        foreach ($this->items as $item) {
-            PurchaseRequisitionItem::create([
-                'requisition_id' => $this->requisition->id,
-                'product_id' => $item['product_id'],
-                'qty' => $item['quantity'],
-                'estimated_unit_cost' => $item['unit_price'],
-                'specifications' => $item['specifications'] ?? null,
-            ]);
-        }
+            // Create items
+            foreach ($this->items as $item) {
+                PurchaseRequisitionItem::create([
+                    'requisition_id' => $this->requisition->id,
+                    'product_id' => $item['product_id'],
+                    'qty' => $item['quantity'],
+                    'estimated_unit_cost' => $item['unit_price'],
+                    'specifications' => $item['specifications'] ?? null,
+                ]);
+            }
+        });
 
         $this->dispatch('notify', [
             'type' => 'success',
@@ -220,24 +224,27 @@ class Form extends Component
             'status' => 'pending_approval',
         ];
 
-        if ($this->isEdit && $this->requisition) {
-            $this->requisition->update($data);
-            // Delete existing items and recreate
-            $this->requisition->items()->delete();
-        } else {
-            $this->requisition = PurchaseRequisition::create($data);
-        }
+        // V58-CONSISTENCY-01 FIX: Wrap multi-write operations in transaction for atomicity
+        DB::transaction(function () use ($data) {
+            if ($this->isEdit && $this->requisition) {
+                $this->requisition->update($data);
+                // Delete existing items and recreate
+                $this->requisition->items()->delete();
+            } else {
+                $this->requisition = PurchaseRequisition::create($data);
+            }
 
-        // Create items
-        foreach ($this->items as $item) {
-            PurchaseRequisitionItem::create([
-                'requisition_id' => $this->requisition->id,
-                'product_id' => $item['product_id'],
-                'qty' => $item['quantity'],
-                'estimated_unit_cost' => $item['unit_price'],
-                'specifications' => $item['specifications'] ?? null,
-            ]);
-        }
+            // Create items
+            foreach ($this->items as $item) {
+                PurchaseRequisitionItem::create([
+                    'requisition_id' => $this->requisition->id,
+                    'product_id' => $item['product_id'],
+                    'qty' => $item['quantity'],
+                    'estimated_unit_cost' => $item['unit_price'],
+                    'specifications' => $item['specifications'] ?? null,
+                ]);
+            }
+        });
 
         $this->dispatch('notify', [
             'type' => 'success',

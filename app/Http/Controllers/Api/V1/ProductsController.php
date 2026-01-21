@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\ProductStoreMapping;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class ProductsController extends BaseApiController
@@ -211,42 +212,47 @@ class ProductsController extends BaseApiController
             unset($validated['cost_price']);
         }
 
-        // V9-CRITICAL-01 FIX: Create product without stock_quantity and use stock_movements instead
-        $product = new Product($validated);
-        $product->branch_id = $store->branch_id;
-        // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
-        $product->created_by = actual_user_id();
-        // Keep stock_quantity as cached value but also create stock movement
-        $product->stock_quantity = $quantity;
-        $product->save();
+        // V58-CONSISTENCY-01 FIX: Wrap multi-write operations in transaction for atomicity
+        $product = DB::transaction(function () use ($validated, $quantity, $warehouseId, $store, $request) {
+            // V9-CRITICAL-01 FIX: Create product without stock_quantity and use stock_movements instead
+            $product = new Product($validated);
+            $product->branch_id = $store->branch_id;
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+            $product->created_by = actual_user_id();
+            // Keep stock_quantity as cached value but also create stock movement
+            $product->stock_quantity = $quantity;
+            $product->save();
 
-        // V9-CRITICAL-01 FIX: Create initial stock movement if quantity > 0 and warehouse is specified
-        if ($quantity > 0 && $warehouseId) {
-            $stockMovementRepo = app(\App\Repositories\Contracts\StockMovementRepositoryInterface::class);
-            $stockMovementRepo->create([
-                'warehouse_id' => $warehouseId,
-                'product_id' => $product->id,
-                'movement_type' => 'initial_stock',
-                'reference_type' => 'product_create',
-                'reference_id' => $product->id,
-                'qty' => $quantity,
-                'direction' => 'in',
-                'unit_cost' => $product->cost ?? null,
-                'notes' => 'Initial stock via API product creation',
-                // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
-                'created_by' => actual_user_id(),
-            ]);
-        }
+            // V9-CRITICAL-01 FIX: Create initial stock movement if quantity > 0 and warehouse is specified
+            if ($quantity > 0 && $warehouseId) {
+                $stockMovementRepo = app(\App\Repositories\Contracts\StockMovementRepositoryInterface::class);
+                $stockMovementRepo->create([
+                    'warehouse_id' => $warehouseId,
+                    'product_id' => $product->id,
+                    'movement_type' => 'initial_stock',
+                    'reference_type' => 'product_create',
+                    'reference_id' => $product->id,
+                    'qty' => $quantity,
+                    'direction' => 'in',
+                    'unit_cost' => $product->cost ?? null,
+                    'notes' => 'Initial stock via API product creation',
+                    // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+                    'created_by' => actual_user_id(),
+                ]);
+            }
 
-        if ($store && $request->filled('external_id')) {
-            ProductStoreMapping::create([
-                'product_id' => $product->id,
-                'store_id' => $store->id,
-                'external_id' => $request->external_id,
-                'external_sku' => $request->external_sku ?? $product->sku,
-                'last_synced_at' => now(),
-            ]);
-        }
+            if ($store && $request->filled('external_id')) {
+                ProductStoreMapping::create([
+                    'product_id' => $product->id,
+                    'store_id' => $store->id,
+                    'external_id' => $request->external_id,
+                    'external_sku' => $request->external_sku ?? $product->sku,
+                    'last_synced_at' => now(),
+                ]);
+            }
+
+            return $product;
+        });
 
         return $this->successResponse($product, __('Product created successfully'), 201);
     }
@@ -302,48 +308,51 @@ class ProductsController extends BaseApiController
             unset($validated['cost_price']);
         }
 
-        // V9-CRITICAL-01 FIX: When quantity is updated, create a stock adjustment movement
-        // Note: If warehouse_id is not provided, we can only update the cached stock_quantity
-        // A stock movement requires a warehouse_id. This is acceptable as stock_quantity serves as
-        // a fallback cache when stock_movements isn't fully utilized.
-        $warehouseId = $validated['warehouse_id'] ?? null;
-        if (array_key_exists('quantity', $validated)) {
-            // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
-            $newQuantity = decimal_float($validated['quantity'], 4);
+        // V58-CONSISTENCY-01 FIX: Wrap multi-write operations in transaction for atomicity
+        DB::transaction(function () use ($product, $validated) {
+            // V9-CRITICAL-01 FIX: When quantity is updated, create a stock adjustment movement
+            // Note: If warehouse_id is not provided, we can only update the cached stock_quantity
+            // A stock movement requires a warehouse_id. This is acceptable as stock_quantity serves as
+            // a fallback cache when stock_movements isn't fully utilized.
+            $warehouseId = $validated['warehouse_id'] ?? null;
+            if (array_key_exists('quantity', $validated)) {
+                // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
+                $newQuantity = decimal_float($validated['quantity'], 4);
 
-            // Update cached stock_quantity
-            $product->stock_quantity = $newQuantity;
-            unset($validated['quantity']);
+                // Update cached stock_quantity
+                $product->stock_quantity = $newQuantity;
+                unset($validated['quantity']);
 
-            // Create stock adjustment movement if warehouse is specified
-            if ($warehouseId) {
-                $currentStock = \App\Services\StockService::getCurrentStock($product->id, $warehouseId);
-                $quantityDiff = $newQuantity - $currentStock;
+                // Create stock adjustment movement if warehouse is specified
+                if ($warehouseId) {
+                    $currentStock = \App\Services\StockService::getCurrentStock($product->id, $warehouseId);
+                    $quantityDiff = $newQuantity - $currentStock;
 
-                // Only create movement if there's a meaningful difference
-                if (abs($quantityDiff) > 0.0001) {
-                    $stockMovementRepo = app(\App\Repositories\Contracts\StockMovementRepositoryInterface::class);
-                    $stockMovementRepo->create([
-                        'warehouse_id' => $warehouseId,
-                        'product_id' => $product->id,
-                        'movement_type' => 'adjustment',
-                        'reference_type' => 'product_update',
-                        'reference_id' => $product->id,
-                        'qty' => abs($quantityDiff),
-                        'direction' => $quantityDiff > 0 ? 'in' : 'out',
-                        'unit_cost' => $product->cost ?? null,
-                        'notes' => 'Stock adjustment via API product update',
-                        // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
-                        'created_by' => actual_user_id(),
-                    ]);
+                    // Only create movement if there's a meaningful difference
+                    if (abs($quantityDiff) > 0.0001) {
+                        $stockMovementRepo = app(\App\Repositories\Contracts\StockMovementRepositoryInterface::class);
+                        $stockMovementRepo->create([
+                            'warehouse_id' => $warehouseId,
+                            'product_id' => $product->id,
+                            'movement_type' => 'adjustment',
+                            'reference_type' => 'product_update',
+                            'reference_id' => $product->id,
+                            'qty' => abs($quantityDiff),
+                            'direction' => $quantityDiff > 0 ? 'in' : 'out',
+                            'unit_cost' => $product->cost ?? null,
+                            'notes' => 'Stock adjustment via API product update',
+                            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+                            'created_by' => actual_user_id(),
+                        ]);
+                    }
                 }
             }
-        }
 
-        $product->fill($validated);
-        // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
-        $product->updated_by = actual_user_id();
-        $product->save();
+            $product->fill($validated);
+            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+            $product->updated_by = actual_user_id();
+            $product->save();
+        });
 
         return $this->successResponse($product, __('Product updated successfully'));
     }

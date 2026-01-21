@@ -10,6 +10,7 @@ use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\StoreOrder;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class StoreOrderToSaleService
@@ -90,32 +91,41 @@ class StoreOrderToSaleService
                 $data['status'] = 'completed';
             }
 
-            /** @var Sale $sale */
-            $sale = $saleModel->newQuery()->create($data);
+            // V58-CONSISTENCY-01 FIX: Wrap multi-write operations in transaction for atomicity
+            $sale = DB::transaction(function () use ($saleModel, $data, $order) {
+                /** @var Sale $sale */
+                $sale = $saleModel->newQuery()->create($data);
 
-            try {
-                if (class_exists(SaleItem::class)) {
-                    $this->syncItems($order, $sale);
+                try {
+                    if (class_exists(SaleItem::class)) {
+                        $this->syncItems($order, $sale);
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('StoreOrderToSaleService: items sync failed', [
+                        'order_id' => $order->getKey(),
+                        'message' => $e->getMessage(),
+                    ]);
+                    // Re-throw to rollback transaction
+                    throw $e;
                 }
-            } catch (\Throwable $e) {
-                Log::warning('StoreOrderToSaleService: items sync failed', [
-                    'order_id' => $order->getKey(),
-                    'message' => $e->getMessage(),
-                ]);
-            }
 
-            try {
-                $order->update(['status' => 'processed']);
-            } catch (\Throwable $e) {
-                // V21-MEDIUM-08 Fix: Log the failure instead of silently ignoring
-                // This helps identify when orders remain in wrong state after sale creation
-                // Note: Using exception class name instead of full message to avoid exposing sensitive data
-                Log::warning('StoreOrderToSaleService: failed to update order status to processed', [
-                    'order_id' => $order->getKey(),
-                    'sale_id' => $sale->getKey(),
-                    'exception_type' => get_class($e),
-                ]);
-            }
+                try {
+                    $order->update(['status' => 'processed']);
+                } catch (\Throwable $e) {
+                    // V21-MEDIUM-08 Fix: Log the failure instead of silently ignoring
+                    // This helps identify when orders remain in wrong state after sale creation
+                    // Note: Using exception class name instead of full message to avoid exposing sensitive data
+                    Log::warning('StoreOrderToSaleService: failed to update order status to processed', [
+                        'order_id' => $order->getKey(),
+                        'sale_id' => $sale->getKey(),
+                        'exception_type' => get_class($e),
+                    ]);
+                    // Re-throw to rollback transaction
+                    throw $e;
+                }
+
+                return $sale;
+            });
 
             return $sale;
         } catch (\Throwable $e) {
