@@ -22,14 +22,16 @@ class ProductObserver
             $product->name = trim((string) $product->name);
         }
         if ($product->getAttribute('default_price') !== null) {
-            // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
-            $product->default_price = round(decimal_float($product->default_price), 2);
+            // V53-CRIT-01 FIX: Use 4 decimal precision to match Product model casts (decimal:4)
+            $product->default_price = round(decimal_float($product->default_price, 4), 4);
         }
         if ($product->getAttribute('standard_cost') !== null) {
-            $product->standard_cost = round(decimal_float($product->standard_cost), 2);
+            // V53-CRIT-01 FIX: Use 4 decimal precision to match Product model casts (decimal:4)
+            $product->standard_cost = round(decimal_float($product->standard_cost, 4), 4);
         }
         if ($product->getAttribute('cost') !== null) {
-            $product->cost = round(decimal_float($product->cost), 2);
+            // V53-CRIT-01 FIX: Use 4 decimal precision to match Product model casts (decimal:4)
+            $product->cost = round(decimal_float($product->cost, 4), 4);
         }
     }
 
