@@ -89,7 +89,7 @@ class SalesReturnService
 
                     // Validate return quantity
                     $maxQty = $this->getMaxReturnableQty($saleItem);
-                    $qtyToReturn = decimal_float($itemData['qty'] ?? 0);
+                    $qtyToReturn = decimal_float($itemData['qty'] ?? 0, 4);
 
                     // V37-MED-01 FIX: Use DomainException instead of abort_if for testability in jobs/queues/CLI
                     if ($qtyToReturn > $maxQty) {

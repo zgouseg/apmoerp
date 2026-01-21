@@ -159,17 +159,17 @@ class GoodsReceivedNote extends BaseModel
 
     public function getTotalQuantityReceived(): float
     {
-        return decimal_float($this->items->sum('received_quantity'));
+        return decimal_float($this->items->sum('received_quantity'), 4);
     }
 
     public function getTotalQuantityAccepted(): float
     {
-        return decimal_float($this->items->sum('accepted_quantity'));
+        return decimal_float($this->items->sum('accepted_quantity'), 4);
     }
 
     public function getTotalQuantityRejected(): float
     {
-        return decimal_float($this->items->sum('rejected_quantity'));
+        return decimal_float($this->items->sum('rejected_quantity'), 4);
     }
 
     public function hasDiscrepancies(): bool

@@ -83,10 +83,10 @@ class SlowMovingStockService
                     'name' => $product->name,
                     'sku' => $product->sku ?? $product->code,
                     'stock_quantity' => $product->stock_quantity,
-                    'stock_value' => decimal_float($stockValue),
+                    'stock_value' => decimal_float($stockValue, 4),
                     'days_since_sale' => $product->days_since_sale ?? 999,
                     'last_sold_date' => $product->last_sold_date,
-                    'daily_sales_rate' => decimal_float($dailyRate),
+                    'daily_sales_rate' => decimal_float($dailyRate, 4),
                     'days_to_stockout' => $dailyRate > 0
                         ? (int) bcdiv((string) $product->stock_quantity, $dailyRate, 0)
                         : 9999,
@@ -95,8 +95,8 @@ class SlowMovingStockService
             }),
             'total_slow_moving' => $products->count(),
             'total_stock_value' => decimal_float($products->sum(function ($product) {
-                return bcmul((string) $product->stock_quantity, (string) ($product->default_price ?? 0), 2);
-            })),
+                return bcmul((string) $product->stock_quantity, (string) ($product->default_price ?? 0), 4);
+            }), 4),
         ];
     }
 

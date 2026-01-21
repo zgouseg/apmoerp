@@ -112,9 +112,9 @@ class Index extends Component
             'product_id' => $item->product_id,
             'product_name' => $item->product?->name ?? 'Unknown',
             // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
-            'max_qty' => decimal_float($item->qty),
+            'max_qty' => decimal_float($item->qty, 4),
             'qty' => 0,
-            'price' => decimal_float($item->unit_price),
+            'price' => decimal_float($item->unit_price, 4),
         ])->toArray();
     }
 

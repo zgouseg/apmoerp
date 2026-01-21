@@ -35,7 +35,7 @@ class InventoryChartsDashboard extends Component
 
         $totalProducts = $products->count();
         // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
-        $totalStock = decimal_float($products->sum('current_stock'));
+        $totalStock = decimal_float($products->sum('current_stock'), 4);
 
         $lowStock = $products->sortBy('current_stock')->take(20);
 
@@ -45,7 +45,7 @@ class InventoryChartsDashboard extends Component
         foreach ($lowStock as $product) {
             $labels[] = $product->sku ?: $product->name;
             // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
-            $values[] = decimal_float($product->current_stock);
+            $values[] = decimal_float($product->current_stock, 4);
         }
 
         $chartLowStock = [

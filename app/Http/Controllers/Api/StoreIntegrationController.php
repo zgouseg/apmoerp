@@ -115,7 +115,7 @@ class StoreIntegrationController extends Controller
                     'id' => $product->getKey(),
                     'sku' => $product->sku,
                     'name' => $product->name,
-                    'current_stock' => decimal_float($product->current_stock ?? 0),
+                    'current_stock' => decimal_float($product->current_stock ?? 0, 4),
                 ];
             })
             ->values()
@@ -145,7 +145,7 @@ class StoreIntegrationController extends Controller
 
         foreach ($validated['items'] as $row) {
             // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
-            $qty = decimal_float($row['qty']);
+            $qty = decimal_float($row['qty'], 4);
 
             try {
                 $target = null;
@@ -250,7 +250,7 @@ class StoreIntegrationController extends Controller
         try {
             foreach ($validated['items'] as $item) {
                 // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
-                $qty = decimal_float($item['qty']);
+                $qty = decimal_float($item['qty'], 4);
 
                 if ($qty <= 0) {
                     continue;

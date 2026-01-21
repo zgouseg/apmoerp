@@ -157,7 +157,7 @@ class CostingService
                 'batch_id' => $batch->id,
                 'batch_number' => $batch->batch_number,
                 // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
-                'quantity' => decimal_float($batchQty),
+                'quantity' => decimal_float($batchQty, 4),
                 'unit_cost' => decimal_float($batch->unit_cost, 4),
                 // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
                 'total_cost' => decimal_float(bcround($batchCost, 2)),

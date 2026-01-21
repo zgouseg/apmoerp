@@ -158,8 +158,8 @@ class Form extends Component
                     'reference_type' => AdjustmentItem::class,
                     'reference_id' => $adjustmentItem->id,
                     // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
-                    'qty' => abs(decimal_float($item['qty'])),
-                    'direction' => decimal_float($item['qty']) >= 0 ? 'in' : 'out',
+                    'qty' => abs(decimal_float($item['qty'], 4)),
+                    'direction' => decimal_float($item['qty'], 4) >= 0 ? 'in' : 'out',
                     'reason' => $this->reason,
                     'extra_attributes' => [
                         'adjustment_id' => $this->adjustment->id,

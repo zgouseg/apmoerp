@@ -120,7 +120,7 @@ class BillOfMaterial extends BaseModel
 
         foreach ($this->items as $item) {
             $productCost = $item->product->cost ?? 0.0;
-            $itemQuantity = decimal_float($item->quantity);
+            $itemQuantity = decimal_float($item->quantity, 4);
             $scrapFactor = 1 + (decimal_float($item->scrap_percentage ?? 0) / 100);
 
             $cost += $productCost * $itemQuantity * $scrapFactor;

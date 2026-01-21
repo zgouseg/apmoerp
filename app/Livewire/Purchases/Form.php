@@ -168,8 +168,8 @@ class Form extends Component
                 'product_id' => $item->product_id,
                 'product_name' => $item->product?->name ?? '',
                 'sku' => $item->product?->sku ?? '',
-                'qty' => decimal_float($item->qty),
-                'unit_cost' => decimal_float($item->unit_cost),
+                'qty' => decimal_float($item->qty, 4),
+                'unit_cost' => decimal_float($item->unit_cost, 4),
                 'discount' => decimal_float($item->discount ?? 0),
                 'tax_rate' => decimal_float($item->tax_rate ?? 0),
             ])->toArray();

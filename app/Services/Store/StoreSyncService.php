@@ -868,8 +868,8 @@ class StoreSyncService
                 // CRITICAL-05 FIX: Use correct SaleItem schema column names
                 $sale->items()->create([
                     'product_id' => $productId,
-                    'quantity' => decimal_float($lineItem['qty'] ?? $lineItem['quantity'] ?? 1),
-                    'unit_price' => decimal_float($lineItem['unit_price'] ?? $lineItem['price'] ?? 0),
+                    'quantity' => decimal_float($lineItem['qty'] ?? $lineItem['quantity'] ?? 1, 4),
+                    'unit_price' => decimal_float($lineItem['unit_price'] ?? $lineItem['price'] ?? 0, 4),
                     'discount_amount' => decimal_float($lineItem['discount'] ?? 0),
                     'line_total' => decimal_float($lineItem['line_total'] ?? $lineItem['total'] ?? 0),
                 ]);

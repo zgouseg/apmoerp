@@ -72,8 +72,8 @@ final class StockMovementRepository extends EloquentBaseRepository implements St
 
         // quantity > 0 = in, quantity < 0 = out
         // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
-        $in = decimal_float((clone $baseQuery)->where('quantity', '>', 0)->sum('quantity'));
-        $out = decimal_float(abs((clone $baseQuery)->where('quantity', '<', 0)->sum('quantity')));
+        $in = decimal_float((clone $baseQuery)->where('quantity', '>', 0)->sum('quantity'), 4);
+        $out = decimal_float(abs((clone $baseQuery)->where('quantity', '<', 0)->sum('quantity')), 4);
 
         return [
             'in' => $in,
@@ -90,7 +90,7 @@ final class StockMovementRepository extends EloquentBaseRepository implements St
 
         // Sum all quantities (positive = in, negative = out)
         // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
-        return decimal_float($baseQuery->sum('quantity'));
+        return decimal_float($baseQuery->sum('quantity'), 4);
     }
 
     public function currentStockPerWarehouse(int $branchId, int $productId): Collection
@@ -103,7 +103,7 @@ final class StockMovementRepository extends EloquentBaseRepository implements St
         $map = $movements->groupBy('warehouse_id')
             ->map(function ($group) {
                 // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
-                return decimal_float($group->sum('quantity'));
+                return decimal_float($group->sum('quantity'), 4);
             });
 
         return $map;

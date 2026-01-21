@@ -68,21 +68,21 @@ class SmartSuggestionsService
             : '999';
 
         // Determine urgency level
-        $urgency = $this->determineReorderUrgency(decimal_float($currentStock), decimal_float($reorderPoint), decimal_float($product->min_stock ?? 0));
+        $urgency = $this->determineReorderUrgency(decimal_float($currentStock, 4), decimal_float($reorderPoint, 4), decimal_float($product->min_stock ?? 0, 4));
 
         return [
             'product_id' => $product->id,
             'product_name' => $product->name,
             'current_stock' => $currentStock,
             'min_stock' => $product->min_stock ?? 0,
-            'reorder_point' => decimal_float($reorderPoint),
+            'reorder_point' => decimal_float($reorderPoint, 4),
             'suggested_quantity' => (int) $suggestedQty,
-            'sales_velocity' => decimal_float($salesVelocity),
-            'days_of_stock_remaining' => decimal_float($daysOfStock),
+            'sales_velocity' => decimal_float($salesVelocity, 4),
+            'days_of_stock_remaining' => decimal_float($daysOfStock, 4),
             'lead_time_days' => $leadTimeDays,
             'urgency' => $urgency,
             'estimated_cost' => bcmul((string) $suggestedQty, (string) ($product->standard_cost ?? 0), 2),
-            'recommendation' => $this->generateReorderRecommendation($urgency, decimal_float($daysOfStock), $suggestedQty),
+            'recommendation' => $this->generateReorderRecommendation($urgency, decimal_float($daysOfStock, 4), $suggestedQty),
         ];
     }
 
@@ -200,13 +200,13 @@ class SmartSuggestionsService
                 'bundle_with' => [
                     'product_id' => $item->product_id,
                     'product_name' => $item->name,
-                    'price' => decimal_float($item->default_price),
+                    'price' => decimal_float($item->default_price, 4),
                 ],
                 'frequency' => $item->frequency,
-                'avg_quantity' => decimal_float($item->avg_quantity),
-                'individual_total' => decimal_float($totalPrice),
-                'suggested_bundle_price' => decimal_float($suggestedBundlePrice),
-                'customer_savings' => decimal_float($savings),
+                'avg_quantity' => decimal_float($item->avg_quantity, 4),
+                'individual_total' => decimal_float($totalPrice, 4),
+                'suggested_bundle_price' => decimal_float($suggestedBundlePrice, 4),
+                'customer_savings' => decimal_float($savings, 4),
                 'discount_percent' => '10%',
             ];
         })->filter();
@@ -303,7 +303,7 @@ class SmartSuggestionsService
             ->whereNull('deleted_at')
             ->sum('quantity');
 
-        return decimal_float($totalStock ?? 0);
+        return decimal_float($totalStock ?? 0, 4);
     }
 
     /**

@@ -99,9 +99,9 @@ class Index extends Component
         $this->returnItems = $this->selectedPurchase->items->map(fn ($item) => [
             'product_id' => $item->product_id,
             'product_name' => $item->product?->name ?? 'Unknown',
-            'max_qty' => decimal_float($item->qty),
+            'max_qty' => decimal_float($item->qty, 4),
             'qty' => 0,
-            'cost' => decimal_float($item->unit_cost),
+            'cost' => decimal_float($item->unit_cost, 4),
         ])->toArray();
     }
 

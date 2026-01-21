@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Media;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\Response;
 
 class MediaDownloadController extends Controller
@@ -47,7 +48,11 @@ class MediaDownloadController extends Controller
 
         $headers = [
             'Content-Type' => $media->mime_type ?? 'application/octet-stream',
-            'Content-Disposition' => 'inline; filename="'.$filename.'"',
+            'Content-Disposition' => HeaderUtils::makeDisposition(
+                HeaderUtils::DISPOSITION_INLINE,
+                $filename,
+                preg_replace('/[^\x20-\x7E]/', '_', $filename) ?? 'file'
+            ),
         ];
 
         $stream = $disk->readStream($path);

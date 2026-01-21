@@ -9,6 +9,7 @@ use App\Models\Attachment;
 use App\Services\AttachmentAuthorizationService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DownloadController extends Controller
@@ -36,7 +37,11 @@ class DownloadController extends Controller
             $attachment->original_filename,
             [
                 'Content-Type' => $realMime,
-                'Content-Disposition' => $disposition.'; filename="'.addslashes($attachment->original_filename).'"',
+                'Content-Disposition' => HeaderUtils::makeDisposition(
+                    $disposition === 'inline' ? HeaderUtils::DISPOSITION_INLINE : HeaderUtils::DISPOSITION_ATTACHMENT,
+                    $attachment->original_filename,
+                    preg_replace('/[^\x20-\x7E]/', '_', $attachment->original_filename) ?? 'file'
+                ),
             ]
         );
     }

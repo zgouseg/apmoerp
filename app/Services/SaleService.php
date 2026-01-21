@@ -68,7 +68,7 @@ class SaleService implements SaleServiceInterface
                         // sale_item_id is preferred as it correctly identifies the specific line item
                         $saleItemId = $it['sale_item_id'] ?? null;
                         $productId = $it['product_id'] ?? null;
-                        $requestedQty = decimal_float($it['qty'] ?? 0);
+                        $requestedQty = decimal_float($it['qty'] ?? 0, 4);
 
                         // Validate required fields
                         if ((! $saleItemId && ! $productId) || $requestedQty <= 0) {
@@ -101,7 +101,7 @@ class SaleService implements SaleServiceInterface
 
                         // V22-HIGH-07 FIX: Calculate available quantity considering previous returns
                         $alreadyReturned = $previouslyReturned[$si->id] ?? 0.0;
-                        $availableToReturn = max(0, decimal_float($si->quantity) - $alreadyReturned);
+                        $availableToReturn = max(0, decimal_float($si->quantity, 4) - $alreadyReturned);
 
                         // Cap at available quantity
                         $qty = min($requestedQty, $availableToReturn);
@@ -294,7 +294,7 @@ class SaleService implements SaleServiceInterface
                 ->where('quantity', '>', 0)  // Positive quantity = stock added back
                 ->sum('quantity');
 
-            $returned[$itemId] = abs(decimal_float($returnedQty));
+            $returned[$itemId] = abs(decimal_float($returnedQty, 4));
         }
 
         return $returned;
@@ -314,12 +314,12 @@ class SaleService implements SaleServiceInterface
         $currentReturnMap = [];
         foreach ($currentReturnItems as $item) {
             $saleItemId = $item['sale_item_id'];
-            $currentReturnMap[$saleItemId] = ($currentReturnMap[$saleItemId] ?? 0) + decimal_float($item['qty']);
+            $currentReturnMap[$saleItemId] = ($currentReturnMap[$saleItemId] ?? 0) + decimal_float($item['qty'], 4);
         }
 
         // Check each sale item to see if it's fully returned
         foreach ($sale->items as $saleItem) {
-            $soldQty = decimal_float($saleItem->quantity);
+            $soldQty = decimal_float($saleItem->quantity, 4);
             $previouslyReturnedQty = $previouslyReturned[$saleItem->id] ?? 0;
             $currentlyReturningQty = $currentReturnMap[$saleItem->id] ?? 0;
             $totalReturnedQty = $previouslyReturnedQty + $currentlyReturningQty;

@@ -214,8 +214,8 @@ class ReportService implements ReportServiceInterface
                 // Previously was computing ($p->default_price ?? 0) * 1 which is meaningless
                 $summary = [
                     'total_products' => $items->count(),
-                    'total_value' => $items->sum(fn ($p) => (decimal_float($p->stock_quantity ?? 0)) * (decimal_float($p->cost ?? $p->standard_cost ?? 0))),
-                    'total_cost' => $items->sum(fn ($p) => decimal_float($p->standard_cost ?? 0)),
+                    'total_value' => $items->sum(fn ($p) => (decimal_float($p->stock_quantity ?? 0, 4)) * (decimal_float($p->cost ?? $p->standard_cost ?? 0, 4))),
+                    'total_cost' => $items->sum(fn ($p) => decimal_float($p->standard_cost ?? 0, 4)),
                     'by_module' => $items->groupBy('module_id')->map(fn ($g) => $g->count()),
                     'by_status' => $items->groupBy('status')->map(fn ($g) => $g->count()),
                 ];

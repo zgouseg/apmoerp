@@ -192,8 +192,8 @@ class Form extends Component
                 'product_name' => $item->product?->name ?? '',
                 'sku' => $item->product?->sku ?? '',
                 // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
-                'qty' => decimal_float($item->qty),
-                'unit_price' => decimal_float($item->unit_price),
+                'qty' => decimal_float($item->qty, 4),
+                'unit_price' => decimal_float($item->unit_price, 4),
                 'discount' => decimal_float($item->discount ?? 0),
                 'tax_rate' => decimal_float($item->tax_rate ?? 0),
             ])->toArray();

@@ -82,7 +82,7 @@ class GRNItem extends BaseModel
 
     public function getDiscrepancyPercentage(): float
     {
-        $expectedQty = decimal_float($this->expected_quantity ?? 0);
+        $expectedQty = decimal_float($this->expected_quantity ?? 0, 4);
         // Prevent division by zero
         if ($expectedQty <= 0) {
             return 0.0;
@@ -90,7 +90,7 @@ class GRNItem extends BaseModel
 
         $acceptedQty = $this->accepted_quantity ?? max(0, $this->received_quantity - $this->rejected_quantity);
 
-        return (abs($expectedQty - decimal_float($acceptedQty)) / $expectedQty) * 100;
+        return (abs($expectedQty - decimal_float($acceptedQty, 4)) / $expectedQty) * 100;
     }
 
     public function isFullyReceived(): bool

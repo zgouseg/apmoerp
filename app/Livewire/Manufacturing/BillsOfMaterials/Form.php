@@ -68,9 +68,9 @@ class Form extends Component
         $this->name_ar = $this->bom->name_ar ?? '';
         $this->description = $this->bom->description ?? '';
         // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
-        $this->quantity = decimal_float($this->bom->quantity);
+        $this->quantity = decimal_float($this->bom->quantity, 4);
         $this->status = $this->bom->status;
-        $this->scrap_percentage = decimal_float($this->bom->scrap_percentage);
+        $this->scrap_percentage = decimal_float($this->bom->scrap_percentage, 4);
         $this->is_multi_level = (bool) $this->bom->is_multi_level;
     }
 

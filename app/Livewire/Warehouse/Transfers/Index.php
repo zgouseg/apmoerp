@@ -89,7 +89,7 @@ class Index extends Component
 
             foreach ($transfer->items as $item) {
                 // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
-                $qty = decimal_float($item->quantity);
+                $qty = decimal_float($item->quantity, 4);
 
                 // Skip items with zero or negative quantity
                 if ($qty <= 0) {

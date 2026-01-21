@@ -80,7 +80,7 @@ class WoodService implements WoodServiceInterface
                 return (int) DB::table('wood_waste')->insertGetId([
                     'branch_id' => request()->attributes->get('branch_id'),
                     'type' => $payload['type'] ?? 'general',
-                    'qty' => decimal_float($payload['qty'] ?? 0),
+                    'qty' => decimal_float($payload['qty'] ?? 0, 4),
                     'uom' => $payload['uom'] ?? 'kg',
                     'notes' => $payload['notes'] ?? null,
                     'created_at' => now(), 'updated_at' => now(),

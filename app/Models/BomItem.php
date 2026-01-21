@@ -66,7 +66,7 @@ class BomItem extends BaseModel
      */
     public function getEffectiveQuantityAttribute(): float
     {
-        $baseQuantity = decimal_float($this->quantity);
+        $baseQuantity = decimal_float($this->quantity, 4);
         $scrapFactor = 1 + (decimal_float($this->scrap_percentage ?? 0) / 100);
 
         return $baseQuantity * $scrapFactor;

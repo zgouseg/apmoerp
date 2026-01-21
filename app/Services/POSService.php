@@ -123,7 +123,7 @@ class POSService implements POSServiceInterface
                 foreach ($items as $it) {
                     // Validate quantity is positive (prevent negative quantity exploit)
                     // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
-                    $qty = decimal_float($it['qty'] ?? 1);
+                    $qty = decimal_float($it['qty'] ?? 1, 4);
                     if ($qty <= 0) {
                         abort(422, __('Quantity must be positive. Received: :qty', ['qty' => $qty]));
                     }

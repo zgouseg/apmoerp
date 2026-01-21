@@ -202,7 +202,7 @@ class ProductsController extends BaseApiController
         $validated['default_price'] = $validated['price'];
         unset($validated['price']);
         // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
-        $quantity = decimal_float($validated['quantity']);
+        $quantity = decimal_float($validated['quantity'], 4);
         $warehouseId = $validated['warehouse_id'] ?? null;
         unset($validated['quantity']);
 
@@ -309,7 +309,7 @@ class ProductsController extends BaseApiController
         $warehouseId = $validated['warehouse_id'] ?? null;
         if (array_key_exists('quantity', $validated)) {
             // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
-            $newQuantity = decimal_float($validated['quantity']);
+            $newQuantity = decimal_float($validated['quantity'], 4);
 
             // Update cached stock_quantity
             $product->stock_quantity = $newQuantity;

@@ -115,7 +115,7 @@ class StockReorderService
     {
         // Use predefined reorder quantity if available
         if ($product->reorder_qty && $product->reorder_qty > 0) {
-            return decimal_float($product->reorder_qty);
+            return decimal_float($product->reorder_qty, 4);
         }
 
         // V10-CRITICAL-01 FIX: Calculate sales velocity for the product's branch
@@ -127,20 +127,20 @@ class StockReorderService
 
             // Respect minimum order quantity
             if ($product->minimum_order_quantity && $optimalQty < $product->minimum_order_quantity) {
-                return decimal_float($product->minimum_order_quantity);
+                return decimal_float($product->minimum_order_quantity, 4);
             }
 
             // Respect maximum order quantity
             if ($product->maximum_order_quantity && $optimalQty > $product->maximum_order_quantity) {
-                return decimal_float($product->maximum_order_quantity);
+                return decimal_float($product->maximum_order_quantity, 4);
             }
 
             // V30-MED-08 FIX: Use bcround() instead of bcdiv truncation
-            return decimal_float(bcround((string) $optimalQty, 2));
+            return decimal_float(bcround((string) $optimalQty, 4), 4);
         }
 
         // Fallback: reorder to bring stock to 2x reorder point
-        return $product->reorder_point ? (decimal_float($product->reorder_point) * 2) : 50;
+        return $product->reorder_point ? (decimal_float($product->reorder_point, 4) * 2) : 50;
     }
 
     /**
