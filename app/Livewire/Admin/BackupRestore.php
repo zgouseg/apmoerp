@@ -6,7 +6,6 @@ namespace App\Livewire\Admin;
 
 use App\Services\BackupService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 /**
@@ -47,10 +46,7 @@ class BackupRestore extends Component
     public function mount(): void
     {
         // V57-HIGH-01 FIX: Add authorization for backup management
-        $user = Auth::user();
-        if (! $user || ! $user->can('system.backup.manage')) {
-            abort(403);
-        }
+        $this->authorize('system.backup.manage');
         
         $this->loadBackups();
     }
