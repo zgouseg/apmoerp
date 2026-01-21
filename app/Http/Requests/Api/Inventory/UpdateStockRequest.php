@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api\Inventory;
 
+use App\Rules\BranchScopedExists;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateStockRequest extends FormRequest
@@ -23,13 +24,16 @@ class UpdateStockRequest extends FormRequest
      */
     public function rules(): array
     {
+        $branchId = $this->user()?->branch_id;
+
         return [
-            'product_id' => 'required_without:external_id|exists:products,id',
+            // V58-CRITICAL-02 FIX: Use BranchScopedExists for branch-aware validation
+            'product_id' => ['required_without:external_id', new BranchScopedExists('products', 'id', $branchId, allowNull: true)],
             'external_id' => 'required_without:product_id|string',
             'qty' => 'required|numeric',
             'direction' => 'required|in:in,out,set',
             'reason' => 'nullable|string|max:255',
-            'warehouse_id' => 'nullable|exists:warehouses,id',
+            'warehouse_id' => ['nullable', new BranchScopedExists('warehouses', 'id', $branchId, allowNull: true)],
         ];
     }
 }

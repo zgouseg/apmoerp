@@ -169,12 +169,15 @@ class Form extends Component
      */
     private function validateGRN(): void
     {
+        $branchId = auth()->user()?->branch_id;
+
+        // V58-CRITICAL-02 FIX: Use BranchScopedExists for branch-aware validation
         $this->validate([
-            'purchaseId' => 'required|exists:purchases,id',
+            'purchaseId' => ['required', new \App\Rules\BranchScopedExists('purchases', 'id', $branchId)],
             'receivedDate' => 'required|date|before_or_equal:today',
             'inspectorId' => 'nullable|exists:users,id',
             'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.product_id' => ['required', new \App\Rules\BranchScopedExists('products', 'id', $branchId)],
             'items.*.quantity_received' => 'required|numeric|min:0',
             'items.*.quality_status' => 'required|in:good,damaged,defective',
             'items.*.quantity_damaged' => 'nullable|numeric|min:0',

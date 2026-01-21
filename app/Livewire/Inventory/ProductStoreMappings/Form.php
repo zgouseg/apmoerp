@@ -109,8 +109,11 @@ class Form extends Component
 
     protected function rules(): array
     {
+        $branchId = auth()->user()?->branch_id;
+
         return [
-            'store_id' => 'required|exists:stores,id',
+            // V58-CRITICAL-02 FIX: Use BranchScopedExists for branch-aware validation
+            'store_id' => ['required', new \App\Rules\BranchScopedExists('stores', 'id', $branchId)],
             'external_id' => 'required|string|max:255',
             'external_sku' => 'nullable|string|max:255',
         ];
