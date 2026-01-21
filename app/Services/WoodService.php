@@ -54,7 +54,8 @@ class WoodService implements WoodServiceInterface
                 if (! $row) {
                     return;
                 }
-                $eff = $this->efficiency(decimal_float($row->input_qty), decimal_float($row->output_qty));
+                // V52-HIGH-02 FIX: Use 4 decimal precision for quantity calculations
+                $eff = $this->efficiency(decimal_float($row->input_qty, 4), decimal_float($row->output_qty, 4));
                 DB::table('wood_conversions')->where('id', $conversionId)->update(['efficiency' => $eff, 'updated_at' => now()]);
             },
             operation: 'recalc',

@@ -155,18 +155,20 @@ class StoreOrderToSaleService
                 continue;
             }
 
-            $qty = decimal_float(Arr::get($item, 'qty', 0));
+            // V53-CRIT-03 FIX: Use 4 decimal precision for qty/price/discount to prevent rounding errors
+            $qty = decimal_float(Arr::get($item, 'qty', 0), 4);
 
             if ($qty <= 0) {
                 continue;
             }
 
-            $price = decimal_float(Arr::get($item, 'price', 0));
-            $discount = decimal_float(Arr::get($item, 'discount', 0));
+            $price = decimal_float(Arr::get($item, 'price', 0), 4);
+            $discount = decimal_float(Arr::get($item, 'discount', 0), 4);
             $total = Arr::get($item, 'total');
 
             if ($total === null) {
-                $total = ($qty * $price) - $discount;
+                // Use BCMath for precise calculation to avoid floating-point drift
+                $total = (float) bcsub(bcmul((string) $qty, (string) $price, 4), (string) $discount, 4);
             }
 
             $productId = null;

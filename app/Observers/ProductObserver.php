@@ -45,14 +45,15 @@ class ProductObserver
     public function updating(Product $product): void
     {
         // Normalize numeric fields BEFORE save
+        // V53-CRIT-01 FIX: Use 4 decimal precision to match Product model casts (decimal:4)
         if ($product->isDirty('default_price') && $product->default_price !== null) {
-            $product->default_price = round(decimal_float($product->default_price), 2);
+            $product->default_price = round(decimal_float($product->default_price, 4), 4);
         }
         if ($product->isDirty('standard_cost') && $product->standard_cost !== null) {
-            $product->standard_cost = round(decimal_float($product->standard_cost), 2);
+            $product->standard_cost = round(decimal_float($product->standard_cost, 4), 4);
         }
         if ($product->isDirty('cost') && $product->cost !== null) {
-            $product->cost = round(decimal_float($product->cost), 2);
+            $product->cost = round(decimal_float($product->cost, 4), 4);
         }
     }
 

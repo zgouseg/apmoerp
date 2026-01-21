@@ -108,14 +108,15 @@ class ProductService implements ProductServiceInterface
                             $product->name = $name;
                         }
 
+                        // V53-CRIT-02 FIX: Use 4 decimal precision to match Product model casts (decimal:4)
                         $price = $this->valueOrNull($row, $normalized, 'price');
                         if ($price !== null) {
-                            $product->default_price = decimal_float($price);
+                            $product->default_price = decimal_float($price, 4);
                         }
 
                         $cost = $this->valueOrNull($row, $normalized, 'cost');
                         if ($cost !== null) {
-                            $product->cost = decimal_float($cost);
+                            $product->cost = decimal_float($cost, 4);
                         }
 
                         $barcode = $this->valueOrNull($row, $normalized, 'barcode');

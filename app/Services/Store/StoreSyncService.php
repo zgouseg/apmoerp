@@ -313,11 +313,12 @@ class StoreSyncService
                 ->where('external_id', $externalId)
                 ->first();
 
+            // V52-CRIT-02 FIX: Use 4 decimal precision to match Product model casts (decimal:4)
             $productData = [
                 'name' => $data['title'] ?? 'Unknown Product',
                 'description' => strip_tags($data['body_html'] ?? ''),
                 'sku' => $data['variants'][0]['sku'] ?? 'SHOP-'.$externalId,
-                'default_price' => decimal_float($data['variants'][0]['price'] ?? 0),
+                'default_price' => decimal_float($data['variants'][0]['price'] ?? 0, 4),
                 'branch_id' => $store->branch_id,
             ];
 
@@ -482,11 +483,12 @@ class StoreSyncService
                 ->where('external_id', $externalId)
                 ->first();
 
+            // V52-CRIT-02 FIX: Use 4 decimal precision to match Product model casts (decimal:4)
             $productData = [
                 'name' => $data['name'] ?? 'Unknown Product',
                 'description' => strip_tags($data['description'] ?? ''),
                 'sku' => $data['sku'] ?? 'WOO-'.$externalId,
-                'default_price' => decimal_float($data['price'] ?? 0),
+                'default_price' => decimal_float($data['price'] ?? 0, 4),
                 'branch_id' => $store->branch_id,
             ];
 
@@ -1003,7 +1005,8 @@ class StoreSyncService
             return null;
         }
         
+        // V53-HIGH-01 FIX: Use 4 decimal precision to match Product model casts (decimal:4)
         // Use standard_cost if available, otherwise fall back to cost
-        return decimal_float($product->standard_cost ?? $product->cost ?? 0);
+        return decimal_float($product->standard_cost ?? $product->cost ?? 0, 4);
     }
 }
