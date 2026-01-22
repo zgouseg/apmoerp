@@ -10,6 +10,7 @@ use App\Services\AttachmentAuthorizationService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -18,8 +19,11 @@ class NotesAttachments extends Component
 {
     use WithFileUploads;
 
+    // M1 FIX: Lock these properties to prevent client-side tampering
+    #[Locked]
     public string $modelType;
 
+    #[Locked]
     public int $modelId;
 
     public array $notes = [];

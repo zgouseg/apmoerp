@@ -7,6 +7,7 @@ namespace App\Livewire\Components;
 use App\Models\Media;
 use App\Services\ImageOptimizationService;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -67,30 +68,39 @@ class MediaPicker extends Component
 
     // Accept mode: 'image' | 'file' | 'mixed'
     // This is the PRIMARY configuration that controls type-scoping
+    #[Locked]
     public string $acceptMode = 'mixed';
 
     // Storage scope: 'media' | 'direct'
     // - 'media': Use global Media Library (saves to media table)
     // - 'direct': Direct file upload (saves to specified path, no media record)
+    #[Locked]
     public string $storageScope = 'media';
 
     // Storage path for direct mode (e.g., 'incomes', 'expenses', 'avatars')
+    #[Locked]
     public string $storagePath = '';
 
     // Storage disk for direct mode
+    #[Locked]
     public string $storageDisk = 'local';
 
     // Legacy support - will be converted to acceptMode
+    #[Locked]
     public array $acceptTypes = ['image']; // ['image', 'document', 'all']
 
+    #[Locked]
     public int $maxSize = 10240; // KB
 
+    #[Locked]
     public array $constraints = []; // ['maxWidth' => 400, 'maxHeight' => 100, 'aspectRatio' => '16:9']
 
     // Optional: specific allowed mimes/extensions (overrides default for acceptMode)
+    #[Locked]
     public array $allowedMimes = [];
 
     // Field identification
+    #[Locked]
     public string $fieldId = 'media-picker';
 
     // Current preview URL (for display outside modal)
@@ -111,6 +121,66 @@ class MediaPicker extends Component
 
     // For direct mode - list of existing files in the storage path
     public array $existingFiles = [];
+
+    // Whitelist of allowed storage disks for security
+    private array $allowedDisks = ['local', 'private', 'public'];
+
+    /**
+     * Guard media access - ensures user has permission to view media
+     */
+    private function guardMediaAccess(): void
+    {
+        $user = auth()->user();
+        abort_if(! $user || ! $user->can('media.view'), 403);
+    }
+
+    /**
+     * Get a scoped media query that respects branch and user permissions
+     *
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    private function scopedMediaQuery()
+    {
+        $user = auth()->user();
+        $query = Media::query();
+
+        // Branch scoping: don't bypass just because branch_id is null
+        // Only bypass if user has explicit permission
+        if ($user?->branch_id && ! $user->can('media.manage-all')) {
+            $query->forBranch($user->branch_id);
+        }
+
+        // User scoping: restrict to own files if no view-others permission
+        if (! $user?->can('media.view-others')) {
+            $query->forUser($user->id);
+        }
+
+        return $query;
+    }
+
+    /**
+     * Validate that a path is safe for direct mode operations
+     * Prevents directory traversal and ensures path is within storagePath
+     */
+    private function isValidDirectPath(string $path): bool
+    {
+        // Reject path traversal attempts
+        if (str_contains($path, '..')) {
+            return false;
+        }
+
+        // Ensure disk is in the allowed list
+        if (! in_array($this->storageDisk, $this->allowedDisks, true)) {
+            return false;
+        }
+
+        // If storagePath is set, ensure the path starts with it
+        if ($this->storagePath !== '' && ! str_starts_with($path, $this->storagePath)) {
+            return false;
+        }
+
+        return true;
+    }
 
     /**
      * Get image extensions from config or fallback to defaults
@@ -228,6 +298,16 @@ class MediaPicker extends Component
             return;
         }
 
+        // C1 FIX: Validate path is within allowed boundaries
+        if (! $this->isValidDirectPath($this->selectedFilePath)) {
+            $this->selectedFilePath = null;
+            $this->selectedMedia = null;
+            $this->previewUrl = null;
+            $this->previewName = null;
+
+            return;
+        }
+
         $disk = Storage::disk($this->storageDisk);
         if (! $disk->exists($this->selectedFilePath)) {
             $this->selectedFilePath = null;
@@ -302,7 +382,10 @@ class MediaPicker extends Component
             return;
         }
 
-        $media = Media::find($this->selectedMediaId);
+        // C1 FIX: Use proper scoping instead of unscoped Media::find()
+        $this->guardMediaAccess();
+        $media = $this->scopedMediaQuery()->find($this->selectedMediaId);
+
         if ($media) {
             $this->selectedMedia = [
                 'id' => $media->id,
@@ -320,6 +403,12 @@ class MediaPicker extends Component
             ];
             $this->previewUrl = $media->isImage() ? ($media->thumbnail_url ?? $media->url) : null;
             $this->previewName = $media->original_name;
+        } else {
+            // Reset if media not found or not accessible
+            $this->selectedMediaId = null;
+            $this->selectedMedia = null;
+            $this->previewUrl = null;
+            $this->previewName = null;
         }
     }
 
@@ -365,11 +454,23 @@ class MediaPicker extends Component
             return;
         }
 
+        // C1 FIX: Validate disk is in allowed list
+        if (! in_array($this->storageDisk, $this->allowedDisks, true)) {
+            $this->existingFiles = [];
+
+            return;
+        }
+
         $disk = Storage::disk($this->storageDisk);
         $files = $disk->files($this->storagePath);
 
         $this->existingFiles = collect($files)
             ->map(function ($path) use ($disk) {
+                // C1 FIX: Skip files with path traversal patterns
+                if (str_contains($path, '..')) {
+                    return null;
+                }
+
                 $fileName = basename($path);
                 $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
                 $mimeType = $disk->mimeType($path) ?? 'application/octet-stream';
@@ -637,6 +738,13 @@ class MediaPicker extends Component
         $disk = $this->storageDisk;
         $path = $this->storagePath;
 
+        // C1 FIX: Validate disk is in allowed list
+        if (! in_array($disk, $this->allowedDisks, true)) {
+            session()->flash('error', __('Invalid storage configuration'));
+
+            return;
+        }
+
         // Store the file
         $storedPath = $this->uploadFile->store($path, $disk);
 
@@ -726,6 +834,13 @@ class MediaPicker extends Component
      */
     public function selectFile(string $path): void
     {
+        // C1 FIX: Validate path is within allowed boundaries
+        if (! $this->isValidDirectPath($path)) {
+            session()->flash('error', __('Invalid file path'));
+
+            return;
+        }
+
         $disk = Storage::disk($this->storageDisk);
 
         if (! $disk->exists($path)) {
@@ -784,12 +899,10 @@ class MediaPicker extends Component
 
     public function selectMedia(int $mediaId): void
     {
-        $user = auth()->user();
-        $canBypassBranch = ! $user->branch_id || $user->can('media.manage-all');
+        // C1 FIX: Require proper permission and use scoped query
+        $this->guardMediaAccess();
 
-        $media = Media::query()
-            ->when($user->branch_id && ! $canBypassBranch, fn ($q) => $q->forBranch($user->branch_id))
-            ->find($mediaId);
+        $media = $this->scopedMediaQuery()->find($mediaId);
 
         if (! $media) {
             session()->flash('error', __('Media not found'));

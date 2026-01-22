@@ -5,14 +5,18 @@ declare(strict_types=1);
 namespace App\Livewire\Rental\Contracts;
 
 use App\Http\Requests\Traits\HasMultilingualValidation;
+use App\Models\Property;
 use App\Models\RentalContract;
 use App\Models\RentalPeriod;
 use App\Models\RentalUnit;
 use App\Models\Tenant;
+use App\Rules\BranchScopedExists;
 use App\Services\Contracts\ModuleFieldServiceInterface;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -22,6 +26,7 @@ class Form extends Component
     use HasMultilingualValidation;
     use WithFileUploads;
 
+    #[Locked]
     public ?int $contractId = null;
 
     /**
@@ -31,6 +36,7 @@ class Form extends Component
 
     /**
      * Existing files (for edit mode).
+     * Note: This is loaded from DB on mount and should not be trusted from client.
      */
     public array $existingFiles = [];
 
@@ -99,7 +105,13 @@ class Form extends Component
 
         $this->contractId = $contract;
 
-        $branchId = (int) ($user->branch_id ?? 1);
+        // H1 FIX: Remove fallback to branch 1 - require explicit branch assignment
+        $branchId = $user->branch_id;
+        if (! $branchId && ! $user->can('rental.contracts.manage-all')) {
+            // User has no branch and doesn't have manage-all permission
+            abort(403, __('No branch assigned. Please contact administrator.'));
+        }
+        $branchId = (int) ($branchId ?? 0);
         $this->form['branch_id'] = $branchId;
 
         // Load units for this branch with eager loading
@@ -206,10 +218,21 @@ class Form extends Component
 
     protected function rules(): array
     {
+        $branchId = (int) $this->form['branch_id'];
+
+        // H1 FIX: Use branch-scoped validation for tenant and unit
         return [
             'form.branch_id' => ['required', 'integer'],
-            'form.unit_id' => ['required', 'integer', 'exists:rental_units,id'],
-            'form.tenant_id' => ['required', 'integer', 'exists:tenants,id'],
+            'form.unit_id' => [
+                'required',
+                'integer',
+                // Validate unit belongs to a property in the same branch
+                Rule::exists('rental_units', 'id')->whereIn(
+                    'property_id',
+                    Property::where('branch_id', $branchId)->select('id')
+                ),
+            ],
+            'form.tenant_id' => ['required', 'integer', new BranchScopedExists('tenants', 'id', $branchId)],
             'form.rental_period_id' => ['required', 'integer', 'exists:rental_periods,id'],
             'form.custom_days' => ['nullable', 'integer', 'min:1', 'max:365'],
             'form.start_date' => ['required', 'date'],
@@ -283,31 +306,49 @@ class Form extends Component
 
     public function removeExistingFile(int $index): void
     {
-        if (isset($this->existingFiles[$index])) {
-            $file = $this->existingFiles[$index];
+        // H1 FIX: Reload attachments from DB instead of trusting client state
+        if (! $this->contractId) {
+            return;
+        }
 
+        $contract = RentalContract::find($this->contractId);
+        if (! $contract) {
+            return;
+        }
+
+        // Get attachments from DB, not from client state
+        $dbAttachments = $contract->extra_attributes['attachments'] ?? [];
+
+        if (! isset($dbAttachments[$index])) {
+            session()->flash('error', __('File not found'));
+
+            return;
+        }
+
+        $file = $dbAttachments[$index];
+
+        // Validate path doesn't contain traversal attempts
+        if (isset($file['path']) && ! str_contains($file['path'], '..')) {
             // Delete from storage
-            if (isset($file['path']) && Storage::disk('private')->exists($file['path'])) {
+            if (Storage::disk('private')->exists($file['path'])) {
                 Storage::disk('private')->delete($file['path']);
             }
-
-            // Remove from array
-            unset($this->existingFiles[$index]);
-            $this->existingFiles = array_values($this->existingFiles);
-
-            // Update contract if it exists
-            if ($this->contractId) {
-                $contract = RentalContract::find($this->contractId);
-                if ($contract) {
-                    $attributes = $contract->extra_attributes ?? [];
-                    $attributes['attachments'] = $this->existingFiles;
-                    $contract->extra_attributes = $attributes;
-                    $contract->save();
-                }
-            }
-
-            session()->flash('success', __('File removed successfully'));
         }
+
+        // Remove from array using DB data
+        unset($dbAttachments[$index]);
+        $dbAttachments = array_values($dbAttachments);
+
+        // Update contract
+        $attributes = $contract->extra_attributes ?? [];
+        $attributes['attachments'] = $dbAttachments;
+        $contract->extra_attributes = $attributes;
+        $contract->save();
+
+        // Sync local state with DB
+        $this->existingFiles = $dbAttachments;
+
+        session()->flash('success', __('File removed successfully'));
     }
 
     public function save(): mixed

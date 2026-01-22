@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\Password;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -32,7 +33,32 @@ class Edit extends Component
 
     public $avatar;
 
+    // C2 FIX: Lock currentAvatar to prevent client-side tampering
+    #[Locked]
     public ?string $currentAvatar = null;
+
+    /**
+     * Validate that a path is a safe avatar path
+     * Prevents directory traversal and ensures path is within avatars/ directory
+     */
+    private function isValidAvatarPath(?string $path): bool
+    {
+        if ($path === null || $path === '') {
+            return true; // null/empty is valid (no avatar)
+        }
+
+        // Reject path traversal attempts
+        if (str_contains($path, '..')) {
+            return false;
+        }
+
+        // Ensure path starts with avatars/
+        if (! str_starts_with($path, 'avatars/')) {
+            return false;
+        }
+
+        return true;
+    }
 
     public function mount(): void
     {
@@ -90,8 +116,22 @@ class Edit extends Component
         if ($fieldId === 'profile-avatar') {
             $user = Auth::user();
 
-            // Delete old avatar if exists
-            if ($this->currentAvatar) {
+            // C2 FIX: Validate the new path is a valid avatar path
+            if (! $this->isValidAvatarPath($path)) {
+                session()->flash('error', __('Invalid avatar path'));
+
+                return;
+            }
+
+            // C2 FIX: Verify the file actually exists on disk
+            if (! Storage::disk('public')->exists($path)) {
+                session()->flash('error', __('Avatar file not found'));
+
+                return;
+            }
+
+            // Delete old avatar if exists (already validated through #[Locked])
+            if ($this->currentAvatar && $this->isValidAvatarPath($this->currentAvatar)) {
                 Storage::disk('public')->delete($this->currentAvatar);
             }
 
@@ -123,7 +163,8 @@ class Edit extends Component
             'avatar' => ['required', 'image', 'mimes:jpeg,png,webp', 'max:2048'],
         ]);
 
-        if ($this->currentAvatar) {
+        // C2 FIX: Only delete if path is valid
+        if ($this->currentAvatar && $this->isValidAvatarPath($this->currentAvatar)) {
             Storage::disk('public')->delete($this->currentAvatar);
         }
 
@@ -145,7 +186,8 @@ class Edit extends Component
     {
         $user = Auth::user();
 
-        if ($this->currentAvatar) {
+        // C2 FIX: Only delete if path is valid
+        if ($this->currentAvatar && $this->isValidAvatarPath($this->currentAvatar)) {
             Storage::disk('public')->delete($this->currentAvatar);
         }
 
