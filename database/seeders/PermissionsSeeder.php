@@ -1,0 +1,414 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use Spatie\Permission\Models\Permission;
+
+/**
+ * PermissionsSeeder - Seeds all application permissions
+ *
+ * Permissions follow the pattern: module.entity.action or module.action
+ * This comprehensive list is derived from code analysis of:
+ * - Route middleware definitions
+ * - Controller/Livewire component can() checks
+ * - Policy definitions
+ */
+class PermissionsSeeder extends Seeder
+{
+    /**
+     * Run the database seeds.
+     */
+    public function run(): void
+    {
+        // Clear cache before seeding
+        app()['cache']->forget('spatie.permission.cache');
+
+        $permissions = $this->getPermissions();
+
+        foreach ($permissions as $permission) {
+            Permission::firstOrCreate(
+                ['name' => $permission, 'guard_name' => 'web']
+            );
+        }
+
+        // Clear cache after seeding
+        app()['cache']->forget('spatie.permission.cache');
+    }
+
+    /**
+     * Get all application permissions organized by module
+     */
+    protected function getPermissions(): array
+    {
+        return array_merge(
+            $this->getSystemPermissions(),
+            $this->getDashboardPermissions(),
+            $this->getUserPermissions(),
+            $this->getBranchPermissions(),
+            $this->getSettingsPermissions(),
+            $this->getPosPermissions(),
+            $this->getInventoryPermissions(),
+            $this->getSalesPermissions(),
+            $this->getPurchasesPermissions(),
+            $this->getCustomerPermissions(),
+            $this->getSupplierPermissions(),
+            $this->getBankingPermissions(),
+            $this->getExpenseIncomePermissions(),
+            $this->getFixedAssetPermissions(),
+            $this->getHrmPermissions(),
+            $this->getProjectPermissions(),
+            $this->getRentalPermissions(),
+            $this->getMotorcyclePermissions(),
+            $this->getManufacturingPermissions(),
+            $this->getDocumentPermissions(),
+            $this->getHelpdeskPermissions(),
+            $this->getReportPermissions(),
+            $this->getLogPermissions(),
+            $this->getMediaPermissions(),
+            $this->getModulePermissions(),
+            $this->getStorePermissions(),
+            $this->getWoodPermissions(),
+            $this->getSparesPermissions(),
+            $this->getApiPermissions(),
+        );
+    }
+
+    protected function getSystemPermissions(): array
+    {
+        return [
+            'system.view-notifications',
+            'impersonate.users',
+            'access-all-branches',
+        ];
+    }
+
+    protected function getDashboardPermissions(): array
+    {
+        return [
+            'dashboard.view',
+        ];
+    }
+
+    protected function getUserPermissions(): array
+    {
+        return [
+            'users.manage',
+            'users.create',
+            'users.edit',
+            'view',
+            'update',
+        ];
+    }
+
+    protected function getBranchPermissions(): array
+    {
+        return [
+            'branches.view',
+            'branches.view-all',
+            'branches.create',
+            'branches.update',
+            'branches.manage',
+            'branches.settings',
+            'branch.employees.manage',
+            'branch.reports.view',
+            'branch.settings.manage',
+        ];
+    }
+
+    protected function getSettingsPermissions(): array
+    {
+        return [
+            'settings.view',
+            'settings.manage',
+            'settings.update',
+            'settings.branch',
+            'settings.currency.manage',
+            'settings.translations.view',
+            'settings.translations.manage',
+        ];
+    }
+
+    protected function getPosPermissions(): array
+    {
+        return [
+            'pos.use',
+            'pos.offline.report.view',
+        ];
+    }
+
+    protected function getInventoryPermissions(): array
+    {
+        return [
+            'inventory.view',
+            'inventory.products.view',
+            'inventory.products.manage',
+            'inventory.categories.view',
+            'inventory.categories.manage',
+            'inventory.units.view',
+            'inventory.units.manage',
+            'inventory.stock.alerts.view',
+            'products.view-cost',
+            'products.create',
+            'products.update',
+            'products.import',
+            'products.image.upload',
+            'stock.adjust',
+            'stock.transfer',
+        ];
+    }
+
+    protected function getSalesPermissions(): array
+    {
+        return [
+            'sales.view',
+            'sales.update',
+            'sales.void',
+            'sales.return',
+            'sales.installments.view',
+        ];
+    }
+
+    protected function getPurchasesPermissions(): array
+    {
+        return [
+            'purchases.view',
+            'purchases.create',
+            'purchases.update',
+            'purchases.manage',
+            'purchases.approve',
+            'purchases.cancel',
+            'purchases.pay',
+            'purchases.receive',
+            'purchases.return',
+        ];
+    }
+
+    protected function getCustomerPermissions(): array
+    {
+        return [
+            'customers.view',
+            'customers.create',
+            'customers.update',
+            'customers.manage',
+            'customers.manage.all',
+            'customers.view-financial',
+            'customers.view-sales',
+            'customers.loyalty.manage',
+        ];
+    }
+
+    protected function getSupplierPermissions(): array
+    {
+        return [
+            'suppliers.view',
+            'suppliers.create',
+            'suppliers.update',
+            'suppliers.manage',
+            'suppliers.view-financial',
+            'suppliers.view-purchases',
+        ];
+    }
+
+    protected function getBankingPermissions(): array
+    {
+        return [
+            'banking.create',
+            'banking.edit',
+        ];
+    }
+
+    protected function getExpenseIncomePermissions(): array
+    {
+        return [
+            'expenses.manage',
+            'income.manage',
+        ];
+    }
+
+    protected function getFixedAssetPermissions(): array
+    {
+        return [
+            'fixed-assets.view',
+            'fixed-assets.create',
+            'fixed-assets.edit',
+        ];
+    }
+
+    protected function getHrmPermissions(): array
+    {
+        return [
+            'hrm.view',
+            'hrm.employees.view',
+            'hrm.employees.create',
+            'hrm.employees.edit',
+            'hrm.employees.assign',
+            'hrm.attendance.view',
+            'hrm.attendance.create',
+            'hrm.payroll.view',
+            'hrm.payroll.run',
+            'hr.manage-employees',
+            'hr.view-reports',
+            'employee.self.attendance',
+            'employee.self.leave-request',
+            'employee.self.payslip-view',
+        ];
+    }
+
+    protected function getProjectPermissions(): array
+    {
+        return [
+            'projects.view',
+            'projects.create',
+            'projects.edit',
+            'projects.tasks.manage',
+            'projects.expenses.manage',
+            'projects.timelogs.manage',
+        ];
+    }
+
+    protected function getRentalPermissions(): array
+    {
+        return [
+            'rental.units.view',
+            'rental.units.create',
+            'rental.units.update',
+            'rental.units.manage',
+            'rental.units.status',
+            'rental.properties.create',
+            'rental.properties.update',
+            'rental.tenants.create',
+            'rental.tenants.update',
+            'rental.tenants.archive',
+            'rental.contracts.view',
+            'rental.contracts.create',
+            'rental.contracts.update',
+            'rental.contracts.manage',
+            'rental.contracts.renew',
+            'rental.contracts.terminate',
+            'rental.invoices.collect',
+            'rental.invoices.penalty',
+            'rental.view-reports',
+        ];
+    }
+
+    protected function getMotorcyclePermissions(): array
+    {
+        return [
+            'motorcycle.vehicles.create',
+            'motorcycle.vehicles.update',
+            'motorcycle.warranties.create',
+            'motorcycle.warranties.update',
+        ];
+    }
+
+    protected function getManufacturingPermissions(): array
+    {
+        return [
+            'manufacturing.create',
+            'manufacturing.update',
+        ];
+    }
+
+    protected function getDocumentPermissions(): array
+    {
+        return [
+            'documents.view',
+            'documents.create',
+            'documents.edit',
+            'documents.manage',
+            'documents.share',
+            'documents.download',
+            'documents.tags.create',
+        ];
+    }
+
+    protected function getHelpdeskPermissions(): array
+    {
+        return [
+            'helpdesk.view',
+            'helpdesk.create',
+            'helpdesk.edit',
+            'helpdesk.manage',
+            'helpdesk.reply',
+        ];
+    }
+
+    protected function getReportPermissions(): array
+    {
+        return [
+            'reports.view',
+            'reports.manage',
+            'reports.sales.view',
+            'reports.inventory.charts',
+            'reports.inventory.export',
+            'reports.pos.charts',
+            'reports.pos.export',
+            'reports.templates.manage',
+            'reports.scheduled.manage',
+        ];
+    }
+
+    protected function getLogPermissions(): array
+    {
+        return [
+            'logs.audit.view',
+            'logs.activity.view',
+            'logs.login.view',
+        ];
+    }
+
+    protected function getMediaPermissions(): array
+    {
+        return [
+            'media.view',
+            'media.view-others',
+            'media.upload',
+            'media.manage',
+            'media.manage-all',
+            'media.delete',
+        ];
+    }
+
+    protected function getModulePermissions(): array
+    {
+        return [
+            'modules.manage',
+        ];
+    }
+
+    protected function getStorePermissions(): array
+    {
+        return [
+            'stores.view',
+            'store.api.products',
+            'store.api.orders',
+            'store.reports.dashboard',
+        ];
+    }
+
+    protected function getWoodPermissions(): array
+    {
+        return [
+            'wood.conversions.create',
+            'wood.conversions.update',
+            'wood.waste.create',
+        ];
+    }
+
+    protected function getSparesPermissions(): array
+    {
+        return [
+            'spares.compatibility.update',
+        ];
+    }
+
+    protected function getApiPermissions(): array
+    {
+        return [
+            'api.docs.view',
+        ];
+    }
+}
