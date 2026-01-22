@@ -84,23 +84,23 @@ class StockTransferItem extends Model
     }
 
     // Backward compatibility accessors
-    public function getQtyRequestedAttribute()
+    public function getQtyRequestedAttribute(): ?float
     {
-        return $this->quantity_requested;
+        return $this->quantity_requested !== null ? (float) $this->quantity_requested : null;
     }
 
-    public function getQtyShippedAttribute()
+    public function getQtyShippedAttribute(): ?float
     {
-        return $this->quantity_shipped;
+        return $this->quantity_shipped !== null ? (float) $this->quantity_shipped : null;
     }
 
-    public function getQtyReceivedAttribute()
+    public function getQtyReceivedAttribute(): ?float
     {
-        return $this->quantity_received;
+        return $this->quantity_received !== null ? (float) $this->quantity_received : null;
     }
 
-    public function getQtyDamagedAttribute()
+    public function getQtyDamagedAttribute(): ?float
     {
-        return $this->quantity_damaged;
+        return $this->quantity_damaged !== null ? (float) $this->quantity_damaged : null;
     }
 }

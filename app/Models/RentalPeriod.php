@@ -77,7 +77,7 @@ class RentalPeriod extends Model
      */
     public function calculateDays(): int
     {
-        if (!$this->start_date || !$this->end_date) {
+        if ($this->start_date === null || $this->end_date === null) {
             return 0;
         }
         return $this->start_date->diffInDays($this->end_date);

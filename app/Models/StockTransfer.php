@@ -148,7 +148,7 @@ class StockTransfer extends Model
 
     /**
      * Legacy alias for generateReferenceNumber
-     * @deprecated Use generateReferenceNumber() instead
+     * @deprecated 2.0.0 Use generateReferenceNumber() instead. Will be removed in a future major version.
      */
     public static function generateTransferNumber(): string
     {
