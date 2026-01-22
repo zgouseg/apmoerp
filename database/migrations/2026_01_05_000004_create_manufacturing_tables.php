@@ -78,12 +78,18 @@ return new class extends Migration
         });
 
         // BOM items
+        // BOM items - aligned with BomItem model (extends BaseModel with HasBranch + SoftDeletes)
         Schema::create('bom_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('bom_id')
                 ->constrained('bills_of_materials')
                 ->cascadeOnDelete()
                 ->name('fk_bomi_bom__bom');
+            $table->foreignId('branch_id')
+                ->nullable()
+                ->constrained('branches')
+                ->nullOnDelete()
+                ->name('fk_bomi_branch__brnch');
             $table->foreignId('product_id')
                 ->constrained('products')
                 ->cascadeOnDelete()
@@ -101,18 +107,25 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->unsignedSmallInteger('sort_order')->default(0);
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index('bom_id', 'idx_bomi_bom_id');
+            $table->index('branch_id', 'idx_bomi_branch_id');
             $table->index('product_id', 'idx_bomi_product_id');
         });
 
-        // BOM operations
+        // BOM operations - aligned with BomOperation model (extends BaseModel with HasBranch + SoftDeletes)
         Schema::create('bom_operations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('bom_id')
                 ->constrained('bills_of_materials')
                 ->cascadeOnDelete()
                 ->name('fk_bomop_bom__bom');
+            $table->foreignId('branch_id')
+                ->nullable()
+                ->constrained('branches')
+                ->nullOnDelete()
+                ->name('fk_bomop_branch__brnch');
             $table->foreignId('work_center_id')
                 ->nullable()
                 ->constrained('work_centers')
@@ -128,8 +141,10 @@ return new class extends Migration
             $table->json('quality_criteria')->nullable();
             $table->json('metadata')->nullable();
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index('bom_id', 'idx_bomop_bom_id');
+            $table->index('branch_id', 'idx_bomop_branch_id');
             $table->index('work_center_id', 'idx_bomop_wkctr_id');
         });
 
@@ -197,12 +212,18 @@ return new class extends Migration
         });
 
         // Production order items
+        // Production order items - aligned with ProductionOrderItem model (extends BaseModel with HasBranch + SoftDeletes)
         Schema::create('production_order_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('production_order_id')
                 ->constrained('production_orders')
                 ->cascadeOnDelete()
                 ->name('fk_prodordi_order__prodord');
+            $table->foreignId('branch_id')
+                ->nullable()
+                ->constrained('branches')
+                ->nullOnDelete()
+                ->name('fk_prodordi_branch__brnch');
             $table->foreignId('product_id')
                 ->constrained('products')
                 ->cascadeOnDelete()
@@ -224,8 +245,10 @@ return new class extends Migration
             $table->boolean('is_issued')->default(false);
             $table->timestamp('issued_at')->nullable();
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index('production_order_id', 'idx_prodordi_order_id');
+            $table->index('branch_id', 'idx_prodordi_branch_id');
             $table->index('product_id', 'idx_prodordi_product_id');
         });
 
@@ -236,6 +259,11 @@ return new class extends Migration
                 ->constrained('production_orders')
                 ->cascadeOnDelete()
                 ->name('fk_prodordop_order__prodord');
+            $table->foreignId('branch_id')
+                ->nullable()
+                ->constrained('branches')
+                ->nullOnDelete()
+                ->name('fk_prodordop_branch__brnch');
             $table->foreignId('bom_operation_id')
                 ->nullable()
                 ->constrained('bom_operations')
@@ -261,8 +289,10 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->json('quality_results')->nullable();
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index('production_order_id', 'idx_prodordop_order_id');
+            $table->index('branch_id', 'idx_prodordop_branch_id');
             $table->index('status', 'idx_prodordop_status');
         });
 

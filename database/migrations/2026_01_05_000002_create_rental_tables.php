@@ -151,27 +151,36 @@ return new class extends Migration
             $table->index(['start_date', 'end_date'], 'idx_rntctr_dates');
         });
 
-        // Rental periods
+        // Rental periods - aligned with RentalPeriod model (extends BaseModel with HasBranch + SoftDeletes)
+        // These are rental period TYPES (daily, weekly, monthly) that define pricing multipliers
         Schema::create('rental_periods', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('contract_id')
-                ->constrained('rental_contracts')
-                ->cascadeOnDelete()
-                ->name('fk_rntprd_contract__rntctr');
-            $table->unsignedSmallInteger('period_number');
-            $table->date('start_date');
-            $table->date('end_date');
-            $table->date('due_date');
-            $table->decimal('rent_amount', 18, 4);
-            $table->string('status', 30)->default('pending'); // pending, invoiced, paid, overdue
-            $table->boolean('is_prorated')->default(false);
-            $table->boolean('is_paid')->default(false);
+            $table->foreignId('module_id')
+                ->nullable()
+                ->constrained('modules')
+                ->nullOnDelete()
+                ->name('fk_rntprd_module__mod');
+            $table->foreignId('branch_id')
+                ->nullable()
+                ->constrained('branches')
+                ->nullOnDelete()
+                ->name('fk_rntprd_branch__brnch');
+            $table->string('period_key', 50);
+            $table->string('period_name', 100);
+            $table->string('period_name_ar', 100)->nullable();
+            $table->string('period_type', 30)->default('monthly'); // hourly, daily, weekly, monthly, yearly, custom
+            $table->integer('duration_value')->default(1);
+            $table->string('duration_unit', 20)->default('months'); // hours, days, weeks, months, years
+            $table->decimal('price_multiplier', 18, 4)->default(1);
+            $table->boolean('is_default')->default(false);
+            $table->boolean('is_active')->default(true);
+            $table->integer('sort_order')->default(0);
             $table->timestamps();
+            $table->softDeletes();
 
-            $table->unique(['contract_id', 'period_number'], 'uq_rntprd_contract_period');
-            $table->index('contract_id', 'idx_rntprd_contract_id');
-            $table->index('status', 'idx_rntprd_status');
-            $table->index('due_date', 'idx_rntprd_due_date');
+            $table->index('module_id', 'idx_rntprd_module_id');
+            $table->index('branch_id', 'idx_rntprd_branch_id');
+            $table->index('is_active', 'idx_rntprd_is_active');
         });
 
         // Rental invoices

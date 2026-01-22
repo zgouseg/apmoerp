@@ -146,12 +146,18 @@ return new class extends Migration
         });
 
         // Adjustment items
+        // Adjustment items - aligned with AdjustmentItem model (extends BaseModel with HasBranch + SoftDeletes)
         Schema::create('adjustment_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('adjustment_id')
                 ->constrained('stock_adjustments')
                 ->cascadeOnDelete()
                 ->name('fk_stkadjti_adj__stkadjt');
+            $table->foreignId('branch_id')
+                ->nullable()
+                ->constrained('branches')
+                ->nullOnDelete()
+                ->name('fk_stkadjti_branch__brnch');
             $table->foreignId('product_id')
                 ->constrained('products')
                 ->cascadeOnDelete()
@@ -162,8 +168,10 @@ return new class extends Migration
             $table->decimal('unit_cost', 18, 4)->default(0);
             $table->text('notes')->nullable();
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index('adjustment_id', 'idx_stkadjti_adj_id');
+            $table->index('branch_id', 'idx_stkadjti_branch_id');
             $table->index('product_id', 'idx_stkadjti_product_id');
         });
 
@@ -211,12 +219,18 @@ return new class extends Migration
         });
 
         // Transfer items
+        // Transfer items - aligned with TransferItem model (extends BaseModel with HasBranch + SoftDeletes)
         Schema::create('transfer_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('transfer_id')
                 ->constrained('transfers')
                 ->cascadeOnDelete()
                 ->name('fk_trfi_transfer__trf');
+            $table->foreignId('branch_id')
+                ->nullable()
+                ->constrained('branches')
+                ->nullOnDelete()
+                ->name('fk_trfi_branch__brnch');
             $table->foreignId('product_id')
                 ->constrained('products')
                 ->cascadeOnDelete()
@@ -226,20 +240,23 @@ return new class extends Migration
             $table->decimal('unit_cost', 18, 4)->default(0);
             $table->text('notes')->nullable();
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index('transfer_id', 'idx_trfi_transfer_id');
+            $table->index('branch_id', 'idx_trfi_branch_id');
             $table->index('product_id', 'idx_trfi_product_id');
         });
 
         // Stock transfers (detailed version with approvals)
+        // Stock transfers - aligned with StockTransfer model
         Schema::create('stock_transfers', function (Blueprint $table) {
             $table->id();
             $table->foreignId('branch_id')
                 ->constrained('branches')
                 ->cascadeOnDelete()
                 ->name('fk_stktrf_branch__brnch');
-            $table->string('reference_number', 50);
-            $table->string('type', 30)->default('internal'); // internal, inter_branch
+            $table->string('transfer_number', 50);
+            $table->string('transfer_type', 30)->default('internal'); // internal, inter_branch
             $table->foreignId('from_warehouse_id')
                 ->constrained('warehouses')
                 ->cascadeOnDelete()
@@ -261,23 +278,29 @@ return new class extends Migration
             $table->string('status', 30)->default('draft');
             $table->string('priority', 20)->default('normal');
             $table->date('transfer_date');
-            $table->date('expected_arrival_date')->nullable();
-            $table->date('actual_arrival_date')->nullable();
-            $table->decimal('total_items', 18, 3)->default(0);
-            $table->decimal('total_value', 18, 2)->default(0);
-            $table->decimal('shipping_cost', 18, 2)->default(0);
-            $table->string('shipping_method', 50)->nullable();
-            $table->string('tracking_number', 100)->nullable();
+            $table->date('expected_delivery_date')->nullable();
+            $table->date('actual_delivery_date')->nullable();
             $table->text('reason')->nullable();
             $table->text('notes')->nullable();
-            $table->text('rejection_reason')->nullable();
-            $table->boolean('requires_approval')->default(false);
-            $table->boolean('is_auto_generated')->default(false);
-            $table->foreignId('created_by')
+            $table->text('internal_notes')->nullable();
+            $table->string('tracking_number', 100)->nullable();
+            $table->string('courier_name', 100)->nullable();
+            $table->string('vehicle_number', 50)->nullable();
+            $table->string('driver_name', 100)->nullable();
+            $table->string('driver_phone', 50)->nullable();
+            $table->decimal('shipping_cost', 18, 2)->default(0);
+            $table->decimal('insurance_cost', 18, 2)->default(0);
+            $table->decimal('total_cost', 18, 2)->default(0);
+            $table->string('currency', 10)->default('EGP');
+            $table->decimal('total_qty_requested', 18, 3)->default(0);
+            $table->decimal('total_qty_shipped', 18, 3)->default(0);
+            $table->decimal('total_qty_received', 18, 3)->default(0);
+            $table->decimal('total_qty_damaged', 18, 3)->default(0);
+            $table->foreignId('requested_by')
                 ->nullable()
                 ->constrained('users')
                 ->nullOnDelete()
-                ->name('fk_stktrf_created_by__usr');
+                ->name('fk_stktrf_requested_by__usr');
             $table->foreignId('approved_by')
                 ->nullable()
                 ->constrained('users')
@@ -296,18 +319,33 @@ return new class extends Migration
                 ->nullOnDelete()
                 ->name('fk_stktrf_received_by__usr');
             $table->timestamp('received_at')->nullable();
+            $table->foreignId('created_by')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete()
+                ->name('fk_stktrf_created_by__usr');
+            $table->foreignId('updated_by')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete()
+                ->name('fk_stktrf_updated_by__usr');
             $table->timestamps();
             $table->softDeletes();
 
-            $table->unique(['branch_id', 'reference_number'], 'uq_stktrf_branch_ref');
+            $table->unique(['branch_id', 'transfer_number'], 'uq_stktrf_branch_transfer');
             $table->index('branch_id', 'idx_stktrf_branch_id');
             $table->index('status', 'idx_stktrf_status');
             $table->index('transfer_date', 'idx_stktrf_date');
         });
 
-        // Stock transfer items
+        // Stock transfer items - aligned with StockTransferItem model
         Schema::create('stock_transfer_items', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('branch_id')
+                ->nullable()
+                ->constrained('branches')
+                ->nullOnDelete()
+                ->name('fk_stktrfi_branch__brnch');
             $table->foreignId('stock_transfer_id')
                 ->constrained('stock_transfers')
                 ->cascadeOnDelete()
@@ -316,17 +354,21 @@ return new class extends Migration
                 ->constrained('products')
                 ->cascadeOnDelete()
                 ->name('fk_stktrfi_product__prd');
-            $table->string('sku', 100)->nullable();
-            $table->decimal('quantity_requested', 18, 3);
-            $table->decimal('quantity_shipped', 18, 3)->default(0);
-            $table->decimal('quantity_received', 18, 3)->default(0);
-            $table->decimal('quantity_damaged', 18, 3)->default(0);
-            $table->decimal('unit_cost', 18, 2)->default(0);
+            $table->decimal('qty_requested', 18, 3);
+            $table->decimal('qty_approved', 18, 3)->default(0);
+            $table->decimal('qty_shipped', 18, 3)->default(0);
+            $table->decimal('qty_received', 18, 3)->default(0);
+            $table->decimal('qty_damaged', 18, 3)->default(0);
             $table->string('batch_number', 100)->nullable();
             $table->date('expiry_date')->nullable();
+            $table->decimal('unit_cost', 18, 2)->default(0);
+            $table->string('condition_on_shipping', 50)->nullable();
+            $table->string('condition_on_receiving', 50)->nullable();
             $table->text('notes')->nullable();
+            $table->text('damage_report')->nullable();
             $table->timestamps();
 
+            $table->index('branch_id', 'idx_stktrfi_branch_id');
             $table->index('stock_transfer_id', 'idx_stktrfi_transfer_id');
             $table->index('product_id', 'idx_stktrfi_product_id');
         });
@@ -373,25 +415,31 @@ return new class extends Migration
         });
 
         // Stock transfer history
+        // Stock transfer history - aligned with StockTransferHistory model
         Schema::create('stock_transfer_history', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('branch_id')
+                ->nullable()
+                ->constrained('branches')
+                ->nullOnDelete()
+                ->name('fk_stktrfh_branch__brnch');
             $table->foreignId('stock_transfer_id')
                 ->constrained('stock_transfers')
                 ->cascadeOnDelete()
                 ->name('fk_stktrfh_transfer__stktrf');
-            $table->foreignId('user_id')
+            $table->string('from_status', 30)->nullable();
+            $table->string('to_status', 30)->nullable();
+            $table->text('notes')->nullable();
+            $table->json('metadata')->nullable();
+            $table->foreignId('changed_by')
                 ->nullable()
                 ->constrained('users')
                 ->nullOnDelete()
-                ->name('fk_stktrfh_user__usr');
-            $table->string('action', 50);
-            $table->string('from_status', 30)->nullable();
-            $table->string('to_status', 30)->nullable();
-            $table->json('changes')->nullable();
-            $table->text('notes')->nullable();
-            $table->timestamp('performed_at');
+                ->name('fk_stktrfh_changed_by__usr');
+            $table->timestamp('changed_at')->nullable();
             $table->timestamps();
 
+            $table->index('branch_id', 'idx_stktrfh_branch_id');
             $table->index('stock_transfer_id', 'idx_stktrfh_transfer_id');
         });
 

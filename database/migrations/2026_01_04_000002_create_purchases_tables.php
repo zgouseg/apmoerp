@@ -68,12 +68,18 @@ return new class extends Migration
         });
 
         // Purchase requisition items
+        // Purchase requisition items - aligned with PurchaseRequisitionItem model (extends BaseModel with HasBranch + SoftDeletes)
         Schema::create('purchase_requisition_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('requisition_id')
                 ->constrained('purchase_requisitions')
                 ->cascadeOnDelete()
                 ->name('fk_prreqi_req__prreq');
+            $table->foreignId('branch_id')
+                ->nullable()
+                ->constrained('branches')
+                ->nullOnDelete()
+                ->name('fk_prreqi_branch__brnch');
             $table->foreignId('product_id')
                 ->nullable()
                 ->constrained('products')
@@ -104,8 +110,10 @@ return new class extends Migration
                 ->nullOnDelete()
                 ->name('fk_prreqi_updated_by__usr');
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index('requisition_id', 'idx_prreqi_req_id');
+            $table->index('branch_id', 'idx_prreqi_branch_id');
             $table->index('product_id', 'idx_prreqi_product_id');
         });
 
@@ -149,12 +157,18 @@ return new class extends Migration
         });
 
         // Supplier quotation items
+        // Supplier quotation items - aligned with SupplierQuotationItem model (extends BaseModel with HasBranch + SoftDeletes)
         Schema::create('supplier_quotation_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('quotation_id')
                 ->constrained('supplier_quotations')
                 ->cascadeOnDelete()
                 ->name('fk_supqti_quot__supqt');
+            $table->foreignId('branch_id')
+                ->nullable()
+                ->constrained('branches')
+                ->nullOnDelete()
+                ->name('fk_supqti_branch__brnch');
             $table->foreignId('product_id')
                 ->nullable()
                 ->constrained('products')
@@ -165,10 +179,23 @@ return new class extends Migration
             $table->decimal('unit_price', 18, 4);
             $table->decimal('tax_percent', 5, 2)->default(0);
             $table->decimal('line_total', 18, 4);
+            $table->text('notes')->nullable();
             $table->json('extra_attributes')->nullable();
+            $table->foreignId('created_by')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete()
+                ->name('fk_supqti_created_by__usr');
+            $table->foreignId('updated_by')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete()
+                ->name('fk_supqti_updated_by__usr');
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index('quotation_id', 'idx_supqti_quot_id');
+            $table->index('branch_id', 'idx_supqti_branch_id');
             $table->index('product_id', 'idx_supqti_product_id');
         });
 
@@ -261,12 +288,18 @@ return new class extends Migration
         });
 
         // Purchase items
+        // Purchase items - aligned with PurchaseItem model (extends BaseModel with HasBranch + SoftDeletes)
         Schema::create('purchase_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('purchase_id')
                 ->constrained('purchases')
                 ->cascadeOnDelete()
                 ->name('fk_purchi_purchase__purch');
+            $table->foreignId('branch_id')
+                ->nullable()
+                ->constrained('branches')
+                ->nullOnDelete()
+                ->name('fk_purchi_branch__brnch');
             $table->foreignId('product_id')
                 ->nullable()
                 ->constrained('products')
@@ -298,6 +331,7 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->index('purchase_id', 'idx_purchi_purchase_id');
+            $table->index('branch_id', 'idx_purchi_branch_id');
             $table->index('product_id', 'idx_purchi_product_id');
         });
 
@@ -379,13 +413,18 @@ return new class extends Migration
             $table->index('received_date', 'idx_grn_received_date');
         });
 
-        // GRN items
+        // GRN items - aligned with GRNItem model (extends BaseModel with HasBranch + SoftDeletes)
         Schema::create('grn_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('grn_id')
                 ->constrained('goods_received_notes')
                 ->cascadeOnDelete()
                 ->name('fk_grni_grn__grn');
+            $table->foreignId('branch_id')
+                ->nullable()
+                ->constrained('branches')
+                ->nullOnDelete()
+                ->name('fk_grni_branch__brnch');
             $table->foreignId('product_id')
                 ->constrained('products')
                 ->cascadeOnDelete()
@@ -405,8 +444,10 @@ return new class extends Migration
             $table->string('quality_status', 30)->default('pending'); // pending, passed, failed
             $table->text('notes')->nullable();
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index('grn_id', 'idx_grni_grn_id');
+            $table->index('branch_id', 'idx_grni_branch_id');
             $table->index('product_id', 'idx_grni_product_id');
         });
     }

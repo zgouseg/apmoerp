@@ -155,12 +155,18 @@ return new class extends Migration
         });
 
         // Sale items
+        // Sale items - aligned with SaleItem model (extends BaseModel with HasBranch + SoftDeletes)
         Schema::create('sale_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('sale_id')
                 ->constrained('sales')
                 ->cascadeOnDelete()
                 ->name('fk_salei_sale__sale');
+            $table->foreignId('branch_id')
+                ->nullable()
+                ->constrained('branches')
+                ->nullOnDelete()
+                ->name('fk_salei_branch__brnch');
             $table->foreignId('product_id')
                 ->nullable()
                 ->constrained('products')
@@ -198,6 +204,7 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->index('sale_id', 'idx_salei_sale_id');
+            $table->index('branch_id', 'idx_salei_branch_id');
             $table->index('product_id', 'idx_salei_product_id');
         });
 
