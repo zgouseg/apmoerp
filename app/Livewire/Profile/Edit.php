@@ -47,6 +47,11 @@ class Edit extends Component
             return true; // null/empty is valid (no avatar)
         }
 
+        // Reject null bytes and other dangerous characters
+        if (str_contains($path, "\0") || str_contains($path, '\\')) {
+            return false;
+        }
+
         // Reject path traversal attempts
         if (str_contains($path, '..')) {
             return false;

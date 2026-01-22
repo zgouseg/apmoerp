@@ -311,7 +311,18 @@ class Form extends Component
             return;
         }
 
-        $contract = RentalContract::find($this->contractId);
+        $user = Auth::user();
+        if (! $user) {
+            abort(403);
+        }
+
+        // H1 FIX: Use branch-scoped query to ensure user can only access contracts from their branch
+        $query = RentalContract::query();
+        if ($user->branch_id && ! $user->can('rental.contracts.manage-all')) {
+            $query->where('branch_id', $user->branch_id);
+        }
+        $contract = $query->find($this->contractId);
+
         if (! $contract) {
             return;
         }
@@ -327,8 +338,8 @@ class Form extends Component
 
         $file = $dbAttachments[$index];
 
-        // Validate path doesn't contain traversal attempts
-        if (isset($file['path']) && ! str_contains($file['path'], '..')) {
+        // Validate path doesn't contain traversal attempts or null bytes
+        if (isset($file['path']) && ! str_contains($file['path'], '..') && ! str_contains($file['path'], "\0")) {
             // Delete from storage
             if (Storage::disk('private')->exists($file['path'])) {
                 Storage::disk('private')->delete($file['path']);
