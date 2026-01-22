@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Branch\HRM;
 
 use App\Http\Controllers\Controller;
+use App\Rules\BranchScopedExists;
 use Illuminate\Http\Request;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -12,8 +13,9 @@ class ReportsController extends Controller
 {
     public function attendance(Request $request): StreamedResponse
     {
+        // V57-CRITICAL-03 FIX: Use BranchScopedExists to prevent cross-branch employee references
         $validated = $request->validate([
-            'employee_id' => 'nullable|integer|exists:hr_employees,id',
+            'employee_id' => ['nullable', 'integer', new BranchScopedExists('hr_employees', 'id', null, true)],
             'status' => 'nullable|string|in:present,absent,late,on_leave',
             'branch_id' => 'nullable|integer',
             'from' => 'nullable|date',
@@ -101,8 +103,9 @@ class ReportsController extends Controller
 
     public function payroll(Request $request): StreamedResponse
     {
+        // V57-CRITICAL-03 FIX: Use BranchScopedExists to prevent cross-branch employee references
         $validated = $request->validate([
-            'employee_id' => 'nullable|integer|exists:hr_employees,id',
+            'employee_id' => ['nullable', 'integer', new BranchScopedExists('hr_employees', 'id', null, true)],
             'period' => 'nullable|string|max:20',
             'status' => 'nullable|string|in:pending,paid,cancelled',
         ]);

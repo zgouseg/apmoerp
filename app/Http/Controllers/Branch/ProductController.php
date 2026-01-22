@@ -9,6 +9,7 @@ use App\Http\Requests\ProductImageRequest;
 use App\Http\Requests\ProductImportRequest;
 use App\Models\Branch;
 use App\Models\Product;
+use App\Rules\BranchScopedExists;
 use App\Services\Contracts\ProductServiceInterface as Products;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -72,12 +73,13 @@ class ProductController extends Controller
         $branchId = $this->resolveBranchId($request);
 
         // Basic validation
+        // V57-CRITICAL-03 FIX: Use BranchScopedExists to prevent cross-branch references
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'sku' => 'nullable|string|max:100',
             'barcode' => 'nullable|string|max:100',
-            'category_id' => 'nullable|exists:product_categories,id',
-            'tax_id' => 'nullable|exists:taxes,id',
+            'category_id' => ['nullable', new BranchScopedExists('product_categories', 'id', $branchId, true)],
+            'tax_id' => ['nullable', new BranchScopedExists('taxes', 'id', $branchId, true)],
             'default_price' => 'required|numeric|min:0',
             'cost' => 'nullable|numeric|min:0',
             'description' => 'nullable|string',

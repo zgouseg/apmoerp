@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Http\Requests\Traits\HasMultilingualValidation;
+use App\Rules\BranchScopedExists;
 use Illuminate\Foundation\Http\FormRequest;
 
 class LeaveRequestFormRequest extends FormRequest
@@ -19,7 +20,8 @@ class LeaveRequestFormRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'employee_id' => ['required', 'exists:hr_employees,id'],
+            // V57-CRITICAL-03 FIX: Use BranchScopedExists to prevent cross-branch employee references
+            'employee_id' => ['required', new BranchScopedExists('hr_employees')],
             'leave_type' => ['required', 'in:annual,sick,emergency,unpaid,maternity,paternity'],
             'start_date' => ['required', 'date', 'after_or_equal:today'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],

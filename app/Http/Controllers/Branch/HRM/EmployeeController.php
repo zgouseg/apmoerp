@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Branch\HRM;
 use App\Http\Controllers\Branch\Concerns\RequiresBranchContext;
 use App\Http\Controllers\Controller;
 use App\Models\HREmployee;
+use App\Rules\BranchScopedExists;
 use App\Services\Contracts\HRMServiceInterface as HRM;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -34,8 +35,9 @@ class EmployeeController extends Controller
 
     public function assign(Request $request)
     {
+        // V57-CRITICAL-03 FIX: Use BranchScopedExists to prevent cross-branch employee references
         $data = $this->validate($request, [
-            'employee_id' => ['required', 'exists:hr_employees,id'],
+            'employee_id' => ['required', new BranchScopedExists('hr_employees')],
             'branch_id' => ['sometimes', 'integer'],
         ]);
         $branchId = (int) ($data['branch_id'] ?? $request->attributes->get('branch_id'));

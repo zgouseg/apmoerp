@@ -188,7 +188,11 @@ class ProductsController extends BaseApiController
             'cost_price' => 'nullable|numeric|min:0',
             // NEW-MEDIUM-05 FIX: Use numeric validation to support fractional quantities (weight/volume/meters)
             'quantity' => 'required|numeric|min:0',
-            'category_id' => 'nullable|exists:product_categories,id',
+            // V57-CRITICAL-03 FIX: Use Rule::exists with branch_id constraint for category
+            'category_id' => [
+                'nullable',
+                Rule::exists('product_categories', 'id')->where('branch_id', $store->branch_id),
+            ],
             'warehouse_id' => [
                 'required_with:quantity',
                 Rule::exists('warehouses', 'id')->where('branch_id', $store->branch_id),
@@ -287,7 +291,11 @@ class ProductsController extends BaseApiController
             'cost_price' => 'nullable|numeric|min:0',
             // NEW-MEDIUM-02 FIX: Use numeric validation to support fractional quantities (consistent with store())
             'quantity' => 'sometimes|numeric|min:0',
-            'category_id' => 'nullable|exists:product_categories,id',
+            // V57-CRITICAL-03 FIX: Use Rule::exists with branch_id constraint for category
+            'category_id' => [
+                'nullable',
+                Rule::exists('product_categories', 'id')->where('branch_id', $store->branch_id),
+            ],
             'warehouse_id' => [
                 'required_with:quantity',
                 Rule::exists('warehouses', 'id')->where('branch_id', $store->branch_id),

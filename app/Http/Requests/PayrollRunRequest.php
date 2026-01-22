@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Models\Payroll;
+use App\Rules\BranchScopedExists;
 use Illuminate\Foundation\Http\FormRequest;
 
 class PayrollRunRequest extends FormRequest
@@ -21,7 +22,8 @@ class PayrollRunRequest extends FormRequest
             'period_end' => ['required', 'date', 'after_or_equal:period_start'],
             'payment_date' => ['required', 'date'],
             'employee_ids' => ['required', 'array', 'min:1'],
-            'employee_ids.*' => ['exists:hr_employees,id'],
+            // V57-CRITICAL-03 FIX: Use BranchScopedExists to prevent cross-branch employee references
+            'employee_ids.*' => [new BranchScopedExists('hr_employees')],
             'include_overtime' => ['boolean'],
             'include_deductions' => ['boolean'],
             'include_bonuses' => ['boolean'],
