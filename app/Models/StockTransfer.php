@@ -9,61 +9,64 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * CRIT-DB-03 FIX: StockTransfer model fields aligned with migration schema.
+ * Fixed column name mismatches:
+ * - transfer_number → reference_number
+ * - transfer_type → type
+ * - expected_delivery_date → expected_arrival_date
+ * - actual_delivery_date → actual_arrival_date
+ * Removed columns that don't exist in schema (insurance_cost, total_cost, courier_name, etc.)
+ */
 class StockTransfer extends Model
 {
     use HasBranch, HasFactory, SoftDeletes;
 
+    /**
+     * Fillable fields aligned with migration:
+     * 2026_01_04_000003_create_inventory_tables.php
+     */
     protected $fillable = [
-        'branch_id',  // NEW-HIGH-08 FIX: Added branch_id to fillable for HasBranch trait
-        'transfer_number',
+        'branch_id',
+        'reference_number',
+        'type',
         'from_warehouse_id',
         'to_warehouse_id',
         'from_branch_id',
         'to_branch_id',
-        'transfer_type',
         'status',
-        'transfer_date',
-        'expected_delivery_date',
-        'actual_delivery_date',
         'priority',
+        'transfer_date',
+        'expected_arrival_date',
+        'actual_arrival_date',
+        'total_items',
+        'total_value',
+        'shipping_cost',
+        'shipping_method',
+        'tracking_number',
         'reason',
         'notes',
-        'internal_notes',
-        'tracking_number',
-        'courier_name',
-        'vehicle_number',
-        'driver_name',
-        'driver_phone',
-        'shipping_cost',
-        'insurance_cost',
-        'total_cost',
-        'currency',
-        'total_qty_requested',
-        'total_qty_shipped',
-        'total_qty_received',
-        'total_qty_damaged',
-        'requested_by',
+        'rejection_reason',
+        'requires_approval',
+        'is_auto_generated',
+        'created_by',
         'approved_by',
         'approved_at',
         'shipped_by',
         'shipped_at',
         'received_by',
         'received_at',
-        'created_by',
-        'updated_by',
     ];
 
     protected $casts = [
         'transfer_date' => 'date',
-        'expected_delivery_date' => 'date',
-        'actual_delivery_date' => 'date',
+        'expected_arrival_date' => 'date',
+        'actual_arrival_date' => 'date',
+        'total_items' => 'decimal:3',
+        'total_value' => 'decimal:2',
         'shipping_cost' => 'decimal:2',
-        'insurance_cost' => 'decimal:2',
-        'total_cost' => 'decimal:2',
-        'total_qty_requested' => 'decimal:3',
-        'total_qty_shipped' => 'decimal:3',
-        'total_qty_received' => 'decimal:3',
-        'total_qty_damaged' => 'decimal:3',
+        'requires_approval' => 'boolean',
+        'is_auto_generated' => 'boolean',
         'approved_at' => 'datetime',
         'shipped_at' => 'datetime',
         'received_at' => 'datetime',
@@ -107,18 +110,19 @@ class StockTransfer extends Model
         parent::boot();
 
         static::creating(function ($transfer) {
-            if (empty($transfer->transfer_number)) {
-                $transfer->transfer_number = static::generateTransferNumber();
+            if (empty($transfer->reference_number)) {
+                $transfer->reference_number = static::generateReferenceNumber();
             }
         });
     }
 
     /**
-     * Generate unique transfer number
+     * Generate unique reference number
      * NEW-HIGH-08 FIX: Use database locking to prevent race conditions
      * V32-CRIT-03 FIX: Wrap in DB::transaction to ensure lockForUpdate is effective
+     * CRIT-DB-03 FIX: Renamed from generateTransferNumber to match schema column name
      */
-    public static function generateTransferNumber(): string
+    public static function generateReferenceNumber(): string
     {
         return \Illuminate\Support\Facades\DB::transaction(function () {
             $prefix = 'TRF';
@@ -126,13 +130,13 @@ class StockTransfer extends Model
 
             // Use lockForUpdate to prevent concurrent reads from getting the same number
             // V32-CRIT-03 FIX: The outer DB::transaction ensures the lock is effective
-            $lastTransfer = static::where('transfer_number', 'like', "{$prefix}-{$date}-%")
+            $lastTransfer = static::where('reference_number', 'like', "{$prefix}-{$date}-%")
                 ->lockForUpdate()
-                ->orderBy('transfer_number', 'desc')
+                ->orderBy('reference_number', 'desc')
                 ->first();
 
             if ($lastTransfer) {
-                $lastNumber = (int) substr($lastTransfer->transfer_number, -4);
+                $lastNumber = (int) substr($lastTransfer->reference_number, -4);
                 $newNumber = str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
             } else {
                 $newNumber = '0001';
@@ -140,6 +144,15 @@ class StockTransfer extends Model
 
             return "{$prefix}-{$date}-{$newNumber}";
         });
+    }
+
+    /**
+     * Legacy alias for generateReferenceNumber
+     * @deprecated Use generateReferenceNumber() instead
+     */
+    public static function generateTransferNumber(): string
+    {
+        return static::generateReferenceNumber();
     }
 
     /**
@@ -182,12 +195,7 @@ class StockTransfer extends Model
 
     public function history(): HasMany
     {
-        return $this->hasMany(StockTransferHistory::class)->orderBy('changed_at', 'desc');
-    }
-
-    public function requestedBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'requested_by');
+        return $this->hasMany(StockTransferHistory::class)->orderBy('created_at', 'desc');
     }
 
     public function approvedBy(): BelongsTo
@@ -279,6 +287,7 @@ class StockTransfer extends Model
 
     /**
      * Mark as shipped
+     * CRIT-DB-03 FIX: Removed references to non-existent columns (courier_name, vehicle_number, etc.)
      */
     public function markAsShipped(int $userId, ?array $shippingData = null): bool
     {
@@ -295,10 +304,7 @@ class StockTransfer extends Model
         if ($shippingData) {
             $updateData = array_merge($updateData, array_filter([
                 'tracking_number' => $shippingData['tracking_number'] ?? null,
-                'courier_name' => $shippingData['courier_name'] ?? null,
-                'vehicle_number' => $shippingData['vehicle_number'] ?? null,
-                'driver_name' => $shippingData['driver_name'] ?? null,
-                'driver_phone' => $shippingData['driver_phone'] ?? null,
+                'shipping_method' => $shippingData['shipping_method'] ?? null,
             ]));
         }
 
@@ -310,6 +316,7 @@ class StockTransfer extends Model
 
     /**
      * Mark as received
+     * CRIT-DB-03 FIX: Changed actual_delivery_date to actual_arrival_date to match schema
      */
     public function markAsReceived(int $userId): bool
     {
@@ -321,7 +328,7 @@ class StockTransfer extends Model
             'status' => self::STATUS_RECEIVED,
             'received_by' => $userId,
             'received_at' => now(),
-            'actual_delivery_date' => now()->toDateString(),
+            'actual_arrival_date' => now()->toDateString(),
         ]);
 
         $this->recordStatusChange(self::STATUS_IN_TRANSIT, self::STATUS_RECEIVED, $userId);
@@ -353,6 +360,7 @@ class StockTransfer extends Model
 
     /**
      * Reject transfer
+     * CRIT-DB-03 FIX: Changed internal_notes to rejection_reason to match schema
      */
     public function reject(int $userId, ?string $reason = null): bool
     {
@@ -362,7 +370,7 @@ class StockTransfer extends Model
 
         $this->update([
             'status' => self::STATUS_REJECTED,
-            'internal_notes' => $reason ? "Rejected: {$reason}" : $this->internal_notes,
+            'rejection_reason' => $reason,
         ]);
 
         $this->recordStatusChange(self::STATUS_PENDING, self::STATUS_REJECTED, $userId, $reason);
@@ -372,6 +380,7 @@ class StockTransfer extends Model
 
     /**
      * Cancel transfer
+     * CRIT-DB-03 FIX: Changed internal_notes to notes to match schema
      */
     public function cancel(int $userId, ?string $reason = null): bool
     {
@@ -380,10 +389,15 @@ class StockTransfer extends Model
         }
 
         $oldStatus = $this->status;
-        $this->update([
+        $updateData = [
             'status' => self::STATUS_CANCELLED,
-            'internal_notes' => $reason ? "Cancelled: {$reason}" : $this->internal_notes,
-        ]);
+        ];
+        
+        if ($reason) {
+            $updateData['notes'] = ($this->notes ? $this->notes . "\n" : '') . "Cancelled: {$reason}";
+        }
+        
+        $this->update($updateData);
 
         $this->recordStatusChange($oldStatus, self::STATUS_CANCELLED, $userId, $reason);
 
@@ -408,37 +422,43 @@ class StockTransfer extends Model
 
     /**
      * Calculate transfer totals
+     * CRIT-DB-03 FIX: Use correct column names from migration (total_items, total_value)
      */
     public function calculateTotals(): void
     {
-        $this->total_qty_requested = $this->items->sum('qty_requested');
-        $this->total_qty_shipped = $this->items->sum('qty_shipped');
-        $this->total_qty_received = $this->items->sum('qty_received');
-        $this->total_qty_damaged = $this->items->sum('qty_damaged');
+        $this->total_items = $this->items->sum('quantity_requested');
+        $this->total_value = $this->items->sum(function ($item) {
+            return $item->quantity_requested * $item->unit_cost;
+        });
         $this->save();
     }
 
     /**
      * Check if transfer is overdue
+     * CRIT-DB-03 FIX: Use correct column name expected_arrival_date
      */
     public function isOverdue(): bool
     {
-        if (! $this->expected_delivery_date || $this->status === self::STATUS_COMPLETED) {
+        if (! $this->expected_arrival_date || $this->status === self::STATUS_COMPLETED) {
             return false;
         }
 
-        return now()->isAfter($this->expected_delivery_date);
+        return now()->isAfter($this->expected_arrival_date);
     }
 
     /**
      * Get completion percentage
+     * CRIT-DB-03 FIX: Use items relationship to calculate completion
      */
     public function getCompletionPercentage(): float
     {
-        if ($this->total_qty_requested <= 0) {
+        $totalRequested = $this->items->sum('quantity_requested');
+        $totalReceived = $this->items->sum('quantity_received');
+        
+        if ($totalRequested <= 0) {
             return 0;
         }
 
-        return ($this->total_qty_received / $this->total_qty_requested) * 100;
+        return ($totalReceived / $totalRequested) * 100;
     }
 }

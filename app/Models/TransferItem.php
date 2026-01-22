@@ -4,19 +4,29 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class TransferItem extends BaseModel
+/**
+ * CRIT-DB-01 FIX: TransferItem now extends Model directly instead of BaseModel.
+ * Line-item tables inherit branch context from their parent (Transfer) and don't need
+ * their own BranchScope. The transfer_items table has timestamps but no softDeletes,
+ * and branch_id is optional (added via migration but not required for the model's functionality).
+ */
+class TransferItem extends Model
 {
-    protected ?string $moduleKey = 'inventory';
+    use HasFactory;
+
+    protected $table = 'transfer_items';
 
     /**
      * Fillable fields aligned with migration:
      * 2026_01_04_000003_create_inventory_tables.php
+     * Note: branch_id removed as it's inherited from parent Transfer record
      */
     protected $fillable = [
         'transfer_id',
-        'branch_id',
         'product_id',
         'quantity',
         'received_quantity',

@@ -2,7 +2,10 @@
 @php
     $locale = app()->getLocale();
     $dir = $locale === 'ar' ? 'rtl' : 'ltr';
-    $userTheme = auth()->check() ? (auth()->user()->preferences->theme ?? 'light') : 'light';
+    // CRIT-UI-01 FIX: Use data_get() instead of object access since preferences is cast as 'array'
+    $userTheme = auth()->check()
+        ? data_get(auth()->user()->preferences, 'theme', 'light')
+        : 'light';
     $isDark = $userTheme === 'dark' || ($userTheme === 'system' && request()->cookie('theme') === 'dark');
 @endphp
 <!DOCTYPE html>

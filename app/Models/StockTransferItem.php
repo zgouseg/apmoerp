@@ -2,42 +2,45 @@
 
 namespace App\Models;
 
-use App\Traits\HasBranch;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * V65-BUG-FIX: Added HasBranch trait for proper branch scoping.
+ * CRIT-DB-03 FIX: StockTransferItem model fields aligned with migration schema.
+ * - Removed HasBranch trait (branch filtering via parent StockTransfer)
+ * - Fixed column names: qty_* → quantity_*
+ * - Removed columns that don't exist in schema
  */
 class StockTransferItem extends Model
 {
-    use HasBranch, HasFactory;
+    use HasFactory;
 
+    protected $table = 'stock_transfer_items';
+
+    /**
+     * Fillable fields aligned with migration:
+     * 2026_01_04_000003_create_inventory_tables.php
+     */
     protected $fillable = [
-        'branch_id',
         'stock_transfer_id',
         'product_id',
-        'qty_requested',
-        'qty_approved',
-        'qty_shipped',
-        'qty_received',
-        'qty_damaged',
+        'sku',
+        'quantity_requested',
+        'quantity_shipped',
+        'quantity_received',
+        'quantity_damaged',
+        'unit_cost',
         'batch_number',
         'expiry_date',
-        'unit_cost',
-        'condition_on_shipping',
-        'condition_on_receiving',
         'notes',
-        'damage_report',
     ];
 
     protected $casts = [
-        'qty_requested' => 'decimal:3',
-        'qty_approved' => 'decimal:3',
-        'qty_shipped' => 'decimal:3',
-        'qty_received' => 'decimal:3',
-        'qty_damaged' => 'decimal:3',
+        'quantity_requested' => 'decimal:3',
+        'quantity_shipped' => 'decimal:3',
+        'quantity_received' => 'decimal:3',
+        'quantity_damaged' => 'decimal:3',
         'unit_cost' => 'decimal:2',
         'expiry_date' => 'date',
     ];
@@ -60,7 +63,7 @@ class StockTransferItem extends Model
      */
     public function isFullyReceived(): bool
     {
-        return bccomp((string)$this->qty_shipped, (string)$this->qty_received, 3) === 0;
+        return bccomp((string)$this->quantity_shipped, (string)$this->quantity_received, 3) === 0;
     }
 
     /**
@@ -68,7 +71,7 @@ class StockTransferItem extends Model
      */
     public function hasDamage(): bool
     {
-        return $this->qty_damaged > 0;
+        return $this->quantity_damaged > 0;
     }
 
     /**
@@ -77,6 +80,27 @@ class StockTransferItem extends Model
      */
     public function getVariance(): float
     {
-        return decimal_float(bcsub((string)$this->qty_shipped, (string)$this->qty_received, 3), 3);
+        return decimal_float(bcsub((string)$this->quantity_shipped, (string)$this->quantity_received, 3), 3);
+    }
+
+    // Backward compatibility accessors
+    public function getQtyRequestedAttribute()
+    {
+        return $this->quantity_requested;
+    }
+
+    public function getQtyShippedAttribute()
+    {
+        return $this->quantity_shipped;
+    }
+
+    public function getQtyReceivedAttribute()
+    {
+        return $this->quantity_received;
+    }
+
+    public function getQtyDamagedAttribute()
+    {
+        return $this->quantity_damaged;
     }
 }

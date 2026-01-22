@@ -4,11 +4,21 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
-class SaleItem extends BaseModel
+/**
+ * CRIT-DB-01 FIX: SaleItem now extends Model directly instead of BaseModel.
+ * Line-item tables inherit branch context from their parent (Sale) and don't need
+ * their own BranchScope. The sale_items table has softDeletes but branch_id is
+ * optional (added via migration but not required for the model's functionality).
+ */
+class SaleItem extends Model
 {
-    protected ?string $moduleKey = 'sales';
+    use HasFactory;
+    use SoftDeletes;
 
     protected $table = 'sale_items';
 
@@ -16,11 +26,11 @@ class SaleItem extends BaseModel
 
     /**
      * Fillable fields aligned with migration:
-     * 2026_01_04_000005_create_sales_purchases_tables.php
+     * 2026_01_04_000001_create_sales_tables.php
+     * Note: branch_id removed as it's inherited from parent Sale record
      */
     protected $fillable = [
         'sale_id',
-        'branch_id',
         'product_id',
         'variation_id',
         'warehouse_id',
