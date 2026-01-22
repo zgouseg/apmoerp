@@ -242,6 +242,9 @@ return [
 
     // Users & Roles
     'users.manage' => 'إدارة المستخدمين',
+    'roles.view' => 'عرض الأدوار',
+    'roles.create' => 'إنشاء الأدوار',
+    'roles.edit' => 'تعديل الأدوار',
     'roles.manage' => 'إدارة الأدوار',
     'impersonate.users' => 'انتحال شخصية المستخدمين',
 
@@ -251,8 +254,19 @@ return [
     'branches.manage' => 'إدارة الفروع',
     'branches.create' => 'إنشاء فروع',
     'branches.edit' => 'تعديل الفروع',
+    'branches.update' => 'تحديث الفروع',
+    'branches.settings' => 'إعدادات الفروع',
     'branch.admin.manage' => 'إدارة مديري الفروع',
     'branch.users.manage' => 'إدارة مستخدمي الفرع',
+    'branch.employees.manage' => 'إدارة موظفي الفرع',
+    'branch.reports.view' => 'عرض تقارير الفرع',
+    'branch.settings.manage' => 'إدارة إعدادات الفرع',
+
+    // Warehouses
+    'warehouses.view' => 'عرض المستودعات',
+    'warehouses.create' => 'إنشاء مستودعات',
+    'warehouses.update' => 'تحديث المستودعات',
+    'warehouses.manage' => 'إدارة المستودعات',
 
     // Modules
     'modules.manage' => 'إدارة الوحدات',
@@ -261,18 +275,105 @@ return [
     'stores.view' => 'عرض المتاجر',
     'stores.manage' => 'إدارة المتاجر',
     'store.reports.dashboard' => 'عرض لوحة تقارير المتجر',
+    'store.api.products' => 'واجهة API للمنتجات',
+    'store.api.orders' => 'واجهة API للطلبات',
 
     // Logs
     'logs.audit.view' => 'عرض سجلات التدقيق',
     'logs.login.view' => 'عرض سجلات تسجيل الدخول',
+    'logs.activity.view' => 'عرض سجلات النشاط',
 
     // System
     'system.view-notifications' => 'عرض الإشعارات',
+    'access-all-branches' => 'الوصول لجميع الفروع',
 
     // Installments
     'sales.installments.view' => 'عرض أقساط المبيعات',
+    'sales.update' => 'تحديث المبيعات',
+    'sales.void' => 'إلغاء المبيعات',
 
     // Spares/Vehicle
     'spares.compatibility.manage' => 'إدارة توافق قطع الغيار',
+    'spares.compatibility.update' => 'تحديث توافق قطع الغيار',
     'spares.vehicle-models.view' => 'عرض موديلات المركبات',
+
+    // Motorcycle
+    'motorcycle.vehicles.create' => 'إنشاء مركبات',
+    'motorcycle.vehicles.update' => 'تحديث المركبات',
+    'motorcycle.warranties.create' => 'إنشاء ضمانات',
+    'motorcycle.warranties.update' => 'تحديث الضمانات',
+
+    // Wood
+    'wood.conversions.create' => 'إنشاء تحويلات الخشب',
+    'wood.conversions.update' => 'تحديث تحويلات الخشب',
+    'wood.waste.create' => 'تسجيل نفايات الخشب',
+
+    // API
+    'api.docs.view' => 'عرض توثيق API',
+
+    // Users
+    'users.create' => 'إنشاء مستخدمين',
+    'users.edit' => 'تعديل المستخدمين',
+
+    // Customers
+    'customers.create' => 'إنشاء عملاء',
+    'customers.update' => 'تحديث العملاء',
+    'customers.view-financial' => 'عرض البيانات المالية للعملاء',
+    'customers.view-sales' => 'عرض مبيعات العملاء',
+
+    // Suppliers
+    'suppliers.create' => 'إنشاء موردين',
+    'suppliers.update' => 'تحديث الموردين',
+    'suppliers.view-financial' => 'عرض البيانات المالية للموردين',
+    'suppliers.view-purchases' => 'عرض مشتريات الموردين',
+
+    // Documents
+    'documents.tags.create' => 'إنشاء علامات المستندات',
+
+    // Employee Self-Service
+    'employee.self.attendance' => 'تسجيل الحضور الذاتي',
+    'employee.self.leave-request' => 'طلب إجازة',
+    'employee.self.payslip-view' => 'عرض قسيمة الراتب',
+
+    // HRM
+    'hrm.attendance.create' => 'تسجيل الحضور',
+    'hrm.employees.create' => 'إنشاء موظفين',
+    'hrm.employees.edit' => 'تعديل الموظفين',
+
+    // Inventory & Products
+    'inventory.products.manage' => 'إدارة المنتجات',
+    'products.create' => 'إنشاء منتجات',
+    'products.update' => 'تحديث المنتجات',
+    'products.import' => 'استيراد المنتجات',
+    'products.image.upload' => 'رفع صور المنتجات',
+    'products.view-cost' => 'عرض تكلفة المنتجات',
+    'stock.adjust' => 'تعديل المخزون',
+    'stock.transfer' => 'تحويل المخزون',
+
+    // Manufacturing
+    'manufacturing.update' => 'تحديث التصنيع',
+
+    // Purchases
+    'purchases.create' => 'إنشاء مشتريات',
+    'purchases.update' => 'تحديث المشتريات',
+    'purchases.approve' => 'اعتماد المشتريات',
+    'purchases.cancel' => 'إلغاء المشتريات',
+    'purchases.pay' => 'دفع المشتريات',
+    'purchases.receive' => 'استلام المشتريات',
+
+    // Rental
+    'rental.units.create' => 'إنشاء وحدات إيجار',
+    'rental.units.update' => 'تحديث وحدات الإيجار',
+    'rental.units.status' => 'تغيير حالة الوحدات',
+    'rental.tenants.archive' => 'أرشفة المستأجرين',
+    'rental.contracts.create' => 'إنشاء عقود إيجار',
+    'rental.contracts.update' => 'تحديث العقود',
+    'rental.contracts.renew' => 'تجديد العقود',
+    'rental.contracts.terminate' => 'إنهاء العقود',
+    'rental.invoices.collect' => 'تحصيل فواتير الإيجار',
+    'rental.invoices.penalty' => 'إضافة غرامات الإيجار',
+
+    // Settings
+    'settings.update' => 'تحديث الإعدادات',
+    'settings.translations.view' => 'عرض الترجمات',
 ];

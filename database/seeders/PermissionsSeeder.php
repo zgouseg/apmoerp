@@ -47,10 +47,12 @@ class PermissionsSeeder extends Seeder
             $this->getSystemPermissions(),
             $this->getDashboardPermissions(),
             $this->getUserPermissions(),
+            $this->getRolePermissions(),
             $this->getBranchPermissions(),
             $this->getSettingsPermissions(),
             $this->getPosPermissions(),
             $this->getInventoryPermissions(),
+            $this->getWarehousePermissions(),
             $this->getSalesPermissions(),
             $this->getPurchasesPermissions(),
             $this->getCustomerPermissions(),
@@ -100,6 +102,16 @@ class PermissionsSeeder extends Seeder
             'users.edit',
             'view',
             'update',
+        ];
+    }
+
+    protected function getRolePermissions(): array
+    {
+        return [
+            'roles.view',
+            'roles.create',
+            'roles.edit',
+            'roles.manage',
         ];
     }
 
@@ -157,6 +169,16 @@ class PermissionsSeeder extends Seeder
             'products.image.upload',
             'stock.adjust',
             'stock.transfer',
+        ];
+    }
+
+    protected function getWarehousePermissions(): array
+    {
+        return [
+            'warehouses.view',
+            'warehouses.create',
+            'warehouses.update',
+            'warehouses.manage',
         ];
     }
 

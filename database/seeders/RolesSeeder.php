@@ -95,12 +95,22 @@ class RolesSeeder extends Seeder
             'users.manage',
             'users.create',
             'users.edit',
+            // Roles
+            'roles.view',
+            'roles.create',
+            'roles.edit',
+            'roles.manage',
             // Branches
             'branches.view',
             'branches.settings',
             'branch.employees.manage',
             'branch.reports.view',
             'branch.settings.manage',
+            // Warehouses
+            'warehouses.view',
+            'warehouses.create',
+            'warehouses.update',
+            'warehouses.manage',
             // Settings
             'settings.view',
             'settings.manage',
@@ -498,6 +508,11 @@ class RolesSeeder extends Seeder
     {
         return [
             'dashboard.view',
+            // Warehouses (full)
+            'warehouses.view',
+            'warehouses.create',
+            'warehouses.update',
+            'warehouses.manage',
             // Inventory (full)
             'inventory.view',
             'inventory.products.view',
