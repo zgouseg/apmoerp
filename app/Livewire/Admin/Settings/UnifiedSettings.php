@@ -701,7 +701,6 @@ class UnifiedSettings extends Component
 
     public function render()
     {
-        $this->settings = app(SettingsService::class);
         $currencies = \App\Models\Currency::active()->ordered()->get(['code', 'name', 'symbol']);
 
         return view('livewire.admin.settings.unified-settings', [

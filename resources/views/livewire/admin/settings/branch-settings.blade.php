@@ -9,12 +9,33 @@
         </p>
     </div>
 
+    {{-- Developer Warning --}}
+    <div class="rounded-2xl border border-amber-300 bg-amber-50 p-4">
+        <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <div>
+                <h3 class="text-sm font-semibold text-amber-800">{{ __('Developer/Super-Admin Only') }}</h3>
+                <p class="text-xs text-amber-700 mt-1">
+                    {{ __('This page allows direct key/value editing of branch-specific settings. For most configuration needs, branch settings should be configured through the main') }}
+                    <a href="{{ route('admin.settings') }}" class="underline font-medium hover:text-amber-900">{{ __('Unified Settings') }}</a>
+                    {{ __('page with branch override capability.') }}
+                </p>
+                <p class="text-xs text-amber-600 mt-2">
+                    {{ __('Incorrect key names or values may cause unexpected behavior for this branch.') }}
+                </p>
+            </div>
+        </div>
+    </div>
+
     <div class="space-y-4">
         <div class="space-y-1">
             <label class="block text-sm font-medium text-slate-700">
                 {{ __('Branch') }}
             </label>
             <select wire:model="branchId"
+                    aria-label="{{ __('Select branch') }}"
                     class="erp-input">
                 @foreach($branches as $branch)
                     <option value="{{ $branch['id'] }}">{{ $branch['name'] }}</option>
@@ -32,6 +53,7 @@
                 </h2>
                 <button type="button"
                         wire:click="addRow"
+                        aria-label="{{ __('Add new branch setting') }}"
                         class="inline-flex items-center rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm shadow-emerald-500/30 hover:bg-slate-800">
                     {{ __('Add setting') }}
                 </button>
@@ -69,6 +91,7 @@
                                 <td class="px-3 py-2 align-top text-end">
                                     <button type="button"
                                             wire:click="removeRow({{ $index }})"
+                                            aria-label="{{ __('Remove this setting') }}"
                                             class="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-[0.7rem] font-semibold text-red-700 hover:bg-red-100">
                                         {{ __('Remove') }}
                                     </button>

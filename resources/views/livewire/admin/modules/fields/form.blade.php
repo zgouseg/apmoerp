@@ -24,8 +24,33 @@
             
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ __('Field Key') }} <span class="text-red-500">*</span></label>
-                    <input type="text" wire:model="field_key" class="erp-input w-full font-mono" pattern="[a-z_]+" required {{ $fieldId ? 'readonly' : '' }}>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ __('Label (English)') }} <span class="text-red-500">*</span></label>
+                    <input type="text" wire:model.live="field_label" class="erp-input w-full" required>
+                    @error('field_label') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ __('Label (Arabic)') }}</label>
+                    <input type="text" wire:model="field_label_ar" class="erp-input w-full" dir="rtl">
+                    @error('field_label_ar') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                        {{ __('Field Key') }} 
+                        @if(!$fieldId)
+                            <span class="text-xs text-slate-400 font-normal">({{ __('auto-generated from label') }})</span>
+                        @else
+                            <span class="text-red-500">*</span>
+                        @endif
+                    </label>
+                    <input type="text" wire:model="field_key" 
+                           class="erp-input w-full font-mono text-sm {{ !$fieldId ? 'bg-slate-50 dark:bg-slate-800' : '' }}" 
+                           pattern="[a-z_]+" 
+                           required 
+                           {{ $fieldId ? 'readonly' : '' }}
+                           placeholder="{{ __('Auto-generated...') }}">
                     <p class="text-xs text-slate-500 mt-1">{{ __('Lowercase letters and underscores only') }}</p>
                     @error('field_key') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                 </div>
@@ -37,19 +62,6 @@
                         @endforeach
                     </select>
                     @error('field_type') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ __('Label (English)') }} <span class="text-red-500">*</span></label>
-                    <input type="text" wire:model="field_label" class="erp-input w-full" required>
-                    @error('field_label') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ __('Label (Arabic)') }}</label>
-                    <input type="text" wire:model="field_label_ar" class="erp-input w-full" dir="rtl">
-                    @error('field_label_ar') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                 </div>
             </div>
 
@@ -77,8 +89,18 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ __('Validation Rules') }}</label>
-                    <input type="text" wire:model="validation_rules" class="erp-input w-full font-mono" placeholder="e.g. required|max:255">
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ __('Validation') }}</label>
+                    <div class="space-y-2 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                        <label class="flex items-center gap-2 text-sm">
+                            <input type="checkbox" wire:model.live="is_required" class="rounded border-slate-300">
+                            <span class="text-slate-700 dark:text-slate-300">{{ __('Required field') }}</span>
+                        </label>
+                        <div class="pt-2 border-t border-slate-200 dark:border-slate-600">
+                            <label class="block text-xs font-medium text-slate-500 mb-1">{{ __('Additional rules') }} <span class="text-amber-600">({{ __('advanced') }})</span></label>
+                            <input type="text" wire:model="validation_rules" class="erp-input w-full font-mono text-xs" placeholder="e.g. max:255|min:3">
+                            <p class="text-xs text-slate-400 mt-1">{{ __('Optional: Laravel validation syntax for developers') }}</p>
+                        </div>
+                    </div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ __('Sort Order') }}</label>
