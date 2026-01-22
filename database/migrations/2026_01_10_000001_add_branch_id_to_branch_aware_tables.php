@@ -133,6 +133,11 @@ return new class extends Migration
             'search_history' => 'srchist',
         ];
 
-        return $shortNames[$table] ?? substr($table, 0, 10);
+        // Throw exception for unmapped tables to ensure explicit naming
+        if (!isset($shortNames[$table])) {
+            throw new \RuntimeException("No short name mapping defined for table: {$table}. Add an explicit mapping to prevent constraint name collisions.");
+        }
+
+        return $shortNames[$table];
     }
 };
