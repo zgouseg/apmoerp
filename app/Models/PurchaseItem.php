@@ -4,21 +4,11 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
-/**
- * CRIT-DB-01 FIX: PurchaseItem now extends Model directly instead of BaseModel.
- * Line-item tables inherit branch context from their parent (Purchase) and don't need
- * their own BranchScope. The purchase_items table has softDeletes but branch_id is
- * optional (added via migration but not required for the model's functionality).
- */
-class PurchaseItem extends Model
+class PurchaseItem extends BaseModel
 {
-    use HasFactory;
-    use SoftDeletes;
+    protected ?string $moduleKey = 'purchases';
 
     protected $table = 'purchase_items';
 
@@ -26,11 +16,11 @@ class PurchaseItem extends Model
 
     /**
      * Fillable fields aligned with migration:
-     * 2026_01_04_000002_create_purchases_tables.php
-     * Note: branch_id removed as it's inherited from parent Purchase record
+     * 2026_01_04_000005_create_sales_purchases_tables.php
      */
     protected $fillable = [
         'purchase_id',
+        'branch_id',
         'product_id',
         'variation_id',
         'product_name',

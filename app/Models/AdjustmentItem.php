@@ -4,29 +4,19 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/**
- * CRIT-DB-01 FIX: AdjustmentItem now extends Model directly instead of BaseModel.
- * Line-item tables inherit branch context from their parent (Adjustment) and don't need
- * their own BranchScope. The adjustment_items table has no softDeletes, and branch_id is
- * optional (added via later migration but filtering is done via parent relationship).
- */
-class AdjustmentItem extends Model
+class AdjustmentItem extends BaseModel
 {
-    use HasFactory;
-
-    protected $table = 'adjustment_items';
+    protected ?string $moduleKey = 'inventory';
 
     /**
      * Fillable fields aligned with migration:
      * 2026_01_04_000003_create_inventory_tables.php
-     * Note: branch_id removed as it's inherited from parent Adjustment record
      */
     protected $fillable = [
         'adjustment_id',
+        'branch_id',
         'product_id',
         'system_quantity',
         'counted_quantity',

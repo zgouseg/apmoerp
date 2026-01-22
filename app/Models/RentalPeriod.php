@@ -2,84 +2,73 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/**
- * CRIT-DB-02 FIX: RentalPeriod now extends Model directly instead of BaseModel.
- * The rental_periods table does NOT have softDeletes() column in migration,
- * so using BaseModel (which includes SoftDeletes trait) would cause SQL errors.
- * This table also doesn't need branch_id filtering - it's linked via contract_id.
- */
-class RentalPeriod extends Model
+class RentalPeriod extends BaseModel
 {
-    use HasFactory;
-
-    protected $table = 'rental_periods';
-
     protected $fillable = [
-        'contract_id',
-        'period_number',
-        'start_date',
-        'end_date',
-        'due_date',
-        'rent_amount',
-        'status',
-        'is_prorated',
-        'is_paid',
+        'module_id',
+        'branch_id',
+        'period_key',
+        'period_name',
+        'period_name_ar',
+        'period_type',
+        'duration_value',
+        'duration_unit',
+        'price_multiplier',
+        'is_default',
+        'is_active',
+        'sort_order',
     ];
 
     protected $casts = [
-        'period_number' => 'integer',
-        'start_date' => 'date',
-        'end_date' => 'date',
-        'due_date' => 'date',
-        'rent_amount' => 'decimal:4',
-        'is_prorated' => 'boolean',
-        'is_paid' => 'boolean',
+        'duration_value' => 'integer',
+        'price_multiplier' => 'decimal:4',
+        'is_default' => 'boolean',
+        'is_active' => 'boolean',
     ];
 
-    /**
-     * Get the rental contract this period belongs to
-     */
-    public function contract(): BelongsTo
+    public function module(): BelongsTo
     {
-        return $this->belongsTo(RentalContract::class, 'contract_id');
+        return $this->belongsTo(Module::class);
     }
 
-    /**
-     * Scope to get pending periods
-     */
-    public function scopePending(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    public function getLocalizedNameAttribute(): string
     {
-        return $query->where('status', 'pending');
+        $locale = app()->getLocale();
+
+        return $locale === 'ar' && $this->period_name_ar ? $this->period_name_ar : $this->period_name;
     }
 
-    /**
-     * Scope to get paid periods
-     */
-    public function scopePaid(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
-    {
-        return $query->where('is_paid', true);
-    }
-
-    /**
-     * Scope to get overdue periods
-     */
-    public function scopeOverdue(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
-    {
-        return $query->where('status', 'overdue');
-    }
-
-    /**
-     * Calculate the number of days in this rental period
-     */
     public function calculateDays(): int
     {
-        if ($this->start_date === null || $this->end_date === null) {
-            return 0;
-        }
-        return $this->start_date->diffInDays($this->end_date);
+        return match ($this->duration_unit) {
+            'hours' => ceil($this->duration_value / 24),
+            'days' => $this->duration_value,
+            'weeks' => $this->duration_value * 7,
+            'months' => $this->duration_value * 30,
+            'years' => $this->duration_value * 365,
+            default => $this->duration_value,
+        };
+    }
+
+    public function calculatePrice(float $basePrice): float
+    {
+        return $basePrice * $this->price_multiplier;
+    }
+
+    public function scopeActive(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeDefault(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    {
+        return $query->where('is_default', true);
+    }
+
+    public function scopeOrdered(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    {
+        return $query->orderBy('sort_order')->orderBy('duration_value');
     }
 }

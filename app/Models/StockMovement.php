@@ -3,22 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
-/**
- * CRIT-DB-01/CRIT-DB-04 FIX: StockMovement now extends Model directly instead of BaseModel.
- * - Removed HasBranch trait to avoid BranchScope since branch_id was not in original schema
- * - Added SoftDeletes to match migration schema (stock_movements has deleted_at column)
- * - Enabled timestamps since migration has timestamps() (previously $timestamps = false was wrong)
- */
-class StockMovement extends Model
+class StockMovement extends BaseModel
 {
-    use HasFactory;
-    use SoftDeletes;
+    protected ?string $moduleKey = 'inventory';
 
     protected $table = 'stock_movements';
 
@@ -35,10 +25,10 @@ class StockMovement extends Model
     /**
      * Fillable fields aligned with migration:
      * 2026_01_04_000003_create_inventory_tables.php
-     * Note: branch_id was added via later migration but filtering is done via parent relationships
      */
     protected $fillable = [
         'product_id',
+        'branch_id',
         'warehouse_id',
         'batch_id',
         'movement_type',
@@ -59,7 +49,17 @@ class StockMovement extends Model
         'stock_after' => 'decimal:4',
     ];
 
-    // CRIT-DB-04 FIX: Enabled timestamps - migration has both created_at and updated_at
+    // Disable timestamps since migration only has created_at
+    public $timestamps = false;
+
+    protected static function booted(): void
+    {
+        parent::booted();
+
+        static::creating(function ($m) {
+            $m->created_at = $m->created_at ?? now();
+        });
+    }
 
     public function product(): BelongsTo
     {
