@@ -370,10 +370,27 @@ return [
     'rental.contracts.update' => 'تحديث العقود',
     'rental.contracts.renew' => 'تجديد العقود',
     'rental.contracts.terminate' => 'إنهاء العقود',
+    'rental.contracts.manage-all' => 'إدارة جميع العقود',
     'rental.invoices.collect' => 'تحصيل فواتير الإيجار',
     'rental.invoices.penalty' => 'إضافة غرامات الإيجار',
 
     // Settings
     'settings.update' => 'تحديث الإعدادات',
     'settings.translations.view' => 'عرض الترجمات',
+
+    // Additional permissions (added for completeness)
+    'sales.create' => 'إنشاء مبيعات',
+    'sales.update' => 'تحديث المبيعات',
+    'sales.void' => 'إلغاء المبيعات',
+    'expenses.create' => 'إنشاء مصروفات',
+    'expenses.edit' => 'تعديل المصروفات',
+    'income.create' => 'إنشاء الإيرادات',
+    'income.edit' => 'تعديل الإيرادات',
+    'projects.manage' => 'إدارة المشاريع',
+    'hrm.attendance.manage' => 'إدارة الحضور',
+    'hrm.payroll.manage' => 'إدارة الرواتب',
+    'hrm.shifts.view' => 'عرض الورديات',
+    'hrm.shifts.manage' => 'إدارة الورديات',
+    'rental.properties.view' => 'عرض العقارات',
+    'rental.tenants.view' => 'عرض المستأجرين',
 ];

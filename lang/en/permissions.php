@@ -277,4 +277,21 @@ return [
     // Spares/Vehicle
     'spares.compatibility.manage' => 'Manage Spare Parts Compatibility',
     'spares.vehicle-models.view' => 'View Vehicle Models',
+
+    // Additional permissions (added for completeness)
+    'sales.create' => 'Create Sales',
+    'sales.update' => 'Update Sales',
+    'sales.void' => 'Void Sales',
+    'expenses.create' => 'Create Expenses',
+    'expenses.edit' => 'Edit Expenses',
+    'income.create' => 'Create Income',
+    'income.edit' => 'Edit Income',
+    'projects.manage' => 'Manage Projects',
+    'hrm.attendance.manage' => 'Manage Attendance',
+    'hrm.payroll.manage' => 'Manage Payroll',
+    'hrm.shifts.view' => 'View Shifts',
+    'hrm.shifts.manage' => 'Manage Shifts',
+    'rental.properties.view' => 'View Properties',
+    'rental.tenants.view' => 'View Tenants',
+    'rental.contracts.manage-all' => 'Manage All Contracts',
 ];
