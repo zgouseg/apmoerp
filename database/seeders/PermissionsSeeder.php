@@ -198,6 +198,7 @@ class PermissionsSeeder extends Seeder
     {
         return [
             'sales.view',
+            'sales.create',
             'sales.update',
             'sales.void',
             'sales.return',
@@ -282,8 +283,12 @@ class PermissionsSeeder extends Seeder
         return [
             'expenses.manage',
             'expenses.view',
+            'expenses.create',
+            'expenses.edit',
             'income.manage',
             'income.view',
+            'income.create',
+            'income.edit',
             'income.delete',
             'incomes.manage', // Alias for backward compatibility
         ];
@@ -309,8 +314,12 @@ class PermissionsSeeder extends Seeder
             'hrm.employees.assign',
             'hrm.attendance.view',
             'hrm.attendance.create',
+            'hrm.attendance.manage',
             'hrm.payroll.view',
             'hrm.payroll.run',
+            'hrm.payroll.manage',
+            'hrm.shifts.view',
+            'hrm.shifts.manage',
             'hrm.manage',
             'hr.manage-employees',
             'hr.view-reports',
@@ -327,6 +336,7 @@ class PermissionsSeeder extends Seeder
             'projects.create',
             'projects.edit',
             'projects.delete',
+            'projects.manage',
             'projects.tasks.view',
             'projects.tasks.manage',
             'projects.expenses.view',
@@ -346,8 +356,10 @@ class PermissionsSeeder extends Seeder
             'rental.units.update',
             'rental.units.manage',
             'rental.units.status',
+            'rental.properties.view',
             'rental.properties.create',
             'rental.properties.update',
+            'rental.tenants.view',
             'rental.tenants.create',
             'rental.tenants.update',
             'rental.tenants.archive',

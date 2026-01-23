@@ -45,7 +45,7 @@ class QuickActions extends Component
                 'description' => __('Adjust inventory stock levels'),
                 'icon' => '📊',
                 'route' => 'app.warehouse.adjustments.create',
-                'permission' => 'inventory.stock.adjust',
+                'permission' => 'stock.adjust',
                 'color' => 'orange',
             ],
             [
@@ -92,8 +92,8 @@ class QuickActions extends Component
                 'title' => __('Import Data'),
                 'description' => __('Import products, customers, etc.'),
                 'icon' => '📥',
-                'route' => 'admin.import.index',
-                'permission' => 'inventory.products.import',
+                'route' => 'admin.bulk-import',
+                'permission' => 'products.import',
                 'color' => 'indigo',
             ],
             [

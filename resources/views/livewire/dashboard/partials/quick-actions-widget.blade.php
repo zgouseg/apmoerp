@@ -1,7 +1,7 @@
 {{-- Quick Actions Widget --}}
 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
     {{-- New Sale --}}
-    @can('pos.access')
+    @can('pos.use')
     <a href="{{ route('pos.terminal') }}" class="group flex flex-col items-center gap-3 p-5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-lg hover:border-pink-200 dark:hover:border-pink-600 transition-all duration-300">
         <div class="w-16 h-16 flex items-center justify-center rounded-full bg-gradient-to-br from-pink-100 to-pink-50 dark:from-pink-900/30 dark:to-pink-800/20 group-hover:scale-110 transition-transform">
             <svg class="w-8 h-8 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
