@@ -36,7 +36,7 @@
 
             <div>
                 <label class="erp-label">{{ __('Billing Address') }}</label>
-                <textarea wire:model="billing_address" rows="2" class="erp-input"></textarea>
+                <textarea wire:model="address" rows="2" class="erp-input"></textarea>
             </div>
 
             <div>
@@ -51,7 +51,7 @@
 
             <div>
                 <label class="erp-label">{{ __('Discount Percentage') }}</label>
-                <input type="number" wire:model="discount_percentage" step="0.01" min="0" max="100" class="erp-input">
+                <input type="number" wire:model="discount_percent" step="0.01" min="0" max="100" class="erp-input">
             </div>
 
             <div>
@@ -68,12 +68,12 @@
 
             <div>
                 <label class="erp-label">{{ __('Payment Due Days') }}</label>
-                <input type="number" wire:model="payment_due_days" min="0" class="erp-input">
+                <input type="number" wire:model="payment_terms_days" min="0" class="erp-input">
             </div>
 
             <div>
                 <label class="erp-label">{{ __('Preferred Currency') }}</label>
-                <input type="text" wire:model="preferred_currency" maxlength="3" class="erp-input">
+                <input type="text" wire:model="currency" maxlength="3" class="erp-input">
             </div>
 
             <div>
