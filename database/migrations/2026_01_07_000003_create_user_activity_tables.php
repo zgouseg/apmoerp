@@ -21,7 +21,7 @@ return new class extends Migration
         Schema::create('user_preferences', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')
-                ->unique('uq_usrpref_user')
+                ->unique()
                 ->constrained('users')
                 ->cascadeOnDelete()
                 ->name('fk_usrpref_user__usr');
