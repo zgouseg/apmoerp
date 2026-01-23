@@ -134,12 +134,12 @@
                             </label>
                             <select wire:model="timezone"
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                <option value="UTC">UTC</option>
-                                <option value="Africa/Cairo">Africa/Cairo</option>
-                                <option value="Asia/Dubai">Asia/Dubai</option>
-                                <option value="Asia/Riyadh">Asia/Riyadh</option>
-                                <option value="Europe/London">Europe/London</option>
-                                <option value="America/New_York">America/New_York</option>
+                                <option value="UTC">{{ __('UTC') }}</option>
+                                <option value="Africa/Cairo">{{ __('Africa/Cairo') }}</option>
+                                <option value="Asia/Dubai">{{ __('Asia/Dubai') }}</option>
+                                <option value="Asia/Riyadh">{{ __('Asia/Riyadh') }}</option>
+                                <option value="Europe/London">{{ __('Europe/London') }}</option>
+                                <option value="America/New_York">{{ __('America/New_York') }}</option>
                             </select>
                         </div>
 
@@ -149,9 +149,9 @@
                             </label>
                             <select wire:model="date_format"
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                <option value="Y-m-d">YYYY-MM-DD</option>
-                                <option value="d/m/Y">DD/MM/YYYY</option>
-                                <option value="m/d/Y">MM/DD/YYYY</option>
+                                <option value="Y-m-d">{{ __('YYYY-MM-DD') }}</option>
+                                <option value="d/m/Y">{{ __('DD/MM/YYYY') }}</option>
+                                <option value="m/d/Y">{{ __('MM/DD/YYYY') }}</option>
                             </select>
                         </div>
 

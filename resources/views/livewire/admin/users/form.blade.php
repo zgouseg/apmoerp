@@ -148,21 +148,21 @@
                         {{ __('Timezone') }}
                     </label>
                     <select wire:model="form.timezone" class="erp-input">
-                        <option value="Africa/Cairo">Africa/Cairo (EET, UTC+2)</option>
-                        <option value="Asia/Riyadh">Asia/Riyadh (AST, UTC+3)</option>
-                        <option value="Asia/Dubai">Asia/Dubai (GST, UTC+4)</option>
-                        <option value="Asia/Kuwait">Asia/Kuwait (AST, UTC+3)</option>
-                        <option value="Asia/Bahrain">Asia/Bahrain (AST, UTC+3)</option>
-                        <option value="Asia/Qatar">Asia/Qatar (AST, UTC+3)</option>
-                        <option value="Asia/Amman">Asia/Amman (EET, UTC+2)</option>
-                        <option value="Asia/Beirut">Asia/Beirut (EET, UTC+2)</option>
-                        <option value="Asia/Damascus">Asia/Damascus (EET, UTC+2)</option>
-                        <option value="Asia/Jerusalem">Asia/Jerusalem (IST, UTC+2)</option>
-                        <option value="Europe/London">Europe/London (GMT, UTC+0)</option>
-                        <option value="Europe/Paris">Europe/Paris (CET, UTC+1)</option>
-                        <option value="America/New_York">America/New_York (EST, UTC-5)</option>
-                        <option value="America/Los_Angeles">America/Los_Angeles (PST, UTC-8)</option>
-                        <option value="UTC">UTC (UTC+0)</option>
+                        <option value="Africa/Cairo">{{ __('Africa/Cairo (EET, UTC+2)') }}</option>
+                        <option value="Asia/Riyadh">{{ __('Asia/Riyadh (AST, UTC+3)') }}</option>
+                        <option value="Asia/Dubai">{{ __('Asia/Dubai (GST, UTC+4)') }}</option>
+                        <option value="Asia/Kuwait">{{ __('Asia/Kuwait (AST, UTC+3)') }}</option>
+                        <option value="Asia/Bahrain">{{ __('Asia/Bahrain (AST, UTC+3)') }}</option>
+                        <option value="Asia/Qatar">{{ __('Asia/Qatar (AST, UTC+3)') }}</option>
+                        <option value="Asia/Amman">{{ __('Asia/Amman (EET, UTC+2)') }}</option>
+                        <option value="Asia/Beirut">{{ __('Asia/Beirut (EET, UTC+2)') }}</option>
+                        <option value="Asia/Damascus">{{ __('Asia/Damascus (EET, UTC+2)') }}</option>
+                        <option value="Asia/Jerusalem">{{ __('Asia/Jerusalem (IST, UTC+2)') }}</option>
+                        <option value="Europe/London">{{ __('Europe/London (GMT, UTC+0)') }}</option>
+                        <option value="Europe/Paris">{{ __('Europe/Paris (CET, UTC+1)') }}</option>
+                        <option value="America/New_York">{{ __('America/New_York (EST, UTC-5)') }}</option>
+                        <option value="America/Los_Angeles">{{ __('America/Los_Angeles (PST, UTC-8)') }}</option>
+                        <option value="UTC">{{ __('UTC (UTC+0)') }}</option>
                     </select>
                     @error('form.timezone')
                         <p class="mt-1 text-xs text-red-600">{{ $message }}</p>

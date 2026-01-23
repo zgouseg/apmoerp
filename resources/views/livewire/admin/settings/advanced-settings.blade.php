@@ -133,10 +133,10 @@
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">{{ __('Timezone') }}</label>
                             <select wire:model="general.timezone" class="erp-input w-full">
-                                <option value="Africa/Cairo">Africa/Cairo (Egypt)</option>
-                                <option value="Asia/Riyadh">Asia/Riyadh (Saudi Arabia)</option>
-                                <option value="Asia/Dubai">Asia/Dubai (UAE)</option>
-                                <option value="Europe/London">Europe/London (UK)</option>
+                                <option value="Africa/Cairo">{{ __('Africa/Cairo (Egypt)') }}</option>
+                                <option value="Asia/Riyadh">{{ __('Asia/Riyadh (Saudi Arabia)') }}</option>
+                                <option value="Asia/Dubai">{{ __('Asia/Dubai (UAE)') }}</option>
+                                <option value="Europe/London">{{ __('Europe/London (UK)') }}</option>
                             </select>
                         </div>
                         <div class="pt-4">
@@ -708,10 +708,10 @@
                                 <div>
                                     <label class="block text-sm font-medium text-slate-700 mb-1">{{ __('Default format') }}</label>
                                     <select wire:model="export.default_format" class="erp-input w-full">
-                                        <option value="xlsx">Excel (.xlsx)</option>
-                                        <option value="csv">CSV (.csv)</option>
-                                        <option value="pdf">PDF (.pdf)</option>
-                                        <option value="json">JSON (.json)</option>
+                                        <option value="xlsx">{{ __('Excel (.xlsx)') }}</option>
+                                        <option value="csv">{{ __('CSV (.csv)') }}</option>
+                                        <option value="pdf">{{ __('PDF (.pdf)') }}</option>
+                                        <option value="json">{{ __('JSON (.json)') }}</option>
                                     </select>
                                 </div>
                                 <div>
@@ -751,10 +751,10 @@
                                 <div>
                                     <label class="block text-sm font-medium text-slate-700 mb-1">{{ __('Paper size') }}</label>
                                     <select wire:model="export.pdf_paper_size" class="erp-input w-full">
-                                        <option value="a4">A4</option>
-                                        <option value="letter">Letter</option>
-                                        <option value="legal">Legal</option>
-                                        <option value="a3">A3</option>
+                                        <option value="a4">{{ __('A4') }}</option>
+                                        <option value="letter">{{ __('Letter') }}</option>
+                                        <option value="legal">{{ __('Legal') }}</option>
+                                        <option value="a3">{{ __('A3') }}</option>
                                     </select>
                                 </div>
                             </div>
