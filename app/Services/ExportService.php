@@ -87,6 +87,8 @@ class ExportService
             ],
             'expenses' => [
                 'id' => 'ID',
+                // APMOERP68-FIX: Add reference_number to expenses export columns
+                'reference_number' => __('Reference'),
                 'expense_date' => __('Date'),
                 'category_name' => __('Category'),
                 'description' => __('Description'),
@@ -96,6 +98,8 @@ class ExportService
             ],
             'incomes' => [
                 'id' => 'ID',
+                // APMOERP68-FIX: Add reference_number to incomes export columns
+                'reference_number' => __('Reference'),
                 'income_date' => __('Date'),
                 'category_name' => __('Category'),
                 'description' => __('Description'),

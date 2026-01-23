@@ -45,7 +45,8 @@ class SendScheduledReports extends Command
                 $url = null;
 
                 // Template-aware export routing
-                if ($template && in_array($template->output_type, ['excel', 'pdf'], true)) {
+                // APMOERP68-FIX: Support both 'xlsx' and 'excel' output types for export
+                if ($template && in_array($template->output_type, ['excel', 'xlsx', 'pdf'], true)) {
                     if ($template->route_name === 'admin.store.dashboard') {
                         $exportFilters = $filters;
 
@@ -53,10 +54,12 @@ class SendScheduledReports extends Command
                             $exportFilters['columns'] = $template->export_columns;
                         }
 
-                        $exportFilters['format'] = $template->output_type;
+                        // Normalize xlsx to excel for consistent format handling
+                        $exportFilters['format'] = $template->output_type === 'xlsx' ? 'excel' : $template->output_type;
 
                         try {
-                            $url = url()->route('admin.store.orders.export', $exportFilters);
+                            // APMOERP68-FIX: Correct route name is 'admin.stores.orders.export' not 'admin.store.orders.export'
+                            $url = url()->route('admin.stores.orders.export', $exportFilters);
                         } catch (\Throwable $e) {
                             Log::warning('ScheduledReports: export route failed, falling back to base route', [
                                 'report_id' => $report->id,

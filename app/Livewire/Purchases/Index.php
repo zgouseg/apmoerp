@@ -106,16 +106,18 @@ class Index extends Component
             ->orderBy('purchases.'.$sortField, $sortDirection)
             ->select([
                 'purchases.id',
-                'purchases.reference_number as reference',
-                // V34-HIGH-04 FIX: Use purchase_date instead of created_at for posted_at export field
-                'purchases.purchase_date as posted_at',
+                // APMOERP68-FIX: Use column names matching ExportService expectations
+                'purchases.reference_number as reference_number',
+                'purchases.purchase_date as purchase_date',
                 'suppliers.name as supplier_name',
-                'purchases.total_amount as grand_total',
+                'purchases.total_amount as total_amount',
                 'purchases.paid_amount as amount_paid',
                 // SECURITY (V58-SQL-01): DB::raw uses hardcoded column names, no user input
                 DB::raw('(purchases.total_amount - purchases.paid_amount) as amount_due'),
                 'purchases.status',
+                'purchases.payment_status as payment_status',
                 'branches.name as branch_name',
+                'purchases.created_at',
             ])
             ->get();
 

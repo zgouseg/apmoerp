@@ -120,12 +120,26 @@ class RunScheduledReports extends Command
         $hour = (int) $time[0];
         $minute = (int) ($time[1] ?? 0);
 
+        // APMOERP68-FIX: Map day_of_week number to Carbon day name for proper weekly scheduling
+        $dayMap = [
+            0 => 'Sunday',
+            1 => 'Monday',
+            2 => 'Tuesday',
+            3 => 'Wednesday',
+            4 => 'Thursday',
+            5 => 'Friday',
+            6 => 'Saturday',
+        ];
+
         switch ($schedule->frequency) {
             case 'daily':
                 $next = $now->copy()->addDay()->setTime($hour, $minute);
                 break;
             case 'weekly':
-                $next = $now->copy()->next($schedule->day_of_week ?? 1)->setTime($hour, $minute);
+                // APMOERP68-FIX: Use Carbon-compatible day name instead of number
+                $dayOfWeek = $schedule->day_of_week ?? 1;
+                $dayName = $dayMap[$dayOfWeek] ?? 'Monday';
+                $next = $now->copy()->next($dayName)->setTime($hour, $minute);
                 break;
             case 'monthly':
                 $next = $now->copy()->addMonth()->day($schedule->day_of_month ?? 1)->setTime($hour, $minute);

@@ -133,15 +133,16 @@ class Index extends Component
             ->orderBy('sales.'.$sortField, $sortDirection)
             ->select([
                 'sales.id',
-                'sales.reference_number as reference',
-                // V34-HIGH-04 FIX: Use sale_date instead of created_at for posted_at export field
-                'sales.sale_date as posted_at',
+                // APMOERP68-FIX: Use column names matching ExportService expectations
+                'sales.reference_number as reference_number',
+                'sales.sale_date as sale_date',
                 'customers.name as customer_name',
-                'sales.total_amount as grand_total',
+                'sales.total_amount as total_amount',
                 'sales.paid_amount as amount_paid',
                 // SECURITY (V58-SQL-01): DB::raw uses hardcoded column names, no user input
                 DB::raw('(sales.total_amount - sales.paid_amount) as amount_due'),
                 'sales.status',
+                'sales.payment_status as payment_status',
                 'branches.name as branch_name',
                 'sales.created_at',
             ])

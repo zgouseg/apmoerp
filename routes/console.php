@@ -58,7 +58,7 @@ Schedule::command('hrm:payroll --period='.now()->format('Y-m'))
     ->description('Run monthly payroll for all branches');
 
 Schedule::command('reports:run-scheduled')
-    ->hourly()
+    ->everyMinute()
     ->description('Run scheduled reports and send via email');
 
 Schedule::command('stock:check-low')

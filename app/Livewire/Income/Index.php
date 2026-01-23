@@ -56,6 +56,8 @@ class Index extends Component
             ->get()
             ->map(fn ($income) => [
                 'id' => $income->id,
+                // APMOERP68-FIX: Add reference_number to income export map
+                'reference_number' => $income->reference_number,
                 'income_date' => $income->income_date?->format('Y-m-d'),
                 'category_name' => $income->category?->name ?? '-',
                 'description' => $income->description,
