@@ -24,6 +24,11 @@ class Index extends Component
 
     public $sortDirection = 'desc';
 
+    public function mount(): void
+    {
+        $this->authorize('purchases.manage');
+    }
+
     public function updatingSearch()
     {
         $this->resetPage();

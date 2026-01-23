@@ -36,6 +36,7 @@ class Index extends Component
 
     public function mount(): void
     {
+        $this->authorize('suppliers.view');
         $this->initializeExport('suppliers');
     }
 
@@ -67,6 +68,8 @@ class Index extends Component
 
     public function export()
     {
+        $this->authorize('suppliers.manage');
+
         $data = Supplier::query()
             ->when($this->search, fn ($q) => $q->where('name', 'like', "%{$this->search}%")
                 ->orWhere('email', 'like', "%{$this->search}%")
