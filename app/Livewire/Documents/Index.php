@@ -154,8 +154,8 @@ class Index extends Component
         // Get statistics
         $stats = $this->documentService->getStatistics($branchId);
 
-        // Get filter options
-        $tags = DocumentTag::all();
+        // Get filter options (limited to prevent performance issues)
+        $tags = DocumentTag::orderBy('name')->limit(200)->get();
         $categories = Document::select('category')
             ->whereNotNull('category')
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))

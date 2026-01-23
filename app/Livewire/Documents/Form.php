@@ -128,7 +128,8 @@ class Form extends Component
 
     public function render()
     {
-        $tags = DocumentTag::all();
+        // Limit tags to prevent memory issues with large datasets
+        $tags = DocumentTag::orderBy('name')->limit(200)->get();
 
         return view('livewire.documents.form', [
             'tags' => $tags,

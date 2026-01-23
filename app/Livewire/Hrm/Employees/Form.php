@@ -106,7 +106,8 @@ class Form extends Component
 
             // V23-MED-02 FIX: Recompute schema/users for the employee's branch
             // when editing an employee from another branch
-            if ($employeeModel->branch_id && $employeeModel->branch_id !== ($user->branch_id ?? 1)) {
+            $userBranchId = $user->branch_id;
+            if ($employeeModel->branch_id && $userBranchId && $employeeModel->branch_id !== $userBranchId) {
                 $this->dynamicSchema = $moduleFields->formSchema('hr', 'employees', $employeeModel->branch_id);
                 $this->availableUsers = User::query()
                     ->where('branch_id', $employeeModel->branch_id)

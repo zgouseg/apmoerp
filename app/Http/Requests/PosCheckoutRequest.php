@@ -29,7 +29,7 @@ class PosCheckoutRequest extends FormRequest
             'items.*.price' => ['sometimes', 'numeric', 'gte:0'],
             'items.*.discount' => ['sometimes', 'numeric', 'gte:0'],
             'items.*.percent' => ['sometimes', 'boolean'],
-            'items.*.tax_id' => ['sometimes', 'integer', 'exists:taxes,id'],
+            'items.*.tax_id' => ['sometimes', 'integer', new BranchScopedExists('taxes', 'id', $branchId, allowNull: true)],
             'customer_id' => ['sometimes', 'integer', new BranchScopedExists('customers', 'id', $branchId, allowNull: true)],
             'warehouse_id' => ['sometimes', 'integer', new BranchScopedExists('warehouses', 'id', $branchId, allowNull: true)],
         ];
