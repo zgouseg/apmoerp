@@ -14,7 +14,7 @@ class Warranty extends BaseModel
 
     protected $fillable = ['vehicle_id', 'branch_id', 'provider', 'start_date', 'end_date', 'notes', 'extra_attributes'];
 
-    protected $casts = ['start_date' => 'date', 'end_date' => 'date'];
+    protected $casts = ['start_date' => 'date', 'end_date' => 'date', 'extra_attributes' => 'array'];
 
     public function vehicle(): BelongsTo
     {

@@ -28,6 +28,10 @@ class LoginActivity extends Model
         'metadata',
     ];
 
+    protected $casts = [
+        'metadata' => 'array',
+    ];
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

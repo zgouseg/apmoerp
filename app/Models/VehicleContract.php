@@ -13,7 +13,7 @@ class VehicleContract extends BaseModel
 
     protected $fillable = ['vehicle_id', 'branch_id', 'customer_id', 'start_date', 'end_date', 'price', 'status', 'extra_attributes'];
 
-    protected $casts = ['start_date' => 'date', 'end_date' => 'date', 'price' => 'decimal:2'];
+    protected $casts = ['start_date' => 'date', 'end_date' => 'date', 'price' => 'decimal:2', 'extra_attributes' => 'array'];
 
     public function vehicle(): BelongsTo
     {

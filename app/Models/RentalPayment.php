@@ -12,7 +12,7 @@ class RentalPayment extends BaseModel
 
     protected $fillable = ['branch_id', 'contract_id', 'invoice_id', 'created_by', 'method', 'amount', 'paid_at', 'reference', 'extra_attributes'];
 
-    protected $casts = ['amount' => 'decimal:2', 'paid_at' => 'datetime'];
+    protected $casts = ['amount' => 'decimal:2', 'paid_at' => 'datetime', 'extra_attributes' => 'array'];
 
     public function contract(): BelongsTo
     {

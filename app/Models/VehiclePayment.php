@@ -12,7 +12,7 @@ class VehiclePayment extends BaseModel
 
     protected $fillable = ['contract_id', 'branch_id', 'method', 'amount', 'paid_at', 'reference', 'extra_attributes'];
 
-    protected $casts = ['amount' => 'decimal:2', 'paid_at' => 'datetime'];
+    protected $casts = ['amount' => 'decimal:2', 'paid_at' => 'datetime', 'extra_attributes' => 'array'];
 
     public function contract(): BelongsTo
     {
