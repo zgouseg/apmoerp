@@ -110,7 +110,7 @@ class SettingsService
     {
         return $this->handleServiceOperation(
             callback: function () use ($key, $default) {
-                $setting = SystemSetting::where('key', $key)->first();
+                $setting = SystemSetting::where('setting_key', $key)->first();
 
                 if (! $setting) {
                     return $default;
@@ -149,10 +149,10 @@ class SettingsService
         return $this->handleServiceOperation(
             callback: function () use ($key, $value, $options) {
                 $data = [
-                    'key' => $key,
+                    'setting_key' => $key,
                     'value' => is_array($value) ? $value : [$value],
                     'type' => $options['type'] ?? 'string',
-                    'group' => $options['group'] ?? 'general',
+                    'setting_group' => $options['group'] ?? 'general',
                     'category' => $options['category'] ?? null,
                     'is_public' => $options['is_public'] ?? false,
                     'is_encrypted' => $options['is_encrypted'] ?? false,
@@ -164,7 +164,7 @@ class SettingsService
                     $data['value'] = [Crypt::encryptString(is_array($value) ? json_encode($value) : (string) $value)];
                 }
 
-                SystemSetting::updateOrCreate(['key' => $key], $data);
+                SystemSetting::updateOrCreate(['setting_key' => $key], $data);
                 $this->clearCache();
                 
                 // Clear Laravel config cache to ensure changes are reflected immediately
@@ -172,7 +172,7 @@ class SettingsService
                     \Illuminate\Support\Facades\Artisan::call('config:clear');
                 } catch (\Exception $e) {
                     Log::warning('Failed to clear config cache after setting update', [
-                        'key' => $key,
+                        'setting_key' => $key,
                         'error' => $e->getMessage(),
                     ]);
                 }
@@ -180,7 +180,7 @@ class SettingsService
                 return true;
             },
             operation: 'set',
-            context: ['key' => $key],
+            context: ['setting_key' => $key],
             defaultValue: false
         );
     }
@@ -219,7 +219,7 @@ class SettingsService
         return $this->handleServiceOperation(
             callback: function () {
                 return Cache::remember(self::CACHE_KEY, self::CACHE_TTL, function () {
-                    return SystemSetting::select('key', 'value', 'is_encrypted', 'type')
+                    return SystemSetting::select('setting_key', 'value', 'is_encrypted', 'type')
                         ->get()
                         ->mapWithKeys(function (SystemSetting $setting): array {
                             $value = $this->resolveValue($setting->value, $setting->type ?? 'string');
@@ -230,19 +230,19 @@ class SettingsService
                                     $decoded = json_decode($decrypted, true);
 
                                     return [
-                                        $setting->key => json_last_error() === JSON_ERROR_NONE ? $decoded : $decrypted,
+                                        $setting->setting_key => json_last_error() === JSON_ERROR_NONE ? $decoded : $decrypted,
                                     ];
                                 } catch (Throwable $e) {
                                     Log::warning('Failed to decrypt cached setting', [
-                                        'key' => $setting->key,
+                                        'setting_key' => $setting->setting_key,
                                         'error' => $e->getMessage(),
                                     ]);
 
-                                    return [$setting->key => null];
+                                    return [$setting->setting_key => null];
                                 }
                             }
 
-                            return [$setting->key => $value];
+                            return [$setting->setting_key => $value];
                         })
                         ->toArray();
                 });
@@ -257,7 +257,7 @@ class SettingsService
     {
         return $this->handleServiceOperation(
             callback: function () use ($group) {
-                return SystemSetting::where('group', $group)
+                return SystemSetting::where('setting_group', $group)
                     ->orderBy('sort_order')
                     ->get()
                     ->mapWithKeys(function ($setting) {
@@ -269,19 +269,19 @@ class SettingsService
                                 $decoded = json_decode($decrypted, true);
 
                                 return [
-                                    $setting->key => json_last_error() === JSON_ERROR_NONE ? $decoded : $decrypted,
+                                    $setting->setting_key => json_last_error() === JSON_ERROR_NONE ? $decoded : $decrypted,
                                 ];
                             } catch (\Exception $e) {
                                 Log::warning('Failed to decrypt group setting', [
-                                    'key' => $setting->key,
+                                    'setting_key' => $setting->setting_key,
                                     'error' => $e->getMessage(),
                                 ]);
 
-                                return [$setting->key => null];
+                                return [$setting->setting_key => null];
                             }
                         }
 
-                        return [$setting->key => $this->resolveValue($value, $setting->type ?? 'string')];
+                        return [$setting->setting_key => $this->resolveValue($value, $setting->type ?? 'string')];
                     })
                     ->toArray();
             },
@@ -307,19 +307,19 @@ class SettingsService
                                 $decoded = json_decode($decrypted, true);
 
                                 return [
-                                    $setting->key => json_last_error() === JSON_ERROR_NONE ? $decoded : $decrypted,
+                                    $setting->setting_key => json_last_error() === JSON_ERROR_NONE ? $decoded : $decrypted,
                                 ];
                             } catch (\Exception $e) {
                                 Log::warning('Failed to decrypt category setting', [
-                                    'key' => $setting->key,
+                                    'setting_key' => $setting->setting_key,
                                     'error' => $e->getMessage(),
                                 ]);
 
-                                return [$setting->key => null];
+                                return [$setting->setting_key => null];
                             }
                         }
 
-                        return [$setting->key => $this->resolveValue($value, $setting->type ?? 'string')];
+                        return [$setting->setting_key => $this->resolveValue($value, $setting->type ?? 'string')];
                     })
                     ->toArray();
             },
@@ -333,13 +333,13 @@ class SettingsService
     {
         return $this->handleServiceOperation(
             callback: function () use ($key) {
-                SystemSetting::where('key', $key)->delete();
+                SystemSetting::where('setting_key', $key)->delete();
                 $this->clearCache();
 
                 return true;
             },
             operation: 'delete',
-            context: ['key' => $key],
+            context: ['setting_key' => $key],
             defaultValue: false
         );
     }

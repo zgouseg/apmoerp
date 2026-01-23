@@ -35,8 +35,8 @@ class ModuleField extends Model
         'is_visible',
         'show_in_list',
         'show_in_export',
-        'order',
-        'default',
+        'sort_order',
+        'default_value',
         'meta',
         'field_category',
         'validation_rules',
@@ -54,8 +54,8 @@ class ModuleField extends Model
         'is_visible' => 'bool',
         'show_in_list' => 'bool',
         'show_in_export' => 'bool',
-        'order' => 'int',
-        'default' => 'array',
+        'sort_order' => 'int',
+        'default_value' => 'array',
         'meta' => 'array',
         'branch_id' => 'int',
         'validation_rules' => 'array',
@@ -83,7 +83,7 @@ class ModuleField extends Model
 
     public function scopeVisible(Builder $query): Builder
     {
-        return $query->where('is_visible', true)->orderBy('order');
+        return $query->where('is_visible', true)->orderBy('sort_order');
     }
 
     public function scopeByCategory(Builder $query, string $category): Builder

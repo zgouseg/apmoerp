@@ -13,7 +13,7 @@ class DashboardWidget extends BaseModel
 
     protected $fillable = [
         'branch_id',
-        'key',
+        'widget_key',
         'name',
         'name_ar',
         'description',

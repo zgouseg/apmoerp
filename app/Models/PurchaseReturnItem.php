@@ -27,7 +27,7 @@ class PurchaseReturnItem extends Model
         'unit_cost',
         'tax_amount',
         'line_total',
-        'condition',
+        'item_condition',
         'batch_number',
         'reason',
         'notes',
@@ -85,27 +85,27 @@ class PurchaseReturnItem extends Model
 
     public function isDefective(): bool
     {
-        return $this->condition === self::CONDITION_DEFECTIVE;
+        return $this->item_condition === self::CONDITION_DEFECTIVE;
     }
 
     public function isDamaged(): bool
     {
-        return $this->condition === self::CONDITION_DAMAGED;
+        return $this->item_condition === self::CONDITION_DAMAGED;
     }
 
     public function isWrongItem(): bool
     {
-        return $this->condition === self::CONDITION_WRONG_ITEM;
+        return $this->item_condition === self::CONDITION_WRONG_ITEM;
     }
 
     public function isExcess(): bool
     {
-        return $this->condition === self::CONDITION_EXCESS;
+        return $this->item_condition === self::CONDITION_EXCESS;
     }
 
     public function isExpired(): bool
     {
-        return $this->condition === self::CONDITION_EXPIRED;
+        return $this->item_condition === self::CONDITION_EXPIRED;
     }
 
     public function isDeducted(): bool

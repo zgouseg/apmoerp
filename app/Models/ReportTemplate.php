@@ -29,7 +29,7 @@ class ReportTemplate extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'key',
+        'template_key',
         'name',
         'description',
         'route_name',

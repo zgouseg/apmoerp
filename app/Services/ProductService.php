@@ -223,7 +223,7 @@ class ProductService implements ProductServiceInterface
             callback: function () use ($module, $data, $thumbnail) {
                 // Verify module supports items
                 if (! $module->supportsItems()) {
-                    throw new \Exception("Module {$module->key} does not support items/products");
+                    throw new \Exception("Module {$module->module_key} does not support items/products");
                 }
 
                 DB::beginTransaction();
@@ -269,7 +269,7 @@ class ProductService implements ProductServiceInterface
 
                     $this->logServiceInfo('createProductForModule', 'Product created for module', [
                         'product_id' => $product->id,
-                        'module_key' => $module->key,
+                        'module_key' => $module->module_key,
                     ]);
 
                     return $product;
@@ -279,7 +279,7 @@ class ProductService implements ProductServiceInterface
                 }
             },
             operation: 'createProductForModule',
-            context: ['module_key' => $module->key, 'data' => $data]
+            context: ['module_key' => $module->module_key, 'data' => $data]
         );
     }
 

@@ -17,7 +17,7 @@ class Module extends Model
     protected $table = 'modules';
 
     protected $fillable = [
-        'key',
+        'module_key',
         'slug',
         'name',
         'name_ar',
@@ -78,9 +78,9 @@ class Module extends Model
         parent::booted();
 
         static::creating(function ($model): void {
-            // Auto-generate slug from key if not provided
-            if (empty($model->slug) && ! empty($model->key)) {
-                $model->slug = $model->key;
+            // Auto-generate slug from module_key if not provided
+            if (empty($model->slug) && ! empty($model->module_key)) {
+                $model->slug = $model->module_key;
             }
         });
     }
@@ -183,9 +183,9 @@ class Module extends Model
         return $query->where('is_active', true);
     }
 
-    public function scopeKey(Builder $query, string $key): Builder
+    public function scopeModuleKey(Builder $query, string $moduleKey): Builder
     {
-        return $query->where('key', $key);
+        return $query->where('module_key', $moduleKey);
     }
 
     public function scopeSlug(Builder $query, string $slug): Builder
@@ -276,7 +276,7 @@ class Module extends Model
     public function getModuleTypeLabel(): string
     {
         // Stock module (inventory) - tracks stock but doesn't create items
-        if ($this->key === 'inventory') {
+        if ($this->module_key === 'inventory') {
             return __('Stock Module');
         }
 
@@ -286,7 +286,7 @@ class Module extends Model
         }
 
         // Operational modules - use products from other modules
-        if (in_array($this->key, ['sales', 'purchases', 'pos'])) {
+        if (in_array($this->module_key, ['sales', 'purchases', 'pos'])) {
             return __('Operational Module');
         }
 
@@ -299,7 +299,7 @@ class Module extends Model
      */
     public function getModuleTypeColor(): string
     {
-        if ($this->key === 'inventory') {
+        if ($this->module_key === 'inventory') {
             return 'bg-blue-100 text-blue-700';
         }
 
@@ -307,7 +307,7 @@ class Module extends Model
             return 'bg-emerald-100 text-emerald-700';
         }
 
-        if (in_array($this->key, ['sales', 'purchases', 'pos'])) {
+        if (in_array($this->module_key, ['sales', 'purchases', 'pos'])) {
             return 'bg-amber-100 text-amber-700';
         }
 

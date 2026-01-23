@@ -244,7 +244,7 @@ class BranchAccessService
                     $moduleId => [
                         'enabled' => true,
                         'settings' => json_encode($settings),
-                        'module_key' => $module->key,
+                        'module_key' => $module->module_key,
                     ],
                 ]);
             },

@@ -18,17 +18,17 @@ class SystemSetting extends Model
     /**
      * Generic key/value settings storage.
      *
-     * - key      : unique identifier (e.g. "app.name", "pos.receipt.footer")
-     * - value    : json value
-     * - type     : optional type hint (string,int,bool,array,json,encrypted,...)
-     * - group    : logical group (e.g. "app","mail","pos","hr")
-     * - is_public: whether it can be exposed to clients without auth
+     * - setting_key  : unique identifier (e.g. "app.name", "pos.receipt.footer")
+     * - value        : json value
+     * - type         : optional type hint (string,int,bool,array,json,encrypted,...)
+     * - setting_group: logical group (e.g. "app","mail","pos","hr")
+     * - is_public    : whether it can be exposed to clients without auth
      */
     protected $fillable = [
-        'key',
+        'setting_key',
         'value',
         'type',
-        'group',
+        'setting_group',
         'category',
         'is_public',
         'is_encrypted',
@@ -43,30 +43,30 @@ class SystemSetting extends Model
     ];
 
     /** Scopes */
-    public function scopeKey(Builder $query, string $key): Builder
+    public function scopeSettingKey(Builder $query, string $settingKey): Builder
     {
-        return $query->where('key', $key);
+        return $query->where('setting_key', $settingKey);
     }
 
-    public function scopeGroup(Builder $query, string $group): Builder
+    public function scopeSettingGroup(Builder $query, string $settingGroup): Builder
     {
-        return $query->where('group', $group);
+        return $query->where('setting_group', $settingGroup);
     }
 
     /**
-     * Get a setting value by group and key.
+     * Get a setting value by setting_group and setting_key.
      *
-     * @param  string|null  $group  The setting group (null for any group)
-     * @param  string  $key  The setting key
+     * @param  string|null  $settingGroup  The setting group (null for any group)
+     * @param  string  $settingKey  The setting key
      * @param  mixed  $default  Default value if setting doesn't exist
      * @return mixed The setting value or default
      */
-    public static function getValue(?string $group, string $key, $default = null): mixed
+    public static function getValue(?string $settingGroup, string $settingKey, $default = null): mixed
     {
-        $query = static::where('key', $key);
+        $query = static::where('setting_key', $settingKey);
 
-        if ($group !== null) {
-            $query->where('group', $group);
+        if ($settingGroup !== null) {
+            $query->where('setting_group', $settingGroup);
         }
 
         $setting = $query->first();
@@ -108,12 +108,12 @@ class SystemSetting extends Model
     /**
      * Get a setting value using cache.
      */
-    public static function cachedValue(?string $group, string $key, $default = null, int $ttlSeconds = 1800)
+    public static function cachedValue(?string $settingGroup, string $settingKey, $default = null, int $ttlSeconds = 1800)
     {
-        $cacheKey = sprintf('system_setting:%s:%s', $group ?? 'global', $key);
+        $cacheKey = sprintf('system_setting:%s:%s', $settingGroup ?? 'global', $settingKey);
 
-        return Cache::remember($cacheKey, $ttlSeconds, function () use ($group, $key, $default) {
-            return static::getValue($group, $key, $default);
+        return Cache::remember($cacheKey, $ttlSeconds, function () use ($settingGroup, $settingKey, $default) {
+            return static::getValue($settingGroup, $settingKey, $default);
         });
     }
 }

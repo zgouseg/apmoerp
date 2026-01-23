@@ -31,7 +31,7 @@ class SalesReturnItem extends Model
         'discount',
         'tax_amount',
         'line_total',
-        'condition',
+        'item_condition',
         'reason',
         'notes',
         'restock',
@@ -105,7 +105,7 @@ class SalesReturnItem extends Model
      */
     public function shouldRestock(): bool
     {
-        return $this->restock && in_array($this->condition, [self::CONDITION_NEW, self::CONDITION_USED]);
+        return $this->restock && in_array($this->item_condition, [self::CONDITION_NEW, self::CONDITION_USED]);
     }
 
     /**

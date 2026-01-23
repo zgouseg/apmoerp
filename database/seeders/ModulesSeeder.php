@@ -19,7 +19,7 @@ class ModulesSeeder extends Seeder
     {
         $modules = [
             [
-                'key' => 'pos',
+                'module_key' => 'pos',
                 'slug' => 'pos',
                 'name' => 'Point of Sale',
                 'name_ar' => 'نقطة البيع',
@@ -32,7 +32,7 @@ class ModulesSeeder extends Seeder
                 'category' => 'sales',
             ],
             [
-                'key' => 'inventory',
+                'module_key' => 'inventory',
                 'slug' => 'inventory',
                 'name' => 'Inventory Management',
                 'name_ar' => 'إدارة المخزون',
@@ -48,7 +48,7 @@ class ModulesSeeder extends Seeder
                 'has_batch_numbers' => true,
             ],
             [
-                'key' => 'sales',
+                'module_key' => 'sales',
                 'slug' => 'sales',
                 'name' => 'Sales Management',
                 'name_ar' => 'إدارة المبيعات',
@@ -61,7 +61,7 @@ class ModulesSeeder extends Seeder
                 'category' => 'sales',
             ],
             [
-                'key' => 'purchases',
+                'module_key' => 'purchases',
                 'slug' => 'purchases',
                 'name' => 'Purchases Management',
                 'name_ar' => 'إدارة المشتريات',
@@ -74,7 +74,7 @@ class ModulesSeeder extends Seeder
                 'category' => 'procurement',
             ],
             [
-                'key' => 'crm',
+                'module_key' => 'crm',
                 'slug' => 'crm',
                 'name' => 'Customer Relations',
                 'name_ar' => 'علاقات العملاء',
@@ -87,7 +87,7 @@ class ModulesSeeder extends Seeder
                 'category' => 'sales',
             ],
             [
-                'key' => 'accounting',
+                'module_key' => 'accounting',
                 'slug' => 'accounting',
                 'name' => 'Accounting & Finance',
                 'name_ar' => 'المحاسبة والمالية',
@@ -100,7 +100,7 @@ class ModulesSeeder extends Seeder
                 'category' => 'finance',
             ],
             [
-                'key' => 'hrm',
+                'module_key' => 'hrm',
                 'slug' => 'hrm',
                 'name' => 'Human Resources',
                 'name_ar' => 'الموارد البشرية',
@@ -113,7 +113,7 @@ class ModulesSeeder extends Seeder
                 'category' => 'hr',
             ],
             [
-                'key' => 'rental',
+                'module_key' => 'rental',
                 'slug' => 'rental',
                 'name' => 'Rental Management',
                 'name_ar' => 'إدارة الإيجارات',
@@ -127,7 +127,7 @@ class ModulesSeeder extends Seeder
                 'is_rental' => true,
             ],
             [
-                'key' => 'projects',
+                'module_key' => 'projects',
                 'slug' => 'projects',
                 'name' => 'Project Management',
                 'name_ar' => 'إدارة المشاريع',
@@ -140,7 +140,7 @@ class ModulesSeeder extends Seeder
                 'category' => 'projects',
             ],
             [
-                'key' => 'manufacturing',
+                'module_key' => 'manufacturing',
                 'slug' => 'manufacturing',
                 'name' => 'Manufacturing',
                 'name_ar' => 'التصنيع',
@@ -153,7 +153,7 @@ class ModulesSeeder extends Seeder
                 'category' => 'manufacturing',
             ],
             [
-                'key' => 'vehicles',
+                'module_key' => 'vehicles',
                 'slug' => 'vehicles',
                 'name' => 'Vehicle & Spare Parts',
                 'name_ar' => 'المركبات وقطع الغيار',
@@ -166,7 +166,7 @@ class ModulesSeeder extends Seeder
                 'category' => 'automotive',
             ],
             [
-                'key' => 'helpdesk',
+                'module_key' => 'helpdesk',
                 'slug' => 'helpdesk',
                 'name' => 'Help Desk',
                 'name_ar' => 'مركز المساعدة',
@@ -180,7 +180,7 @@ class ModulesSeeder extends Seeder
                 'is_service' => true,
             ],
             [
-                'key' => 'documents',
+                'module_key' => 'documents',
                 'slug' => 'documents',
                 'name' => 'Document Management',
                 'name_ar' => 'إدارة المستندات',
@@ -193,7 +193,7 @@ class ModulesSeeder extends Seeder
                 'category' => 'documents',
             ],
             [
-                'key' => 'reports',
+                'module_key' => 'reports',
                 'slug' => 'reports',
                 'name' => 'Reports & Analytics',
                 'name_ar' => 'التقارير والتحليلات',
@@ -207,7 +207,7 @@ class ModulesSeeder extends Seeder
                 'supports_reporting' => true,
             ],
             [
-                'key' => 'settings',
+                'module_key' => 'settings',
                 'slug' => 'settings',
                 'name' => 'System Settings',
                 'name_ar' => 'إعدادات النظام',
@@ -223,7 +223,7 @@ class ModulesSeeder extends Seeder
 
         foreach ($modules as $moduleData) {
             Module::updateOrCreate(
-                ['key' => $moduleData['key']],
+                ['module_key' => $moduleData['module_key']],
                 $moduleData
             );
         }

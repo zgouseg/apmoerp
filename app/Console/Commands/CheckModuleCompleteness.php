@@ -38,7 +38,7 @@ class CheckModuleCompleteness extends Command
         if ($this->option('all')) {
             $modules = Module::active()->get();
         } elseif ($moduleKey = $this->argument('module')) {
-            $modules = Module::where('key', $moduleKey)->get();
+            $modules = Module::where('module_key', $moduleKey)->get();
             if ($modules->isEmpty()) {
                 $this->error("Module '{$moduleKey}' not found");
 
@@ -64,7 +64,7 @@ class CheckModuleCompleteness extends Command
      */
     protected function checkModule(Module $module): void
     {
-        $this->info("Checking module: {$module->name} ({$module->key})");
+        $this->info("Checking module: {$module->name} ({$module->module_key})");
 
         $scores = [
             'navigation' => $this->checkNavigation($module),
@@ -77,7 +77,7 @@ class CheckModuleCompleteness extends Command
         ];
 
         $totalScore = array_sum($scores) / count($scores);
-        $this->completenessScores[$module->key] = [
+        $this->completenessScores[$module->module_key] = [
             'module' => $module,
             'scores' => $scores,
             'total' => $totalScore,
@@ -134,7 +134,7 @@ class CheckModuleCompleteness extends Command
         $requiredComponents = ['Index', 'Form'];
         $foundComponents = 0;
 
-        $moduleName = str($module->key)->studly();
+        $moduleName = str($module->module_key)->studly();
         $componentPath = app_path("Livewire/{$moduleName}");
 
         if (File::isDirectory($componentPath)) {
@@ -167,9 +167,9 @@ class CheckModuleCompleteness extends Command
         $content = File::get($routeFile);
 
         $routePatterns = [
-            "app.{$module->key}.index",
-            "app.{$module->key}.create",
-            "app.{$module->key}.edit",
+            "app.{$module->module_key}.index",
+            "app.{$module->module_key}.create",
+            "app.{$module->module_key}.edit",
         ];
 
         $foundRoutes = 0;
@@ -188,10 +188,10 @@ class CheckModuleCompleteness extends Command
     protected function checkPermissions(Module $module): float
     {
         $permissionPatterns = [
-            "{$module->key}.view",
-            "{$module->key}.create",
-            "{$module->key}.update",
-            "{$module->key}.delete",
+            "{$module->module_key}.view",
+            "{$module->module_key}.create",
+            "{$module->module_key}.update",
+            "{$module->module_key}.delete",
         ];
 
         $foundPermissions = \Spatie\Permission\Models\Permission::whereIn('name', $permissionPatterns)->count();
@@ -204,7 +204,7 @@ class CheckModuleCompleteness extends Command
      */
     protected function checkModels(Module $module): float
     {
-        $moduleName = str($module->key)->studly()->singular();
+        $moduleName = str($module->module_key)->studly()->singular();
         $modelPath = app_path("Models/{$moduleName}.php");
 
         if (! File::exists($modelPath)) {
@@ -247,7 +247,7 @@ class CheckModuleCompleteness extends Command
      */
     protected function checkViews(Module $module): float
     {
-        $moduleName = str($module->key)->kebab();
+        $moduleName = str($module->module_key)->kebab();
         $viewPath = resource_path("views/livewire/{$moduleName}");
 
         if (! File::isDirectory($viewPath)) {
@@ -287,7 +287,7 @@ class CheckModuleCompleteness extends Command
         }
 
         // Check for README
-        $readmePath = base_path("docs/modules/{$module->key}.md");
+        $readmePath = base_path("docs/modules/{$module->module_key}.md");
         if (File::exists($readmePath)) {
             $score += 50;
         }

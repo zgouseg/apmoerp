@@ -59,11 +59,11 @@ class BranchSettings extends Component
         $prefix = 'branch:'.$this->branchId.':';
 
         $this->rows = SystemSetting::query()
-            ->where('key', 'like', $prefix.'%')
-            ->orderBy('key')
+            ->where('setting_key', 'like', $prefix.'%')
+            ->orderBy('setting_key')
             ->get()
             ->map(function (SystemSetting $setting) use ($prefix): array {
-                $plainKey = preg_replace('/^'.preg_quote($prefix, '/').'/', '', $setting->key) ?? $setting->key;
+                $plainKey = preg_replace('/^'.preg_quote($prefix, '/').'/', '', $setting->setting_key) ?? $setting->setting_key;
 
                 return [
                     'id' => $setting->id,
@@ -109,12 +109,12 @@ class BranchSettings extends Component
 
         // نقرأ الإعدادات القديمة للفرع
         $before = SystemSetting::query()
-            ->where('group', 'branch')
-            ->where('key', 'LIKE', $prefix.'%')
+            ->where('setting_group', 'branch')
+            ->where('setting_key', 'LIKE', $prefix.'%')
             ->get()
-            ->keyBy('key')
+            ->keyBy('setting_key')
             ->map(fn (SystemSetting $s) => [
-                'key' => $s->key,
+                'setting_key' => $s->setting_key,
                 'value' => $s->value,
             ])
             ->all();
@@ -131,13 +131,13 @@ class BranchSettings extends Component
 
                 SystemSetting::query()->updateOrCreate(
                     [
-                        'key' => $fullKey,
-                        'group' => 'branch',
+                        'setting_key' => $fullKey,
+                        'setting_group' => 'branch',
                     ],
                     [
                         'value' => $value,
                         'type' => 'string',
-                        'group' => 'branch',
+                        'setting_group' => 'branch',
                     ]
                 );
             }
@@ -145,12 +145,12 @@ class BranchSettings extends Component
 
         // الإعدادات بعد التعديل
         $after = SystemSetting::query()
-            ->where('group', 'branch')
-            ->where('key', 'LIKE', $prefix.'%')
+            ->where('setting_group', 'branch')
+            ->where('setting_key', 'LIKE', $prefix.'%')
             ->get()
-            ->keyBy('key')
+            ->keyBy('setting_key')
             ->map(fn (SystemSetting $s) => [
-                'key' => $s->key,
+                'setting_key' => $s->setting_key,
                 'value' => $s->value,
             ])
             ->all();
