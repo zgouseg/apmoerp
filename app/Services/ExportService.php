@@ -65,7 +65,7 @@ class ExportService
                 'name' => __('Name'),
                 'email' => __('Email'),
                 'phone' => __('Phone'),
-                'billing_address' => __('Address'),
+                'address' => __('Address'),
                 'balance' => __('Balance'),
                 'customer_tier' => __('Customer Tier'),
                 'created_at' => __('Created At'),
