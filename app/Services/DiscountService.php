@@ -162,8 +162,8 @@ class DiscountService implements DiscountServiceInterface
             $isPercent = (bool) ($discount['is_percent'] ?? true);
 
             if ($isPercent) {
-                // Percentage discount
-                $discountAmount = $currentAmount * ($value / 100);
+                // FIX: Use bcmath for percentage discount calculation
+                $discountAmount = decimal_float(bcmul((string) $currentAmount, bcdiv((string) $value, '100', 6), 4), 4);
             } else {
                 // Fixed amount discount
                 $discountAmount = $value;
@@ -173,16 +173,18 @@ class DiscountService implements DiscountServiceInterface
             $discountAmount = min($discountAmount, $currentAmount);
 
             $totalDiscountAmount += $discountAmount;
-            $currentAmount -= $discountAmount;
+            // FIX: Use bcsub for precision
+            $currentAmount = decimal_float(bcsub((string) $currentAmount, (string) $discountAmount, 4), 4);
         }
 
         // Final amount should never be negative
-        $finalAmount = max(0.0, $baseAmount - $totalDiscountAmount);
+        $finalAmount = max(0.0, decimal_float(bcsub((string) $baseAmount, (string) $totalDiscountAmount, 4), 4));
 
         // Check if total discount exceeds maximum allowed (e.g., 80% of base)
         // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
         $maxDiscountPercent = decimal_float(config('sales.max_combined_discount_percent', 80));
-        $discountPercent = $baseAmount > 0 ? ($totalDiscountAmount / $baseAmount * 100) : 0;
+        // FIX: Use bcmath for percentage calculation
+        $discountPercent = $baseAmount > 0 ? decimal_float(bcmul(bcdiv((string) $totalDiscountAmount, (string) $baseAmount, 6), '100', 4), 4) : 0;
 
         if ($discountPercent > $maxDiscountPercent) {
             return [

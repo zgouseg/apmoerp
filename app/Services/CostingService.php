@@ -128,7 +128,8 @@ class CostingService
 
         return [
             'unit_cost' => $unitCost,
-            'total_cost' => $unitCost * $quantity,
+            // FIX: Use bcmul for financial precision instead of float arithmetic
+            'total_cost' => decimal_float(bcmul((string) $unitCost, (string) $quantity, 4), 4),
             'batches_used' => [],
         ];
     }

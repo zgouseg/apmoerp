@@ -61,12 +61,14 @@ class PricingService implements PricingServiceInterface
                 $discVal = decimal_float(Arr::get($line, 'discount', 0));
                 $taxId = Arr::get($line, 'tax_id');
 
-                $subtotal = $qty * $price;
+                // FIX: Use bcmul for financial precision instead of float arithmetic
+                $subtotal = decimal_float(bcmul((string) $qty, (string) $price, 4), 4);
 
                 $discount = $this->discounts->lineTotal($qty, $price, $discVal, $percent);
                 $discount = min($discount, $subtotal);
 
-                $baseAfterDiscount = max(0.0, $subtotal - $discount);
+                // FIX: Use bcsub for financial precision
+                $baseAfterDiscount = max(0.0, decimal_float(bcsub((string) $subtotal, (string) $discount, 4), 4));
 
                 $taxAmount = 0.0;
                 if (! empty($taxId)) {
