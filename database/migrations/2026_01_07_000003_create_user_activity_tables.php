@@ -147,7 +147,10 @@ return new class extends Migration
             $table->index(['searchable_type', 'searchable_id'], 'idx_srchidx_searchable');
             $table->index('category', 'idx_srchidx_category');
             $table->index('branch_id', 'idx_srchidx_branch_id');
-            $table->fullText(['title', 'content'], 'ft_srchidx_content');
+            // Full-text index only supported on MySQL/PostgreSQL
+            if (config('database.default') !== 'sqlite') {
+                $table->fullText(['title', 'content'], 'ft_srchidx_content');
+            }
         });
 
         // Notifications
