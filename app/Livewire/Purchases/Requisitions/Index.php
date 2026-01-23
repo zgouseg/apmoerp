@@ -98,7 +98,8 @@ class Index extends Component
 
     public function delete(int $id): void
     {
-        $this->authorize('purchases.requisitions.create');
+        // FIX: Use correct permission for delete operation
+        $this->authorize('purchases.requisitions.manage');
 
         $requisition = PurchaseRequisition::findOrFail($id);
         $requisition->delete();

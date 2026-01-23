@@ -209,9 +209,32 @@ class AdvancedAnalyticsService
             ->with('category')
             ->get();
 
+        if ($products->isEmpty()) {
+            return [];
+        }
+
+        // FIX N+1 query: Calculate all sales velocities in a single query
+        $days = 30;
+        $start = now()->subDays($days);
+        $productIds = $products->pluck('id');
+        
+        $salesVelocities = SaleItem::query()
+            ->select('product_id', DB::raw('SUM(quantity) as total_qty'))
+            ->whereIn('product_id', $productIds)
+            ->whereHas('sale', function ($q) use ($branchId, $start) {
+                if ($branchId) {
+                    $q->where('branch_id', $branchId);
+                }
+                $q->where('sale_date', '>=', $start)
+                    ->whereNotIn('status', SaleStatus::nonRevenueStatuses());
+            })
+            ->groupBy('product_id')
+            ->pluck('total_qty', 'product_id')
+            ->map(fn ($qty) => $qty / $days);
+
         $recommendations = [];
         foreach ($products as $product) {
-            $salesVelocity = $this->calculateSalesVelocity($product->id, $branchId);
+            $salesVelocity = $salesVelocities->get($product->id, 0);
             $daysOfStock = $product->stock_quantity > 0 && $salesVelocity > 0
                 ? $product->stock_quantity / $salesVelocity
                 : 999;

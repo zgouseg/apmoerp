@@ -68,9 +68,13 @@ class CustomerBehaviorService
                     ];
                 }
 
+                // FIX N+1 query: Load all customers at once instead of individual queries
+                $customerIds = $data->pluck('customer_id')->unique()->filter();
+                $customersMap = Customer::whereIn('id', $customerIds)->get()->keyBy('id');
+
                 // Calculate RFM scores
-                $customers = $data->map(function ($row) {
-                    $customer = Customer::find($row->customer_id);
+                $customers = $data->map(function ($row) use ($customersMap) {
+                    $customer = $customersMap->get($row->customer_id);
                     $daysSinceLastPurchase = now()->diffInDays($row->last_purchase);
 
                     return [

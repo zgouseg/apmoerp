@@ -88,11 +88,15 @@ class ABCAnalysisService
                     ];
                 }
 
+                // FIX N+1 query: Load all products at once instead of individual queries
+                $productIds = $query->pluck('product_id')->unique()->filter();
+                $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
+
                 $categories = ['A' => [], 'B' => [], 'C' => []];
                 $cumulativePercentage = 0;
 
                 foreach ($query as $item) {
-                    $product = Product::find($item->product_id);
+                    $product = $products->get($item->product_id);
                     if (! $product) {
                         continue;
                     }
