@@ -41,6 +41,12 @@ class BackupService implements BackupServiceInterface
      */
     public function run(bool $verify = true, string $prefix = 'backup'): array
     {
+        // HIGH-001 FIX: Validate prefix to prevent path traversal attacks
+        // Only allow alphanumeric characters, underscores, and hyphens
+        if (! preg_match('/^[a-zA-Z0-9_-]+$/', $prefix)) {
+            throw new \InvalidArgumentException('Invalid backup prefix: only alphanumeric characters, underscores, and hyphens are allowed');
+        }
+
         return $this->handleServiceOperation(
             callback: function () use ($verify, $prefix) {
                 $filename = $prefix.'_'.now()->format('Ymd_His').'.sql.gz';

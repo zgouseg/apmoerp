@@ -268,7 +268,8 @@
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        // Livewire 4 FIX: Added livewire:navigated support for SPA navigation
+        function initSystemDashboardCharts() {
             const salesCtx = document.getElementById('systemSalesChart')?.getContext('2d');
             const contractsCtx = document.getElementById('systemContractsChart')?.getContext('2d');
 
@@ -311,6 +312,16 @@
                     }
                 });
             }
-        });
+        }
+
+        // Initialize on DOM ready (initial page load)
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initSystemDashboardCharts);
+        } else {
+            initSystemDashboardCharts();
+        }
+
+        // Re-initialize after Livewire SPA navigation
+        document.addEventListener('livewire:navigated', initSystemDashboardCharts);
     </script>
 @endpush

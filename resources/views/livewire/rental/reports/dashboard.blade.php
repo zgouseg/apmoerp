@@ -16,15 +16,11 @@
             </p>
         </div>
         <div class="flex items-center space-x-3">
-            {{-- TODO: Implement export routes --}}
-            {{-- <a href="{{ route('app.rental.reports.occupancy.export') }}"
-               class="erp-btn-primary">
-                Export Occupancy CSV
-            </a>
-            <a href="{{ route('app.rental.reports.contracts.expiring.export') }}"
-               class="erp-btn-primary">
-                Export Expiring Contracts CSV
-            </a> --}}
+            {{-- LOW-002 FIX: Export functionality not yet implemented - buttons removed --}}
+            {{-- Export routes need to be defined in routes/web.php before enabling:
+                 - Route::get('rental/reports/occupancy/export', [OccupancyReportController::class, 'export'])->name('app.rental.reports.occupancy.export');
+                 - Route::get('rental/reports/contracts/expiring/export', [ExpiringContractsController::class, 'export'])->name('app.rental.reports.contracts.expiring.export');
+            --}}
         </div>
     </div>
 
@@ -179,7 +175,9 @@
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        document.addEventListener('livewire:load', () => {
+        // Livewire 4 FIX: Use 'livewire:init' instead of deprecated 'livewire:load'
+        // Also added 'livewire:navigated' for SPA navigation support
+        function initRentalCharts() {
             const unitsCtx = document.getElementById('rentalUnitsChart')?.getContext('2d');
             const contractsCtx = document.getElementById('rentalContractsChart')?.getContext('2d');
 
@@ -219,6 +217,16 @@
                     }
                 });
             }
-        });
+        }
+
+        // Initialize on DOM ready (initial page load)
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initRentalCharts);
+        } else {
+            initRentalCharts();
+        }
+
+        // Re-initialize after Livewire SPA navigation
+        document.addEventListener('livewire:navigated', initRentalCharts);
     </script>
 @endpush

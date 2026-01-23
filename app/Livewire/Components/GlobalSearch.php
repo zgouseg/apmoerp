@@ -79,6 +79,24 @@ class GlobalSearch extends Component
 
     public function selectResult(string $url): void
     {
+        // CRIT-001 FIX: Prevent Open Redirect by validating URL is internal
+        // Only allow URLs that start with '/' and don't contain protocol indicators
+        if (
+            ! str_starts_with($url, '/') ||
+            str_starts_with($url, '//') ||
+            str_contains($url, '://') ||
+            str_contains($url, "\0")
+        ) {
+            abort(403, __('Invalid redirect URL'));
+        }
+
+        // Additional validation: ensure the URL path is in our results
+        $urlIsInResults = collect($this->results)->contains(fn ($result) => ($result['url'] ?? null) === $url);
+
+        if (! $urlIsInResults && ! empty($this->results)) {
+            abort(403, __('Redirect URL not found in search results'));
+        }
+
         $this->redirect($url, navigate: true);
     }
 

@@ -359,9 +359,32 @@ class DocumentService
             'File not found'
         );
 
-        $headers = ['Content-Type' => $document->mime_type];
+        // MED-004 FIX: Verify MIME type from actual file on storage instead of trusting DB
+        $storedMimeType = Storage::disk($disk)->mimeType($document->file_path);
+        $dbMimeType = $document->mime_type;
 
-        if ($inline) {
+        // Use storage-detected MIME if available, otherwise fall back to DB value
+        $mimeType = $storedMimeType ?: $dbMimeType;
+
+        // MED-004 FIX: Define safe MIME types that can be served inline
+        $safeInlineMimeTypes = [
+            'application/pdf',
+            'image/jpeg',
+            'image/png',
+            'image/gif',
+            'image/webp',
+        ];
+
+        // MED-004 FIX: Add security headers including nosniff
+        $headers = [
+            'Content-Type' => $mimeType,
+            'X-Content-Type-Options' => 'nosniff',
+        ];
+
+        // MED-004 FIX: Only allow inline display for safe MIME types
+        $isSafeForInline = in_array($mimeType, $safeInlineMimeTypes, true);
+
+        if ($inline && $isSafeForInline) {
             return Storage::disk($disk)->response(
                 $document->file_path,
                 $document->file_name,
@@ -405,9 +428,8 @@ class DocumentService
             'path' => $path,
         ]);
 
+        // LOW-001 FIX: abort() never returns, so removed unreachable return statement
         abort(503, 'File temporarily unavailable');
-
-        return $primaryDisk;
     }
 
     private function assertStoredMimeIsAllowed(UploadedFile $file, string $path, string $disk): void

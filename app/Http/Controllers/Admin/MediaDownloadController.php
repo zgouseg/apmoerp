@@ -46,13 +46,37 @@ class MediaDownloadController extends Controller
             ? basename($path)
             : ($media->original_name ?: $media->name);
 
+        // CRIT-002 FIX: Verify MIME type from actual file on storage instead of trusting DB
+        $storedMimeType = $disk->mimeType($path);
+        $dbMimeType = $media->mime_type ?? 'application/octet-stream';
+
+        // Use the storage-detected MIME type, fallback to DB if detection fails
+        $mimeType = $storedMimeType ?: $dbMimeType;
+
+        // CRIT-002 FIX: Define safe MIME types that can be served inline
+        $safeInlineMimeTypes = [
+            'image/jpeg',
+            'image/png',
+            'image/gif',
+            'image/webp',
+            'application/pdf',
+        ];
+
+        // CRIT-002 FIX: Use attachment disposition by default, only allow inline for safe types
+        $isSafeForInline = in_array($mimeType, $safeInlineMimeTypes, true);
+        $disposition = $isSafeForInline
+            ? HeaderUtils::DISPOSITION_INLINE
+            : HeaderUtils::DISPOSITION_ATTACHMENT;
+
         $headers = [
-            'Content-Type' => $media->mime_type ?? 'application/octet-stream',
+            'Content-Type' => $mimeType,
             'Content-Disposition' => HeaderUtils::makeDisposition(
-                HeaderUtils::DISPOSITION_INLINE,
+                $disposition,
                 $filename,
                 preg_replace('/[^\x20-\x7E]/', '_', $filename) ?? 'file'
             ),
+            // CRIT-002 FIX: Prevent MIME type sniffing attacks
+            'X-Content-Type-Options' => 'nosniff',
         ];
 
         $stream = $disk->readStream($path);

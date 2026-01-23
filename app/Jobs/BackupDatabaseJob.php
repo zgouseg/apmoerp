@@ -33,6 +33,12 @@ class BackupDatabaseJob implements ShouldQueue
 
     public function handle(): void
     {
+        // HIGH-001 FIX: Validate prefix to prevent path traversal attacks
+        // Only allow alphanumeric characters, underscores, and hyphens
+        if (! preg_match('/^[a-zA-Z0-9_-]+$/', $this->prefix)) {
+            throw new \InvalidArgumentException('Invalid backup prefix: only alphanumeric characters, underscores, and hyphens are allowed');
+        }
+
         // Get configured disk and path
         $diskName = (string) config('backup.disk', 'local');
         $backupDir = (string) config('backup.dir', 'backups');

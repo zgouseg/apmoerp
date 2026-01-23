@@ -16,15 +16,11 @@
             </p>
         </div>
         <div class="flex items-center space-x-3">
-            {{-- TODO: Implement export routes --}}
-            {{-- <a href="{{ route('app.hrm.reports.attendance.export') }}"
-               class="erp-btn-primary">
-                Export Attendance CSV
-            </a>
-            <a href="{{ route('app.hrm.reports.payroll.export') }}"
-               class="erp-btn-primary">
-                Export Payroll CSV
-            </a> --}}
+            {{-- LOW-002 FIX: Export functionality not yet implemented - buttons removed --}}
+            {{-- Export routes need to be defined in routes/web.php before enabling:
+                 - Route::get('hrm/reports/attendance/export', [AttendanceReportController::class, 'export'])->name('app.hrm.reports.attendance.export');
+                 - Route::get('hrm/reports/payroll/export', [PayrollReportController::class, 'export'])->name('app.hrm.reports.payroll.export');
+            --}}
         </div>
     </div>
 
@@ -172,7 +168,9 @@
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        document.addEventListener('livewire:load', () => {
+        // Livewire 4 FIX: Use 'livewire:init' instead of deprecated 'livewire:load'
+        // Also added 'livewire:navigated' for SPA navigation support
+        function initHRMCharts() {
             const attendanceCtx = document.getElementById('hrmAttendanceChart')?.getContext('2d');
             const payrollCtx = document.getElementById('hrmPayrollChart')?.getContext('2d');
 
@@ -218,6 +216,16 @@
                     }
                 });
             }
-        });
+        }
+
+        // Initialize on DOM ready (initial page load)
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initHRMCharts);
+        } else {
+            initHRMCharts();
+        }
+
+        // Re-initialize after Livewire SPA navigation
+        document.addEventListener('livewire:navigated', initHRMCharts);
     </script>
 @endpush

@@ -36,8 +36,10 @@ class DynamicForm extends Component
         'pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt',
     ];
 
-    // Whitelist of allowed storage disks for security
-    private array $allowedDisks = ['local', 'private'];
+    // HIGH-004 FIX: Whitelist of allowed storage disks for security
+    // Removed 'private' as it's not defined in config/filesystems.php
+    // Available disks: 'local' (private storage), 'public', 's3'
+    private array $allowedDisks = ['local'];
 
     public function mount(
         array $schema = [],
@@ -174,46 +176,98 @@ class DynamicForm extends Component
 
     /**
      * Validate file upload against server-side security rules (BUG-003 fix)
+     * MED-001 FIX: Use server-detected extension/MIME instead of client-provided values
+     * MED-002 FIX: Check file size before reading content to prevent DoS
      */
     private function validateFileUpload($file, array $field): void
     {
-        // Get allowed MIME types from field or use default
-        $allowedMimes = $field['mimes'] ?? $this->defaultFileMimes;
-
-        // Get file extension
-        $extension = strtolower($file->getClientOriginalExtension());
-
-        // Security: Block potentially dangerous file types
-        $blockedExtensions = ['php', 'phtml', 'php3', 'php4', 'php5', 'phar', 'exe', 'sh', 'bat', 'cmd', 'com'];
-        if (in_array($extension, $blockedExtensions, true)) {
-            $validator = validator([], []);
-            $validator->errors()->add('file', 'This file type is not allowed for security reasons.');
-            throw new \Illuminate\Validation\ValidationException($validator);
-        }
-
-        // Security: Check MIME type matches allowed types
-        if (! in_array($extension, $allowedMimes, true)) {
-            $validator = validator([], []);
-            $validator->errors()->add('file', 'Only the following file types are allowed: '.implode(', ', $allowedMimes));
-            throw new \Illuminate\Validation\ValidationException($validator);
-        }
-
-        // Security: Scan for HTML/script content in uploads
-        if (in_array($extension, ['html', 'htm', 'svg'], true)) {
-            $content = file_get_contents($file->getRealPath());
-            if (preg_match('/<script|<iframe|javascript:|onerror=/i', $content)) {
-                $validator = validator([], []);
-                $validator->errors()->add('file', 'File contains potentially malicious content.');
-                throw new \Illuminate\Validation\ValidationException($validator);
-            }
-        }
-
-        // Security: Enforce max file size
+        // MED-002 FIX: Check file size FIRST to prevent memory exhaustion on large files
         $maxSize = ($field['max'] ?? 10240) * 1024; // Convert KB to bytes
         if ($file->getSize() > $maxSize) {
             $validator = validator([], []);
-            $validator->errors()->add('file', 'File size exceeds maximum allowed size.');
+            $validator->errors()->add('file', __('File size exceeds maximum allowed size.'));
             throw new \Illuminate\Validation\ValidationException($validator);
+        }
+
+        // Get allowed extensions from field or use default
+        $allowedExtensions = $field['mimes'] ?? $this->defaultFileMimes;
+
+        // MED-001 FIX: Use server-detected extension instead of client-provided
+        // $file->extension() uses the Symfony guesser based on file content
+        $serverExtension = strtolower($file->extension() ?: '');
+        $clientExtension = strtolower($file->getClientOriginalExtension());
+
+        // Security: Block potentially dangerous file types (check both server and client extensions)
+        $blockedExtensions = ['php', 'phtml', 'php3', 'php4', 'php5', 'phar', 'exe', 'sh', 'bat', 'cmd', 'com'];
+        if (in_array($serverExtension, $blockedExtensions, true) || in_array($clientExtension, $blockedExtensions, true)) {
+            $validator = validator([], []);
+            $validator->errors()->add('file', __('This file type is not allowed for security reasons.'));
+            throw new \Illuminate\Validation\ValidationException($validator);
+        }
+
+        // MED-001 FIX: Validate using server-detected MIME type as primary check
+        $serverMimeType = $file->getMimeType();
+
+        // Build a map of allowed MIME types from extensions for validation
+        $extensionToMimeMap = [
+            'pdf' => ['application/pdf'],
+            'png' => ['image/png'],
+            'jpg' => ['image/jpeg'],
+            'jpeg' => ['image/jpeg'],
+            'gif' => ['image/gif'],
+            'webp' => ['image/webp'],
+            'doc' => ['application/msword'],
+            'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+            'xls' => ['application/vnd.ms-excel'],
+            'xlsx' => ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+            'csv' => ['text/csv', 'text/plain', 'application/csv'],
+            'txt' => ['text/plain'],
+            'html' => ['text/html'],
+            'htm' => ['text/html'],
+            'svg' => ['image/svg+xml'],
+        ];
+
+        // Collect all allowed MIME types based on allowed extensions
+        $allowedMimeTypes = [];
+        foreach ($allowedExtensions as $ext) {
+            if (isset($extensionToMimeMap[$ext])) {
+                $allowedMimeTypes = array_merge($allowedMimeTypes, $extensionToMimeMap[$ext]);
+            }
+        }
+        $allowedMimeTypes = array_unique($allowedMimeTypes);
+
+        // Validate server-detected MIME type if we have a mapping
+        if (! empty($allowedMimeTypes) && $serverMimeType && ! in_array($serverMimeType, $allowedMimeTypes, true)) {
+            $validator = validator([], []);
+            $validator->errors()->add('file', __('Only the following file types are allowed: :types', ['types' => implode(', ', $allowedExtensions)]));
+            throw new \Illuminate\Validation\ValidationException($validator);
+        }
+
+        // Fallback: also validate extension is in allowed list
+        if (! in_array($serverExtension, $allowedExtensions, true) && ! in_array($clientExtension, $allowedExtensions, true)) {
+            $validator = validator([], []);
+            $validator->errors()->add('file', __('Only the following file types are allowed: :types', ['types' => implode(', ', $allowedExtensions)]));
+            throw new \Illuminate\Validation\ValidationException($validator);
+        }
+
+        // MED-003 FIX: Only scan HTML/SVG content if these types are actually allowed
+        // Check if HTML/SVG types are in allowed extensions before scanning
+        $htmlSvgExtensions = ['html', 'htm', 'svg'];
+        $htmlSvgAllowed = ! empty(array_intersect($htmlSvgExtensions, $allowedExtensions));
+
+        if ($htmlSvgAllowed && (in_array($serverExtension, $htmlSvgExtensions, true) || in_array($clientExtension, $htmlSvgExtensions, true))) {
+            // Read only first 8KB to check for malicious content (sufficient for header scanning)
+            $handle = fopen($file->getRealPath(), 'rb');
+            if ($handle) {
+                $content = fread($handle, 8192);
+                fclose($handle);
+
+                if ($content && preg_match('/<script|<iframe|javascript:|onerror=|onload=/i', $content)) {
+                    $validator = validator([], []);
+                    $validator->errors()->add('file', __('File contains potentially malicious content.'));
+                    throw new \Illuminate\Validation\ValidationException($validator);
+                }
+            }
         }
     }
 

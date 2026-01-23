@@ -121,8 +121,12 @@ return [
     | Automatically inject JavaScript and CSS into pages with Livewire components.
     | When false, you need to use @livewireStyles and @livewireScripts.
     |
+    | Livewire 4 FIX: Set to false since layouts/app.blade.php uses manual
+    | @livewireStyles and @livewireScripts directives. Using both causes
+    | duplicate Livewire/Alpine initialization warnings and inconsistent behavior.
+    |
     */
-    'inject_assets' => true,
+    'inject_assets' => false,
 
     /*
     |---------------------------------------------------------------------------
