@@ -304,7 +304,13 @@ async function cacheFirstWithNetwork(request, cacheName) {
         return networkResponse;
     } catch (error) {
         console.warn('[SW] Cache-first failed:', error);
-        return Response.error();
+        if (request.headers.get('accept')?.includes('text/html')) {
+            const offlineResponse = await caches.match('/offline.html');
+            if (offlineResponse) {
+                return offlineResponse;
+            }
+        }
+        return new Response('Offline', { status: 504, statusText: 'Offline' });
     }
 }
 
