@@ -21,19 +21,18 @@ return new class extends Migration
         Schema::create('user_preferences', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')
+                ->unique('uq_usrpref_user_id')
                 ->constrained('users')
                 ->cascadeOnDelete()
                 ->name('fk_usrpref_user__usr');
-            $table->string('preference_key', 100);
-            $table->text('preference_value')->nullable();
-            $table->string('preference_type', 30)->default('string');
-            $table->boolean('is_encrypted')->default(false);
-            $table->json('metadata')->nullable();
-            $table->json('settings')->nullable();
-            $table->json('extra_attributes')->nullable();
+            $table->string('theme', 20)->default('light');
+            $table->unsignedSmallInteger('session_timeout')->default(30);
+            $table->boolean('auto_logout')->default(true);
+            $table->string('default_printer', 100)->nullable();
+            $table->json('dashboard_widgets')->nullable();
+            $table->json('pos_shortcuts')->nullable();
+            $table->json('notification_settings')->nullable();
             $table->timestamps();
-
-            $table->unique(['user_id', 'preference_key'], 'uq_usrpref_user_key');
         });
 
         // User favorites
