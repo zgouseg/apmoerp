@@ -19,13 +19,15 @@ class LivewireViewValidator
     private $baseDir;
     private $viewsDir;
     private $errors = [];
-    private $warnings = [];
     
     // ANSI color codes
     const COLOR_INFO = "\033[0;36m";
     const COLOR_SUCCESS = "\033[0;32m";
     const COLOR_ERROR = "\033[0;31m";
     const COLOR_RESET = "\033[0m";
+    
+    // Preview length for error messages
+    const PREVIEW_LENGTH = 100;
     
     public function __construct()
     {
@@ -94,8 +96,8 @@ class LivewireViewValidator
         
         // Check if content starts with an HTML opening tag
         if (!preg_match('/^<(\w+)([^>]*)>/', $contentWithoutScript, $openMatch)) {
-            // Get first 100 chars to show what it starts with
-            $preview = substr($contentWithoutScript, 0, 100);
+            // Get preview to show what it starts with
+            $preview = substr($contentWithoutScript, 0, self::PREVIEW_LENGTH);
             return [
                 'valid' => false,
                 'reason' => "Does not start with HTML tag. Starts with: " . $preview
@@ -116,8 +118,8 @@ class LivewireViewValidator
         // Check if content ends with the corresponding closing tag
         $pattern = '/<\/' . preg_quote($tagName, '/') . '>\s*$/';
         if (!preg_match($pattern, $contentWithoutScript)) {
-            // Get last 100 chars to show what it ends with
-            $preview = substr($contentWithoutScript, -100);
+            // Get preview to show what it ends with
+            $preview = substr($contentWithoutScript, -self::PREVIEW_LENGTH);
             return [
                 'valid' => false,
                 'reason' => "Does not end with </{$tagName}>. Ends with: " . $preview
