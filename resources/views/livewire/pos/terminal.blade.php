@@ -401,7 +401,7 @@
             </button>
         </div>
     </div>
-</div>
+
 
 @script
 // UNFIXED-01 FIX: Use @script block for proper Livewire 4 component-scoped JavaScript
@@ -729,3 +729,4 @@ function erpPosTerminal(config) {
     };
 }
 @endscript
+</div>

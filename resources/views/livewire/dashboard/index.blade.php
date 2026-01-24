@@ -392,7 +392,6 @@
             </div>
         </div>
     </div>
-</div>
 
 @script
 // UNFIXED-01 FIX: Use @script block for proper Livewire 4 component-scoped JavaScript
@@ -510,3 +509,4 @@ document.addEventListener('livewire:navigating', () => {
     });
 }, { once: true });
 @endscript
+</div>
