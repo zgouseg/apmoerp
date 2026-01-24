@@ -334,7 +334,7 @@ window.erpClearServiceWorkerCache = async function() {
                 }
                 // Auto-refresh after a short delay
                 setTimeout(() => {
-                    window.location.reload(true);
+                    window.location.reload();
                 }, 1500);
             }
         } catch (error) {
