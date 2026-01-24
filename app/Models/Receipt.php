@@ -10,65 +10,49 @@ class Receipt extends BaseModel
 {
     protected ?string $moduleKey = 'finance';
 
-    protected $table = 'receipts';
-
     /**
      * Fillable fields aligned with migration:
-     * 2026_01_04_000001_create_sales_tables.php
+     * 2026_01_04_000005_create_sales_purchases_tables.php
      */
     protected $fillable = [
         'sale_id',
-        'branch_id',
-        'code',
+        'payment_id',
+        'receipt_number',
         'amount',
-        'receipt_date',
-        'payment_method',
-        'extra_attributes',
-        'created_by',
+        'type',
+        'printed_at',
+        'print_data',
     ];
 
     protected $casts = [
         'amount' => 'decimal:4',
-        'receipt_date' => 'datetime',
-        'extra_attributes' => 'array',
+        'printed_at' => 'datetime',
+        'print_data' => 'array',
     ];
-
-    /**
-     * Backward compatibility accessor for receipt_number
-     */
-    public function getReceiptNumberAttribute()
-    {
-        return $this->code;
-    }
 
     public function sale(): BelongsTo
     {
         return $this->belongsTo(Sale::class);
     }
 
-    public function createdBy(): BelongsTo
+    public function payment(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'created_by');
-    }
-
-    public function branch(): BelongsTo
-    {
-        return $this->belongsTo(Branch::class);
+        return $this->belongsTo(SalePayment::class, 'payment_id');
     }
 
     // Backward compatibility accessors
     public function getReferenceAttribute()
     {
-        return $this->code;
+        return $this->receipt_number;
     }
 
     public function getMethodAttribute()
     {
-        return $this->payment_method;
+        return $this->payment?->payment_method;
     }
 
     public function getPaidAtAttribute()
     {
-        return $this->receipt_date ?? $this->created_at;
+        return $this->payment?->payment_date ?? $this->created_at;
     }
 }

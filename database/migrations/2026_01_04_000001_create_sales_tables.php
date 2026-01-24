@@ -255,27 +255,21 @@ return new class extends Migration
                 ->constrained('sales')
                 ->nullOnDelete()
                 ->name('fk_rcpt_sale__sale');
-            $table->foreignId('branch_id')
-                ->constrained('branches')
-                ->cascadeOnDelete()
-                ->name('fk_rcpt_branch__brnch');
-            $table->string('code', 50);
-            $table->decimal('amount', 18, 4);
-            $table->timestamp('receipt_date');
-            $table->string('payment_method', 50)->nullable();
-            $table->json('extra_attributes')->nullable();
-            $table->foreignId('created_by')
+            $table->foreignId('payment_id')
                 ->nullable()
-                ->constrained('users')
+                ->constrained('sale_payments')
                 ->nullOnDelete()
-                ->name('fk_rcpt_created_by__usr');
+                ->name('fk_rcpt_payment__pmt');
+            $table->string('receipt_number', 50);
+            $table->decimal('amount', 18, 4);
+            $table->string('type', 30)->default('sale'); // sale, refund, payment
+            $table->timestamp('printed_at')->nullable();
+            $table->json('print_data')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
-            $table->unique(['branch_id', 'code'], 'uq_rcpt_branch_code');
-            $table->index('branch_id', 'idx_rcpt_branch_id');
             $table->index('sale_id', 'idx_rcpt_sale_id');
-            $table->index('receipt_date', 'idx_rcpt_date');
+            $table->index('payment_id', 'idx_rcpt_payment_id');
         });
 
         // Deliveries
@@ -285,30 +279,26 @@ return new class extends Migration
                 ->constrained('sales')
                 ->cascadeOnDelete()
                 ->name('fk_dlv_sale__sale');
-            $table->foreignId('branch_id')
-                ->constrained('branches')
-                ->cascadeOnDelete()
-                ->name('fk_dlv_branch__brnch');
-            $table->string('code', 50);
+            $table->string('reference_number', 50);
             $table->string('status', 30)->default('pending'); // pending, in_transit, delivered, failed
             $table->date('scheduled_date')->nullable();
             $table->date('delivery_date')->nullable();
             $table->text('delivery_address')->nullable();
+            $table->string('recipient_name', 191)->nullable();
+            $table->string('recipient_phone', 50)->nullable();
             $table->string('driver_name', 191)->nullable();
-            $table->string('driver_phone', 50)->nullable();
             $table->string('vehicle_number', 50)->nullable();
-            $table->decimal('delivery_cost', 18, 4)->default(0);
+            $table->decimal('shipping_cost', 18, 4)->default(0);
             $table->text('notes')->nullable();
-            $table->foreignId('created_by')
+            $table->string('signature_image', 500)->nullable();
+            $table->foreignId('delivered_by')
                 ->nullable()
                 ->constrained('users')
                 ->nullOnDelete()
-                ->name('fk_dlv_created_by__usr');
+                ->name('fk_dlv_delivered_by__usr');
             $table->timestamps();
             $table->softDeletes();
 
-            $table->unique(['branch_id', 'code'], 'uq_dlv_branch_code');
-            $table->index('branch_id', 'idx_dlv_branch_id');
             $table->index('sale_id', 'idx_dlv_sale_id');
             $table->index('status', 'idx_dlv_status');
             $table->index('scheduled_date', 'idx_dlv_scheduled');
