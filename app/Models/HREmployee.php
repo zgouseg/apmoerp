@@ -24,12 +24,8 @@ class HREmployee extends BaseModel
         'user_id',
         'code',
         'name',
-        'employee_code',
+        'name_ar',
         // Personal info
-        'first_name',
-        'last_name',
-        'first_name_ar',
-        'last_name_ar',
         'email',
         'phone',
         'mobile',
@@ -172,7 +168,7 @@ class HREmployee extends BaseModel
 
     public function getFullNameArAttribute(): string
     {
-        return trim(($this->first_name_ar ?? '').' '.($this->last_name_ar ?? ''));
+        return $this->name_ar ?? '';
     }
 
     protected static function booted(): void
@@ -183,16 +179,6 @@ class HREmployee extends BaseModel
                 $employee->code = 'EMP-'.Str::upper(Str::random(8));
             }
             
-            // Sync employee_code with code for backward compatibility
-            if (empty($employee->employee_code)) {
-                $employee->employee_code = $employee->code;
-            }
-            
-            // Auto-generate name from first_name and last_name
-            if (empty($employee->name) && ($employee->first_name || $employee->last_name)) {
-                $employee->name = trim(($employee->first_name ?? '').' '.($employee->last_name ?? ''));
-            }
-            
             // Sync is_active with status on creation
             if (isset($employee->status)) {
                 $employee->is_active = ($employee->status === 'active');
@@ -200,16 +186,6 @@ class HREmployee extends BaseModel
         });
 
         static::updating(function (self $employee): void {
-            // Sync employee_code with code if code changed
-            if ($employee->isDirty('code')) {
-                $employee->employee_code = $employee->code;
-            }
-            
-            // Auto-update name if first_name or last_name changed
-            if ($employee->isDirty(['first_name', 'last_name'])) {
-                $employee->name = trim(($employee->first_name ?? '').' '.($employee->last_name ?? ''));
-            }
-            
             // Sync is_active with status on update
             if ($employee->isDirty('status')) {
                 $employee->is_active = ($employee->status === 'active');

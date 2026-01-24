@@ -55,13 +55,9 @@ return new class extends Migration
                 ->constrained('users')
                 ->nullOnDelete()
                 ->name('fk_hremp_user__usr');
-            $table->string('code', 50); // Employee code (searchable)
+            $table->string('code', 50)->unique(); // Employee code (searchable, unique)
             $table->string('name', 255); // Full employee name (searchable)
-            $table->string('employee_code', 50);
-            $table->string('first_name', 100);
-            $table->string('last_name', 100);
-            $table->string('first_name_ar', 100)->nullable();
-            $table->string('last_name_ar', 100)->nullable();
+            $table->string('name_ar', 255)->nullable(); // Full Arabic name
             $table->string('email', 191)->nullable();
             $table->string('phone', 50)->nullable();
             $table->string('mobile', 50)->nullable();
@@ -116,7 +112,6 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->unique(['branch_id', 'code'], 'uq_hremp_branch_code');
             $table->index('branch_id', 'idx_hremp_branch_id');
             $table->index('user_id', 'idx_hremp_user_id');
             $table->index('department', 'idx_hremp_department');
