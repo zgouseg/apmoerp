@@ -132,7 +132,7 @@
             </div>
         </div>
     </div>
-</div>
+
 
 @script
     // NEW-01 FIX: Use Livewire's component-scoped cleanup mechanism
@@ -165,3 +165,4 @@
     // Listen for navigation events to clean up
     document.addEventListener('livewire:navigating', cleanup, { once: true });
 @endscript
+</div>

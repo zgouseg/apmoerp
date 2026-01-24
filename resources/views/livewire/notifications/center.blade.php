@@ -119,7 +119,7 @@
             {{ $items->links() }}
         </div>
     </div>
-</div>
+
 
 @script
     // Livewire 4 FIX: Wrap with @script for proper execution timing across SPA navigation
@@ -131,3 +131,4 @@
             });
     }
 @endscript
+</div>
