@@ -21,6 +21,12 @@ class LivewireViewValidator
     private $errors = [];
     private $warnings = [];
     
+    // ANSI color codes
+    const COLOR_INFO = "\033[0;36m";
+    const COLOR_SUCCESS = "\033[0;32m";
+    const COLOR_ERROR = "\033[0;31m";
+    const COLOR_RESET = "\033[0m";
+    
     public function __construct()
     {
         $this->baseDir = dirname(__DIR__);
@@ -73,7 +79,7 @@ class LivewireViewValidator
         $content = preg_replace('/\{\{--.*?--\}\}/s', '', $content);
         
         // Remove @script sections for validation (they're allowed outside root)
-        $contentWithoutScript = preg_replace('/@script.*?@endscript/s', '', $content);
+        $contentWithoutScript = preg_replace('/@script\b.*?@endscript\b/s', '', $content);
         
         // Trim whitespace
         $contentWithoutScript = trim($contentWithoutScript);
@@ -129,7 +135,7 @@ class LivewireViewValidator
         );
         
         foreach ($iterator as $file) {
-            if ($file->isFile() && $file->getExtension() === 'php') {
+            if ($file->isFile() && substr($file->getFilename(), -10) === '.blade.php') {
                 $files[] = $file->getPathname();
             }
         }
@@ -139,17 +145,17 @@ class LivewireViewValidator
     
     private function info($message)
     {
-        echo "\033[0;36m{$message}\033[0m\n";
+        echo self::COLOR_INFO . $message . self::COLOR_RESET . "\n";
     }
     
     private function success($message)
     {
-        echo "\033[0;32m{$message}\033[0m\n";
+        echo self::COLOR_SUCCESS . $message . self::COLOR_RESET . "\n";
     }
     
     private function error($message)
     {
-        echo "\033[0;31m{$message}\033[0m\n";
+        echo self::COLOR_ERROR . $message . self::COLOR_RESET . "\n";
     }
 }
 

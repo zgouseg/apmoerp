@@ -38,5 +38,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '❌ **Livewire View Validation Failed**\n\nOne or more Livewire views are missing a root HTML tag. Please check the error log above for details.\n\n📚 See [Livewire Root Tag Documentation](../blob/main/docs/LIVEWIRE_ROOT_TAG.md) for more information.'
+              body: '❌ **Livewire View Validation Failed**\n\nOne or more Livewire views are missing a root HTML tag. Please check the error log above for details.\n\n📚 See [Livewire Root Tag Documentation](https://github.com/${{ github.repository }}/blob/main/docs/LIVEWIRE_ROOT_TAG.md) for more information.'
             })
