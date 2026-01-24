@@ -321,6 +321,28 @@ window.addEventListener('offline', () => {
     }
 });
 
+// Utility function to clear service worker cache (for debugging/troubleshooting)
+window.erpClearServiceWorkerCache = async function() {
+    if ('serviceWorker' in navigator) {
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            if (registration.active) {
+                registration.active.postMessage({ type: 'CLEAR_CACHE' });
+                console.log('[ERP] Service worker cache cleared');
+                if (window.erpShowNotification) {
+                    window.erpShowNotification('Cache cleared. Please refresh the page.', 'success');
+                }
+                // Auto-refresh after a short delay
+                setTimeout(() => {
+                    window.location.reload(true);
+                }, 1500);
+            }
+        } catch (error) {
+            console.error('[ERP] Failed to clear service worker cache:', error);
+        }
+    }
+};
+
 // Global Keyboard Shortcuts
 const KeyboardShortcuts = {
     shortcuts: {},
