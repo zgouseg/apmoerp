@@ -17,30 +17,45 @@ class Delivery extends BaseModel
 
     /**
      * Fillable fields aligned with migration:
-     * 2026_01_04_000005_create_sales_purchases_tables.php
+     * 2026_01_04_000001_create_sales_tables.php
      */
     protected $fillable = [
         'sale_id',
-        'reference_number',
+        'branch_id',
+        'code',
         'status',
         'scheduled_date',
         'delivery_date',
         'delivery_address',
-        'recipient_name',
-        'recipient_phone',
         'driver_name',
+        'driver_phone',
         'vehicle_number',
-        'shipping_cost',
+        'delivery_cost',
         'notes',
-        'signature_image',
-        'delivered_by',
+        'created_by',
     ];
 
     protected $casts = [
         'scheduled_date' => 'date',
         'delivery_date' => 'date',
-        'shipping_cost' => 'decimal:4',
+        'delivery_cost' => 'decimal:4',
     ];
+
+    /**
+     * Backward compatibility accessor for reference_number
+     */
+    public function getReferenceNumberAttribute()
+    {
+        return $this->code;
+    }
+
+    /**
+     * Backward compatibility accessor for shipping_cost
+     */
+    public function getShippingCostAttribute()
+    {
+        return $this->delivery_cost;
+    }
 
     public function sale(): BelongsTo
     {
@@ -49,7 +64,7 @@ class Delivery extends BaseModel
 
     public function deliveredByUser(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'delivered_by');
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     // Backward compatibility accessors
