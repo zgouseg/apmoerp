@@ -52,8 +52,8 @@ class StockAlerts extends Component
         if ($this->search) {
             $query->where(function ($q) {
                 $q->where('products.name', 'like', "%{$this->search}%")
-                    ->orWhere('products.sku', 'like', "%{$this->search}%")
-                    ->orWhere('products.barcode', 'like', "%{$this->search}%");
+                    ->orWhere('products.code', 'like', "%{$this->search}%")
+                    ->orWhere('products.sku', 'like', "%{$this->search}%");
             });
         }
 

@@ -70,7 +70,7 @@
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-4 py-3 text-start text-xs font-medium text-gray-500 uppercase">{{ __('SKU') }}</th>
+                        <th class="px-4 py-3 text-start text-xs font-medium text-gray-500 uppercase">{{ __('Code') }}</th>
                         <th class="px-4 py-3 text-start text-xs font-medium text-gray-500 uppercase">{{ __('Name') }}</th>
                         <th class="px-4 py-3 text-start text-xs font-medium text-gray-500 uppercase">{{ __('Cost') }}</th>
                         <th class="px-4 py-3 text-start text-xs font-medium text-gray-500 uppercase">{{ __('Price') }}</th>
@@ -82,7 +82,7 @@
                     @forelse($reportData as $product)
                         <tr class="hover:bg-gray-50">
                             <td class="px-4 py-3 whitespace-nowrap">
-                                <code class="text-sm bg-gray-100 px-2 py-1 rounded">{{ $product['sku'] ?? '-' }}</code>
+                                <code class="text-sm bg-gray-100 px-2 py-1 rounded">{{ $product['code'] ?? '-' }}</code>
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap">
                                 <div class="text-sm font-medium text-gray-900">{{ $product['name'] ?? '-' }}</div>

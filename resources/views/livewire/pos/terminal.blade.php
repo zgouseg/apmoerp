@@ -130,7 +130,7 @@
                                 x-on:click="addProduct(product)"
                                 class="flex flex-col items-start rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-emerald-50 px-3 py-2 text-start text-xs text-slate-800 shadow-sm shadow-emerald-500/30 hover:border-emerald-300 hover:shadow-md">
                             <span class="font-semibold truncate" x-text="product.name ?? product.label ?? 'Item'"></span>
-                            <span class="mt-0.5 text-[0.7rem] text-slate-500 truncate" x-text="product.sku ?? ''"></span>
+                            <span class="mt-0.5 text-[0.7rem] text-slate-500 truncate" x-text="product.sku ?? product.code ?? ''"></span>
                             <span class="mt-1 text-[0.75rem] font-semibold text-emerald-700" x-text="(product.price ?? product.sale_price ?? 0).toFixed(2) + ' ' + (product.price_currency ?? 'EGP')"></span>
                         </button>
                     </template>
@@ -510,7 +510,7 @@ function erpPosTerminal(config) {
                 this.cart.push({
                     product_id: product.id ?? product.product_id,
                     name: product.name ?? product.label ?? 'Item',
-                    sku: product.sku ?? '',
+                    sku: product.sku ?? product.code ?? '',
                     qty: 1,
                     price: parseFloat(product.price ?? product.sale_price ?? 0),
                     discount: 0

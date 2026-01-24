@@ -81,7 +81,7 @@ class SlowMovingStockService
                 return [
                     'id' => $product->id,
                     'name' => $product->name,
-                    'sku' => $product->sku,
+                    'sku' => $product->sku ?? $product->code,
                     'stock_quantity' => $product->stock_quantity,
                     'stock_value' => decimal_float($stockValue, 4),
                     'days_since_sale' => $product->days_since_sale ?? 999,
@@ -123,7 +123,7 @@ class SlowMovingStockService
                 return [
                     'id' => $product->id,
                     'name' => $product->name,
-                    'sku' => $product->sku,
+                    'sku' => $product->sku ?? $product->code,
                     'stock_quantity' => $product->stock_quantity,
                     'expiry_date' => $product->expiry_date,
                     'days_to_expiry' => $daysToExpiry,
