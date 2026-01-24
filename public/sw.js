@@ -200,7 +200,7 @@ self.addEventListener('install', (event) => {
                     STATIC_ASSETS.map(url => {
                         return fetch(url)
                             .then(response => {
-                                if (response.ok) {
+                                if (response.ok && response.status === 200) {
                                     return cache.put(url, response);
                                 }
                                 return Promise.resolve();
@@ -297,14 +297,20 @@ async function cacheFirstWithNetwork(request, cacheName) {
         }
 
         const networkResponse = await fetch(request);
-        if (networkResponse.ok) {
+        if (networkResponse.ok && networkResponse.status === 200) {
             const cache = await caches.open(cacheName);
             cache.put(request, networkResponse.clone());
         }
         return networkResponse;
     } catch (error) {
         console.warn('[SW] Cache-first failed:', error);
-        return caches.match('/offline.html');
+        if (request.headers.get('accept')?.includes('text/html')) {
+            const offlineResponse = await caches.match('/offline.html');
+            if (offlineResponse) {
+                return offlineResponse;
+            }
+        }
+        return new Response('Offline', { status: 504, statusText: 'Offline' });
     }
 }
 
@@ -314,7 +320,7 @@ async function cacheFirstWithNetwork(request, cacheName) {
 async function networkFirstWithCache(request, cacheName) {
     try {
         const networkResponse = await fetch(request);
-        if (networkResponse.ok) {
+        if (networkResponse.ok && networkResponse.status === 200) {
             const cache = await caches.open(cacheName);
             cache.put(request, networkResponse.clone());
         }
@@ -364,7 +370,7 @@ async function networkFirstWithOffline(request) {
 async function updateCache(request, cacheName) {
     try {
         const networkResponse = await fetch(request);
-        if (networkResponse.ok) {
+        if (networkResponse.ok && networkResponse.status === 200) {
             const cache = await caches.open(cacheName);
             cache.put(request, networkResponse);
         }
