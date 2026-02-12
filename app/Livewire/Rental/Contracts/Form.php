@@ -405,7 +405,11 @@ class Form extends Component
 
         // Auto-generate contract number for new contracts
         if (! $contract->exists) {
-            $contract->contract_number = 'RC-' . strtoupper(\Illuminate\Support\Str::random(8));
+            $branchId = (int) $this->form['branch_id'];
+            $lastNumber = RentalContract::where('branch_id', $branchId)
+                ->withTrashed()
+                ->count() + 1;
+            $contract->contract_number = 'RC-' . str_pad((string) $lastNumber, 6, '0', STR_PAD_LEFT);
             $contract->created_by = Auth::id();
         }
 
