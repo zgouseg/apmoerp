@@ -24,6 +24,7 @@ return new class extends Migration
                 ->constrained('branches')
                 ->cascadeOnDelete()
                 ->name('fk_rtn_branch__brnch');
+            $table->string('reference_number', 50)->nullable();
             $table->foreignId('sale_id')
                 ->nullable()
                 ->constrained('sales')
@@ -34,19 +35,41 @@ return new class extends Migration
                 ->constrained('purchases')
                 ->nullOnDelete()
                 ->name('fk_rtn_purchase__purch');
+            $table->foreignId('customer_id')
+                ->nullable()
+                ->constrained('customers')
+                ->nullOnDelete()
+                ->name('fk_rtn_customer__cust');
+            $table->foreignId('supplier_id')
+                ->nullable()
+                ->constrained('suppliers')
+                ->nullOnDelete()
+                ->name('fk_rtn_supplier__supp');
+            $table->foreignId('warehouse_id')
+                ->nullable()
+                ->constrained('warehouses')
+                ->nullOnDelete()
+                ->name('fk_rtn_warehouse__wh');
             $table->string('code', 50);
             $table->string('type', 30); // sale_return, purchase_return
             $table->string('status', 30)->default('pending');
             $table->date('return_date');
             $table->text('reason')->nullable();
             $table->decimal('total_amount', 18, 4)->default(0);
+            $table->string('refund_method', 50)->nullable();
             $table->boolean('restock')->default(true);
+            $table->boolean('restock_items')->default(true);
             $table->text('notes')->nullable();
             $table->foreignId('created_by')
                 ->nullable()
                 ->constrained('users')
                 ->nullOnDelete()
                 ->name('fk_rtn_created_by__usr');
+            $table->foreignId('processed_by')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete()
+                ->name('fk_rtn_processed_by__usr');
             $table->timestamps();
             $table->softDeletes();
 

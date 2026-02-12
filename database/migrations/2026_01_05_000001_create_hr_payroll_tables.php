@@ -28,10 +28,15 @@ return new class extends Migration
             $table->string('name_ar', 100)->nullable();
             $table->time('start_time');
             $table->time('end_time');
+            $table->time('break_start')->nullable();
+            $table->time('break_end')->nullable();
             $table->unsignedSmallInteger('break_duration_minutes')->default(0);
+            $table->unsignedSmallInteger('late_grace_minutes')->default(0);
+            $table->unsignedSmallInteger('early_leave_grace_minutes')->default(0);
             $table->unsignedSmallInteger('grace_period_minutes')->default(0);
             $table->unsignedSmallInteger('overtime_threshold_minutes')->default(0);
             $table->decimal('overtime_multiplier', 4, 2)->default(1.5);
+            $table->decimal('overtime_rate', 4, 2)->default(1.5);
             $table->boolean('is_night_shift')->default(false);
             $table->boolean('is_active')->default(true);
             $table->json('working_days')->nullable();
@@ -218,18 +223,30 @@ return new class extends Migration
                 ->cascadeOnDelete()
                 ->name('fk_lvtyp_branch__brnch');
             $table->string('name', 100);
+            $table->string('code', 50)->nullable();
             $table->string('name_ar', 100)->nullable();
             $table->text('description')->nullable();
+            $table->string('unit', 30)->default('days');
             $table->decimal('default_days', 5, 2)->default(0);
+            $table->decimal('default_annual_quota', 5, 2)->default(0);
             $table->boolean('is_paid')->default(true);
             $table->boolean('requires_approval')->default(true);
             $table->boolean('requires_document')->default(false);
             $table->boolean('can_carry_forward')->default(false);
             $table->unsignedSmallInteger('max_carry_forward_days')->default(0);
+            $table->unsignedInteger('max_carry_forward')->default(0);
+            $table->boolean('carry_forward_expires')->default(false);
+            $table->unsignedInteger('carry_forward_expiry_months')->default(0);
             $table->unsignedSmallInteger('min_notice_days')->default(0);
             $table->unsignedSmallInteger('max_consecutive_days')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->unsignedInteger('sort_order')->default(0);
             $table->string('color', 20)->nullable();
+            $table->foreignId('created_by')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete()
+                ->name('fk_lvtyp_created_by__usr');
             $table->timestamps();
 
             $table->unique(['branch_id', 'name'], 'uq_lvtyp_branch_name');
@@ -316,6 +333,7 @@ return new class extends Migration
                 ->constrained('leave_types')
                 ->cascadeOnDelete()
                 ->name('fk_lvreq_type__lvtyp');
+            $table->string('leave_type', 100)->nullable();
             $table->date('start_date');
             $table->date('end_date');
             $table->decimal('days_count', 5, 2);

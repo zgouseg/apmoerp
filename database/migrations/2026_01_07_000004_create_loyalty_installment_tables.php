@@ -26,9 +26,14 @@ return new class extends Migration
                 ->name('fk_loyalset_branch__brnch');
             $table->string('setting_key', 100);
             $table->decimal('points_per_unit', 10, 2)->default(1);
+            $table->decimal('points_per_amount', 10, 2)->default(1);
             $table->decimal('unit_amount', 18, 4)->default(1);
+            $table->decimal('amount_per_point', 18, 4)->default(0);
             $table->decimal('redemption_value', 18, 4)->default(0);
+            $table->decimal('redemption_rate', 18, 4)->default(0);
+            $table->unsignedInteger('min_points_redeem')->default(0);
             $table->unsignedSmallInteger('expiry_days')->nullable();
+            $table->unsignedSmallInteger('points_expiry_days')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 
@@ -46,6 +51,12 @@ return new class extends Migration
                 ->constrained('branches')
                 ->cascadeOnDelete()
                 ->name('fk_loyaltxn_branch__brnch');
+            $table->foreignId('sale_id')
+                ->nullable()
+                ->constrained('sales')
+                ->nullOnDelete()
+                ->name('fk_loyaltxn_sale__sale');
+            $table->string('type', 30)->nullable();
             $table->string('transaction_type', 30); // earn, redeem, expire, adjustment
             $table->integer('points');
             $table->integer('balance_after')->default(0);
