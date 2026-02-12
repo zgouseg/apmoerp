@@ -47,6 +47,8 @@ class DailyReport extends Component
         $isSuperAdmin = $user->hasAnyRole(['Super Admin', 'super-admin']);
         if ($this->branchContextId) {
             $this->branchId = $this->branchContextId;
+        } elseif ($user->branch_id) {
+            $this->branchId = (int) $user->branch_id;
         } elseif (! $isSuperAdmin) {
             $branches = $this->branchAccessService->getUserBranches($user);
             $this->branchId = $branches->first()?->id;
