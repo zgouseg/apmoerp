@@ -39,7 +39,6 @@
                             isDark = !isDark;
                             document.documentElement.classList.toggle('dark', isDark);
                             localStorage.setItem('theme', isDark ? 'dark' : 'light');
-                            if (window.erpApplyTheme) window.erpApplyTheme();
                         "
                         class="p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                         aria-label="{{ __('Toggle dark mode') }}"

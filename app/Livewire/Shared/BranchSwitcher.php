@@ -162,7 +162,7 @@ class BranchSwitcher extends Component
         return view('livewire.shared.branch-switcher', [
             'branches' => $this->getBranches(),
             'canSwitch' => $this->canSwitchBranches(),
-            'selectedBranch' => $this->selectedBranch,
+            'selectedBranch' => $this->getSelectedBranchProperty(),
         ]);
     }
 }
