@@ -103,7 +103,7 @@ class WhatsAppService
     protected function buildInvoiceMessage(Sale $sale): string
     {
         $items = $sale->items->map(function ($item) {
-            return "• {$item->product->name} x{$item->qty} = ".number_format(decimal_float($item->line_total), 2);
+            return "• {$item->product?->name} x{$item->qty} = ".number_format(decimal_float($item->line_total), 2);
         })->join("\n");
 
         // V37-LOW-01 FIX: Use sale_date (business date) instead of created_at for accurate invoice date

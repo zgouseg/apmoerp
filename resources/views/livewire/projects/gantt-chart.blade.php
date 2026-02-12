@@ -85,7 +85,7 @@
                     <div class="flex bg-gray-50/50 dark:bg-gray-800/30">
                         {{-- Project Info --}}
                         <div class="w-72 shrink-0 p-3 border-r border-gray-200 dark:border-gray-700">
-                            <a href="{{ route('projects.show', $project['id']) }}" class="block">
+                            <a href="{{ route('app.projects.show', $project['id']) }}" class="block">
                                 <div class="flex items-center gap-2">
                                     <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
@@ -164,7 +164,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                         </svg>
                         <p class="mt-2 text-gray-500 dark:text-gray-400">{{ __('No projects in this period') }}</p>
-                        <a href="{{ route('projects.create') }}" class="mt-4 inline-block erp-btn erp-btn-primary text-sm">
+                        <a href="{{ route('app.projects.create') }}" class="mt-4 inline-block erp-btn erp-btn-primary text-sm">
                             {{ __('Create Project') }}
                         </a>
                     </div>

@@ -69,7 +69,7 @@
                 <div class="flex hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                     {{-- Order Info --}}
                     <div class="w-64 shrink-0 p-3 border-r border-gray-200 dark:border-gray-700">
-                        <a href="{{ route('manufacturing.production-orders.show', $order['id']) }}" class="block">
+                        <a href="{{ route('app.manufacturing.orders.edit', $order['id']) }}" class="block">
                             <div class="flex items-center gap-2">
                                 <span class="text-sm font-medium text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400">
                                     {{ $order['order_number'] }}
@@ -110,7 +110,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                     </svg>
                     <p class="mt-2 text-gray-500 dark:text-gray-400">{{ __('No production orders in this period') }}</p>
-                    <a href="{{ route('manufacturing.production-orders.create') }}" class="mt-4 inline-block erp-btn erp-btn-primary text-sm">
+                    <a href="{{ route('app.manufacturing.orders.create') }}" class="mt-4 inline-block erp-btn erp-btn-primary text-sm">
                         {{ __('Create Production Order') }}
                     </a>
                 </div>

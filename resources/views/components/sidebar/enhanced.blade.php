@@ -106,7 +106,7 @@
                 
                 @can('inventory.products.create')
                 <a 
-                    href="{{ route('inventory.products.create') }}"
+                    href="{{ route('app.inventory.products.create') }}"
                     class="flex items-center px-3 py-2 text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
                 >
                     <span class="text-lg">📦</span>

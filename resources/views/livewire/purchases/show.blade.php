@@ -7,7 +7,7 @@
         <div class="grid grid-cols-2 gap-6">
             <div>
                 <h3 class="font-semibold mb-2">{{ __('Supplier') }}</h3>
-                <p>{{ $purchase->supplier->name ?? __('N/A') }}</p>
+                <p>{{ $purchase->supplier?->name ?? __('N/A') }}</p>
             </div>
             <div>
                 <h3 class="font-semibold mb-2">{{ __('Date') }}</h3>
@@ -29,7 +29,7 @@
                 <tbody>
                     @foreach($purchase->items as $item)
                     <tr class="border-b">
-                        <td class="py-2">{{ $item->product->name ?? $item->product_name ?? __('N/A') }}</td>
+                        <td class="py-2">{{ $item->product?->name ?? $item->product_name ?? __('N/A') }}</td>
                         <td class="text-right">{{ $item->quantity }}</td>
                         <td class="text-right">{{ number_format($item->unit_price, 2) }}</td>
                         <td class="text-right">{{ number_format($item->line_total, 2) }}</td>

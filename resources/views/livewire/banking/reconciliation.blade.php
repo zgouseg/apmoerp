@@ -258,7 +258,7 @@
                         {{ __('Previous') }}
                     </button>
                 @else
-                    <a href="{{ route('banking.index') }}" class="erp-btn erp-btn-secondary">{{ __('Cancel') }}</a>
+                    <a href="{{ route('app.banking.index') }}" class="erp-btn erp-btn-secondary">{{ __('Cancel') }}</a>
                 @endif
             </div>
 
