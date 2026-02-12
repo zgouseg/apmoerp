@@ -7,24 +7,18 @@ use Livewire\Livewire;
 use App\Models\Product;
 use App\Models\Branch;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 
 /**
  * Product Export Test Suite
  * 
  * Tests product export functionality including code column.
+ * 
+ * Note: Base TestCase already uses RefreshDatabase and seeds the database.
+ * Do NOT add RefreshDatabase or migrate:fresh here - it causes VACUUM errors on SQLite.
  */
 class ProductExportTest extends TestCase
 {
-    use RefreshDatabase;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->artisan('migrate:fresh');
-        $this->seed();
-    }
 
     public function test_products_table_has_code_column(): void
     {
@@ -45,24 +39,47 @@ class ProductExportTest extends TestCase
         $this->assertArrayHasKey('code', $columns, 'Export should include code column');
     }
 
-    public function test_can_create_product_with_code(): void
+    public function test_can_create_product_with_auto_generated_code(): void
     {
         $admin = $this->createAdminUser();
         $branch = Branch::first();
 
-        $product = Product::create([
-            'branch_id' => $branch->id,
-            'name' => 'Test Product',
-            'code' => 'TEST-001',
+        $product = new Product();
+        $product->branch_id = $branch->id;
+        $product->name = 'Test Product';
+        $product->sku = 'SKU-001';
+        $product->status = 'active';
+        $product->created_by = $admin->id;
+        $product->save();
+
+        // Code should be auto-generated (starts with PRD-)
+        $this->assertNotNull($product->code, 'Product code should be auto-generated');
+        $this->assertStringStartsWith('PRD-', $product->code, 'Auto-generated code should start with PRD-');
+        $this->assertDatabaseHas('products', [
+            'id' => $product->id,
             'sku' => 'SKU-001',
-            'status' => 'active',
-            'created_by' => $admin->id,
         ]);
+    }
+
+    public function test_can_create_product_with_explicit_code(): void
+    {
+        $admin = $this->createAdminUser();
+        $branch = Branch::first();
+
+        // Use direct attribute set since 'code' is guarded against mass-assignment
+        $product = new Product();
+        $product->branch_id = $branch->id;
+        $product->name = 'Test Product';
+        $product->code = 'TEST-001';
+        $product->sku = 'SKU-002';
+        $product->status = 'active';
+        $product->created_by = $admin->id;
+        $product->save();
 
         $this->assertEquals('TEST-001', $product->code);
         $this->assertDatabaseHas('products', [
             'code' => 'TEST-001',
-            'sku' => 'SKU-001',
+            'sku' => 'SKU-002',
         ]);
     }
 
@@ -108,16 +125,15 @@ class ProductExportTest extends TestCase
 
         $branch = Branch::first();
 
-        // Create test products with code
+        // Create test products (code will be auto-generated since it's guarded)
         for ($i = 1; $i <= 10; $i++) {
-            Product::create([
-                'branch_id' => $branch->id,
-                'name' => "Product $i",
-                'code' => "PROD-$i",
-                'sku' => "SKU-$i",
-                'status' => 'active',
-                'created_by' => $admin->id,
-            ]);
+            $product = new Product();
+            $product->branch_id = $branch->id;
+            $product->name = "Product $i";
+            $product->sku = "SKU-$i";
+            $product->status = 'active';
+            $product->created_by = $admin->id;
+            $product->save();
         }
 
         try {
@@ -144,15 +160,15 @@ class ProductExportTest extends TestCase
 
         $branch = Branch::first();
 
-        // Create a product with code
-        $product = Product::create([
-            'branch_id' => $branch->id,
-            'name' => 'Test Export Product',
-            'code' => 'EXPORT-001',
-            'sku' => 'SKU-EXPORT-001',
-            'status' => 'active',
-            'created_by' => $admin->id,
-        ]);
+        // Create a product with explicit code (set directly, not via mass-assignment)
+        $product = new Product();
+        $product->branch_id = $branch->id;
+        $product->name = 'Test Export Product';
+        $product->code = 'EXPORT-001';
+        $product->sku = 'SKU-EXPORT-001';
+        $product->status = 'active';
+        $product->created_by = $admin->id;
+        $product->save();
 
         // Query products like export does
         $result = Product::query()
@@ -187,15 +203,15 @@ class ProductExportTest extends TestCase
 
         $branch = Branch::first();
 
-        // Create products
-        $product = Product::create([
-            'branch_id' => $branch->id,
-            'name' => 'Export Test',
-            'code' => 'EXP-TEST',
-            'sku' => 'SKU-EXP',
-            'status' => 'active',
-            'created_by' => $admin->id,
-        ]);
+        // Create product with explicit code
+        $product = new Product();
+        $product->branch_id = $branch->id;
+        $product->name = 'Export Test';
+        $product->code = 'EXP-TEST';
+        $product->sku = 'SKU-EXP';
+        $product->status = 'active';
+        $product->created_by = $admin->id;
+        $product->save();
 
         $exportService = app(\App\Services\ExportService::class);
         

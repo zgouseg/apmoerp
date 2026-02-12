@@ -116,15 +116,22 @@ class Index extends Component
         $cacheKey = 'income_stats_'.($user?->branch_id ?? 'all');
 
         return Cache::remember($cacheKey, 300, function () use ($user) {
-            // Use a single query with conditional aggregations to optimize DB queries
+            $month = now()->month;
+            $year = now()->year;
+
+            // Use DatabaseCompatibilityService for cross-DB month/year extraction
+            $dbCompat = app(\App\Services\DatabaseCompatibilityService::class);
+            $monthExpr = $dbCompat->monthExpression('income_date');
+            $yearExpr = $dbCompat->yearExpression('income_date');
+
             $stats = Income::query()
                 ->when($user && $user->branch_id, fn ($q) => $q->where('branch_id', $user->branch_id))
-                ->selectRaw('
+                ->selectRaw("
                     COUNT(*) as total_count,
                     COALESCE(SUM(amount), 0) as total_amount,
                     CASE WHEN COUNT(*) > 0 THEN AVG(amount) ELSE 0 END as avg_amount,
-                    COALESCE(SUM(CASE WHEN MONTH(income_date) = ? AND YEAR(income_date) = ? THEN amount ELSE 0 END), 0) as this_month
-                ', [now()->month, now()->year])
+                    COALESCE(SUM(CASE WHEN {$monthExpr} = ? AND {$yearExpr} = ? THEN amount ELSE 0 END), 0) as this_month
+                ", [$month, $year])
                 ->first();
 
             return [

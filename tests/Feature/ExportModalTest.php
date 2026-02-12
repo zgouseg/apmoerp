@@ -4,23 +4,17 @@ namespace Tests\Feature;
 
 use Tests\TestCase;
 use Livewire\Livewire;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 
 /**
  * Export Modal Functionality Test Suite
  * 
  * Tests that export modals open and close properly across all components.
+ * 
+ * Note: Base TestCase already uses RefreshDatabase and seeds the database.
+ * Do NOT add RefreshDatabase or migrate:fresh here - it causes VACUUM errors on SQLite.
  */
 class ExportModalTest extends TestCase
 {
-    use RefreshDatabase;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->artisan('migrate:fresh');
-        $this->seed();
-    }
 
     public function test_products_export_modal_opens_and_closes(): void
     {
@@ -154,21 +148,22 @@ class ExportModalTest extends TestCase
         $this->assertFileExists($viewPath, 'Export modal component should exist');
     }
 
-    public function test_export_modal_has_entangle_binding(): void
+    public function test_export_modal_has_wire_binding(): void
     {
         $viewPath = resource_path('views/components/export-modal.blade.php');
         $content = file_get_contents($viewPath);
         
+        // Livewire 4 uses $wire for component interaction (not @entangle)
         $this->assertStringContainsString(
-            '@entangle',
+            '$wire',
             $content,
-            'Export modal should use @entangle for proper Livewire/Alpine sync'
+            'Export modal should use $wire for Livewire 4 component interaction'
         );
         
         $this->assertStringContainsString(
-            'showExportModal',
+            'closeExportModal',
             $content,
-            'Export modal should bind to showExportModal property'
+            'Export modal should have closeExportModal binding'
         );
     }
 
