@@ -502,7 +502,7 @@ class ReportService implements ReportServiceInterface
                     ->select('branch_id', DB::raw('COUNT(*) as count'), DB::raw('SUM(amount) as total'))
                     ->whereIn('branch_id', $branches->pluck('id'))
                     ->whereNull('expenses.deleted_at')
-                    ->whereBetween('expense_date', [$dateFrom, $dateTo])
+                    ->whereBetween('expense_date', [$dateFrom->toDateString(), $dateTo->toDateString()])
                     ->groupBy('branch_id')
                     ->get()->keyBy('branch_id');
 

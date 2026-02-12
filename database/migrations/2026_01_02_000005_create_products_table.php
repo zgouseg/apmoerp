@@ -34,6 +34,10 @@ return new class extends Migration
                 ->nullOnDelete()
                 ->name('fk_prd_category__prdcat');
             
+            // Identity
+            $table->uuid('uuid')->nullable()->unique('uq_prd_uuid');
+            $table->string('code', 50)->nullable();
+
             // Basic info
             $table->string('name', 191);
             $table->string('sku', 100);

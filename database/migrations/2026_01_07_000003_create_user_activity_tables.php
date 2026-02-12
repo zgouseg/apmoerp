@@ -215,7 +215,7 @@ return new class extends Migration
             $table->string('module_key', 100)->nullable(); // NEW-005 FIX
             $table->string('subject_type', 191)->nullable(); // NEW-005 FIX
             $table->unsignedBigInteger('subject_id')->nullable(); // NEW-005 FIX
-            $table->string('event', 30); // created, updated, deleted, restored
+            $table->string('event', 30)->nullable(); // created, updated, deleted, restored
             $table->json('old_values')->nullable();
             $table->json('new_values')->nullable();
             $table->string('url', 500)->nullable();
