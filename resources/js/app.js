@@ -70,9 +70,15 @@ if (window.Echo && window.Laravel && window.Laravel.userId) {
 if (typeof window !== 'undefined') {
     window.erpApplyTheme = function () {
         try {
-            const saved = localStorage.getItem('erp_dark');
-            const isDark = saved === '1';
-            document.documentElement.classList.toggle('dark', isDark);
+            const saved = localStorage.getItem('theme');
+            if (saved === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else if (saved === 'system') {
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.documentElement.classList.toggle('dark', prefersDark);
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
         } catch (e) {}
     };
 
@@ -81,7 +87,7 @@ if (typeof window !== 'undefined') {
             const isDark = document.documentElement.classList.contains('dark');
             const next = !isDark;
             document.documentElement.classList.toggle('dark', next);
-            localStorage.setItem('erp_dark', next ? '1' : '0');
+            localStorage.setItem('theme', next ? 'dark' : 'light');
         } catch (e) {}
     };
 

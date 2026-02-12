@@ -54,8 +54,8 @@
                     <dt class="text-sm font-medium text-gray-500">{{ __('Status') }}</dt>
                     <dd class="mt-1">
                         <span class="px-2 py-1 text-xs font-semibold rounded-full
-                            {{ $product->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                            {{ $product->is_active ? __('Active') : __('Inactive') }}
+                            {{ $product->status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                            {{ $product->status === 'active' ? __('Active') : __('Inactive') }}
                         </span>
                     </dd>
                 </div>
@@ -63,10 +63,10 @@
         </div>
     </div>
 
-    @if($product->description)
+    @if($product->notes)
     <div class="mt-6 bg-white dark:bg-gray-800 shadow rounded-lg p-6">
         <h2 class="text-xl font-semibold mb-4">{{ __('Description') }}</h2>
-        <p class="text-gray-700 dark:text-gray-300">{{ $product->description }}</p>
+        <p class="text-gray-700 dark:text-gray-300">{{ $product->notes }}</p>
     </div>
     @endif
 

@@ -99,9 +99,19 @@ class RentalContract extends BaseModel
         return $this->rent_amount;
     }
 
+    public function setRentAttribute($value): void
+    {
+        $this->attributes['rent_amount'] = $value;
+    }
+
     public function getDepositAttribute()
     {
         return $this->deposit_amount;
+    }
+
+    public function setDepositAttribute($value): void
+    {
+        $this->attributes['deposit_amount'] = $value;
     }
 
     public function getRentalPeriodAttribute()

@@ -182,24 +182,28 @@ class Form extends Component
             $this->form['branch_id'] = (int) $model->branch_id;
             $this->form['unit_id'] = (int) $model->unit_id;
             $this->form['tenant_id'] = (int) $model->tenant_id;
-            $this->form['rental_period_id'] = $model->rental_period_id ? (int) $model->rental_period_id : null;
-            $this->form['custom_days'] = $model->custom_days ? (int) $model->custom_days : null;
             $this->form['start_date'] = $model->start_date ? $model->start_date->format('Y-m-d') : null;
             $this->form['end_date'] = $model->end_date ? $model->end_date->format('Y-m-d') : null;
-            $this->form['rent'] = decimal_float($model->rent);
-            $this->form['deposit'] = decimal_float($model->deposit);
+            $this->form['rent'] = decimal_float($model->rent_amount);
+            $this->form['deposit'] = decimal_float($model->deposit_amount);
             $this->form['status'] = (string) $model->status;
 
+            // Map rent_frequency back to a rental period ID for the form
+            if ($model->rent_frequency) {
+                $matchingPeriod = collect($this->availablePeriods)->firstWhere('type', $model->rent_frequency);
+                $this->form['rental_period_id'] = $matchingPeriod ? $matchingPeriod['id'] : null;
+            }
+
             // Check if custom days should be shown
-            if ($model->rental_period_id) {
-                $period = collect($this->availablePeriods)->firstWhere('id', $model->rental_period_id);
+            if ($this->form['rental_period_id']) {
+                $period = collect($this->availablePeriods)->firstWhere('id', $this->form['rental_period_id']);
                 $this->showCustomDays = $period && $period['type'] === 'custom';
             }
 
-            $this->dynamicData = (array) ($model->extra_attributes ?? []);
+            $this->dynamicData = (array) ($model->documents ?? []);
 
             // Load existing files
-            $this->existingFiles = $model->extra_attributes['attachments'] ?? [];
+            $this->existingFiles = $model->documents['attachments'] ?? [];
         } else {
             foreach ($this->dynamicSchema as $field) {
                 $name = $field['name'] ?? null;
@@ -328,7 +332,8 @@ class Form extends Component
         }
 
         // Get attachments from DB, not from client state
-        $dbAttachments = $contract->extra_attributes['attachments'] ?? [];
+        $dbDocuments = $contract->documents ?? [];
+        $dbAttachments = $dbDocuments['attachments'] ?? [];
 
         if (! isset($dbAttachments[$index])) {
             session()->flash('error', __('File not found'));
@@ -351,9 +356,9 @@ class Form extends Component
         $dbAttachments = array_values($dbAttachments);
 
         // Update contract
-        $attributes = $contract->extra_attributes ?? [];
-        $attributes['attachments'] = $dbAttachments;
-        $contract->extra_attributes = $attributes;
+        $documents = $contract->documents ?? [];
+        $documents['attachments'] = $dbAttachments;
+        $contract->documents = $documents;
         $contract->save();
 
         // Sync local state with DB
@@ -384,14 +389,32 @@ class Form extends Component
         $contract->branch_id = (int) $this->form['branch_id'];
         $contract->unit_id = (int) $this->form['unit_id'];
         $contract->tenant_id = (int) $this->form['tenant_id'];
-        $contract->rental_period_id = $this->form['rental_period_id'] ? (int) $this->form['rental_period_id'] : null;
-        $contract->custom_days = $this->form['custom_days'] ? (int) $this->form['custom_days'] : null;
         $contract->start_date = $this->form['start_date'] ?: null;
         $contract->end_date = $this->form['end_date'] ?: null;
-        $contract->rent = decimal_float($this->form['rent']);
-        $contract->deposit = decimal_float($this->form['deposit']);
+        $contract->rent_amount = decimal_float($this->form['rent']);
+        $contract->deposit_amount = decimal_float($this->form['deposit']);
         $contract->status = (string) $this->form['status'];
-        $contract->extra_attributes = $this->dynamicData;
+
+        // Map rental period selection to rent_frequency
+        if ($this->form['rental_period_id']) {
+            $period = RentalPeriod::find((int) $this->form['rental_period_id']);
+            if ($period) {
+                $contract->rent_frequency = $period->period_type ?? 'monthly';
+            }
+        }
+
+        // Auto-generate contract number for new contracts
+        if (! $contract->exists) {
+            $branchId = (int) $this->form['branch_id'];
+            $lastNumber = RentalContract::where('branch_id', $branchId)
+                ->withTrashed()
+                ->count() + 1;
+            $contract->contract_number = 'RC-' . str_pad((string) $lastNumber, 6, '0', STR_PAD_LEFT);
+            $contract->created_by = Auth::id();
+        }
+
+        // Store dynamic data in documents JSON column
+        $contract->documents = $this->dynamicData;
 
         $contract->save();
 
@@ -413,11 +436,10 @@ class Form extends Component
             }
 
             // Merge with existing files
-            $existingAttachments = $contract->extra_attributes['attachments'] ?? [];
-            $contract->extra_attributes = array_merge(
-                $contract->extra_attributes ?? [],
-                ['attachments' => array_merge($existingAttachments, $uploadedFiles)]
-            );
+            $existingDocs = $contract->documents ?? [];
+            $existingAttachments = $existingDocs['attachments'] ?? [];
+            $existingDocs['attachments'] = array_merge($existingAttachments, $uploadedFiles);
+            $contract->documents = $existingDocs;
             $contract->save();
 
             // Clear uploaded files
