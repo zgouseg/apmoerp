@@ -46,14 +46,26 @@ class Terminal extends Component
         // Always resolve the effective branch from the current branch context (Branch Switcher).
         $this->branchId = (int) (current_branch_id() ?? 0);
 
-        if ($this->branchId === 0) {
-            // Non-privileged users MUST have a branch assignment.
-            if (! $this->canViewAllBranches) {
-                abort(403, __('You must be assigned to a branch to use the POS terminal.'));
-            }
+        // If no branch context is set, fall back to the user's own branch.
+        // This prevents 403 errors for admin users who haven't explicitly selected a branch yet.
+        if ($this->branchId === 0 && $user->branch_id) {
+            $this->branchId = (int) $user->branch_id;
 
-            // Privileged users: tell them to select a branch first.
-            abort(403, __('Please select a branch from the branch switcher before using the POS terminal.'));
+            // Also set the session context so BranchSwitcher stays in sync
+            session(['admin_branch_context' => $this->branchId]);
+        }
+
+        if ($this->branchId === 0) {
+            // Try to use the first active branch the user has access to
+            $firstBranch = $user->branches()->where('is_active', true)->first()
+                ?? Branch::where('is_active', true)->first();
+
+            if ($firstBranch) {
+                $this->branchId = (int) $firstBranch->id;
+                session(['admin_branch_context' => $this->branchId]);
+            } else {
+                abort(403, __('No active branch found. Please contact your administrator.'));
+            }
         }
 
         $branch = Branch::find($this->branchId);

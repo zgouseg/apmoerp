@@ -154,10 +154,11 @@ Route::get('/download/export', function () {
             abort(404, 'Export file not found or expired');
         }
 
-        if ((int) $exportInfo['user_id'] !== auth()->id()) {
+        if ((int) $exportInfo['user_id'] !== auth()->id() && (int) $exportInfo['user_id'] !== actual_user_id()) {
             logger()->warning('Unauthorized export download attempt', [
                 'file_user_id' => $exportInfo['user_id'],
                 'current_user_id' => auth()->id(),
+                'actual_user_id' => actual_user_id(),
             ]);
             abort(403, 'You are not authorized to download this export');
         }

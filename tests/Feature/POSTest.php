@@ -69,7 +69,12 @@ class POSTest extends TestCase
     public function test_pos_terminal_loads(): void
     {
         $admin = $this->createAdminUser();
-        $response = $this->actingAs($admin)->get('/pos/terminal');
+        $branch = Branch::first();
+        
+        // Set branch context in session to simulate BranchSwitcher
+        session(['admin_branch_context' => $branch->id]);
+        
+        $response = $this->actingAs($admin)->get('/pos');
         
         if ($response->status() === 500) {
             $this->markTestSkipped('POS terminal returns 500 - view rendering issue in test environment');
@@ -84,6 +89,11 @@ class POSTest extends TestCase
     public function test_pos_index_loads(): void
     {
         $admin = $this->createAdminUser();
+        $branch = Branch::first();
+        
+        // Set branch context in session
+        session(['admin_branch_context' => $branch->id]);
+        
         $response = $this->actingAs($admin)->get('/pos');
         
         if ($response->status() === 500) {

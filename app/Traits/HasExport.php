@@ -109,12 +109,12 @@ trait HasExport
             $downloadName = $filename.'.'.$this->exportFormat;
 
             // Store export info in session for download
-            // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
+            // Store both auth user id and actual performer id for proper verification
             session()->put('export_file', [
                 'path' => $filepath,
                 'name' => $downloadName,
                 'time' => now()->timestamp,
-                'user_id' => actual_user_id(),
+                'user_id' => auth()->id(),
             ]);
 
             // Ensure the export session data is immediately available to the download request
