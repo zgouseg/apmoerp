@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Services\Analytics;
 
+use App\Enums\SaleStatus;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Services\DatabaseCompatibilityService;
 use Illuminate\Support\Facades\Cache;
-use App\Enums\SaleStatus;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -1021,11 +1022,14 @@ class AdvancedAnalyticsService
      */
     protected function getPeakHours(?int $branchId, array $dateRange): array
     {
+        $dbCompat = app(DatabaseCompatibilityService::class);
+        $hourExpr = $dbCompat->hourExpression('sale_date');
+
         $query = Sale::query()
-            ->select(DB::raw('HOUR(sale_date) as hour'), DB::raw('COUNT(*) as count'))
+            ->select(DB::raw("{$hourExpr} as hour"), DB::raw('COUNT(*) as count'))
             ->whereBetween('sale_date', $dateRange)
             ->whereNotIn('status', SaleStatus::nonRevenueStatuses())
-            ->groupBy(DB::raw('HOUR(sale_date)'))
+            ->groupBy(DB::raw($hourExpr))
             ->orderByDesc('count')
             ->limit(3);
         

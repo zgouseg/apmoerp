@@ -173,6 +173,7 @@ return new class extends Migration
             $table->text('data');
             $table->timestamp('read_at')->nullable();
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index(['notifiable_type', 'notifiable_id'], 'idx_notif_notifiable');
             $table->index('read_at', 'idx_notif_read_at');

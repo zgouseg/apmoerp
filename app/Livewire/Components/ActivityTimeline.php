@@ -85,7 +85,7 @@ class ActivityTimeline extends Component
         return "{$action} {$model}: {$identifier}";
     }
 
-    protected function getActivityIcon(string $event): string
+    protected function getActivityIcon(?string $event): string
     {
         return match ($event) {
             'created' => 'M12 6v6m0 0v6m0-6h6m-6 0H6',
@@ -96,7 +96,7 @@ class ActivityTimeline extends Component
         };
     }
 
-    protected function getActivityColor(string $event): string
+    protected function getActivityColor(?string $event): string
     {
         return match ($event) {
             'created' => 'green',
