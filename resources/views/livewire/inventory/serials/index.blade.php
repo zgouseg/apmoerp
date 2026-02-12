@@ -102,9 +102,9 @@
                     @forelse($serials as $serial)
                         <tr wire:key="serial-{{ $serial->id }}">
                             <td class="font-mono text-sm font-medium">{{ $serial->serial_number }}</td>
-                            <td>{{ $serial->product->name ?? '-' }}</td>
+                            <td>{{ $serial->product?->name ?? '-' }}</td>
                             <td>{{ $serial->warehouse->name ?? '-' }}</td>
-                            <td>{{ $serial->customer->name ?? '-' }}</td>
+                            <td>{{ $serial->customer?->name ?? '-' }}</td>
                             <td>
                                 @if($serial->warranty_end)
                                     <span class="@if($serial->isWarrantyActive()) text-emerald-600 @else text-slate-500 @endif">

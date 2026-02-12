@@ -142,7 +142,7 @@
                         <tr wire:key="order-{{ $order->id }}">
                             <td class="font-medium">{{ $order->order_number }}</td>
                             <td>
-                                <div class="font-medium">{{ $order->product->name ?? '-' }}</div>
+                                <div class="font-medium">{{ $order->product?->name ?? '-' }}</div>
                                 @if($order->product->sku)
                                     <div class="text-xs text-slate-500">{{ $order->product->sku }}</div>
                                 @endif

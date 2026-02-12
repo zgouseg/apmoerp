@@ -79,7 +79,7 @@
                         <tr class="hover:bg-slate-50">
                             <td class="text-sm text-slate-500">{{ $movement->created_at->format('Y-m-d H:i') }}</td>
                             <td class="font-mono text-sm">{{ $movement->code }}</td>
-                            <td class="font-medium">{{ $movement->product->name ?? '-' }}</td>
+                            <td class="font-medium">{{ $movement->product?->name ?? '-' }}</td>
                             <td>{{ $movement->warehouse->name ?? '-' }}</td>
                             <td>
                                 <span class="px-2 py-1 text-xs rounded-full {{ $movement->direction === 'in' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">

@@ -102,7 +102,7 @@
                     @forelse($batches as $batch)
                         <tr wire:key="batch-{{ $batch->id }}">
                             <td class="font-mono text-sm font-medium">{{ $batch->batch_number }}</td>
-                            <td>{{ $batch->product->name ?? '-' }}</td>
+                            <td>{{ $batch->product?->name ?? '-' }}</td>
                             <td>{{ $batch->warehouse->name ?? '-' }}</td>
                             <td class="font-medium">{{ number_format($batch->quantity, 2) }}</td>
                             <td>{{ $batch->manufacturing_date?->format('Y-m-d') ?? '-' }}</td>

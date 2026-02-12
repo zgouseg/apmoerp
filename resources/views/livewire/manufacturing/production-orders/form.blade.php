@@ -25,7 +25,7 @@
                     <select wire:model="bom_id" id="bom_id" class="erp-input @error('bom_id') border-red-500 @enderror">
                         <option value="">{{ __('Select a BOM') }}</option>
                         @foreach($boms as $bom)
-                            <option value="{{ $bom->id }}">{{ $bom->name }} ({{ $bom->product->name }})</option>
+                            <option value="{{ $bom->id }}">{{ $bom->name }} ({{ $bom->product?->name ?? '-' }})</option>
                         @endforeach
                     </select>
                     @error('bom_id') <span class="text-sm text-red-500">{{ $message }}</span> @enderror

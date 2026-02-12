@@ -157,7 +157,7 @@
                                     @foreach($document->shares as $share)
                                         <div class="flex items-center justify-between p-2 bg-slate-50 rounded">
                                             <div>
-                                                <p class="text-sm text-slate-900">{{ $share->user->name }}</p>
+                                                <p class="text-sm text-slate-900">{{ $share->user?->name ?? __('Unknown') }}</p>
                                                 <p class="text-xs text-slate-500">{{ ucfirst($share->permission) }}</p>
                                             </div>
                                             <button wire:click="unshare({{ $share->shared_with_user_id }})" class="text-xs text-red-600 hover:text-red-900">{{ __('Revoke') }}</button>

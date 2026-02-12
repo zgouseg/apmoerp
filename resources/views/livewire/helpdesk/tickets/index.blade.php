@@ -108,7 +108,7 @@
                         <td class="px-3 py-2">
                             <div class="text-slate-700 dark:text-slate-200">{{ $ticket->subject }}</div>
                             @if($ticket->category)
-                                <div class="text-xs text-slate-500 dark:text-slate-400">{{ $ticket->category->name }}</div>
+                                <div class="text-xs text-slate-500 dark:text-slate-400">{{ $ticket->category?->name ?? '-' }}</div>
                             @endif
                         </td>
                         <td class="px-3 py-2 text-slate-600 dark:text-slate-300">
