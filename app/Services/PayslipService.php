@@ -153,7 +153,7 @@ class PayslipService
             $previousLimit = $limit;
         }
 
-        $monthlyTax = $annualTax / 12;
+        $monthlyTax = decimal_float(bcdiv((string) $annualTax, '12', 4));
         if ($monthlyTax > 0) {
             $deductions['income_tax'] = round($monthlyTax, 2);
             $total += $monthlyTax;

@@ -19,7 +19,7 @@ class AutoLogout
             // Use cached preferences to avoid DB query on every request
             $preferences = UserPreference::cachedForUser($user->id);
 
-            if ($preferences->auto_logout) {
+            if ($preferences && $preferences->auto_logout) {
                 $lastActivity = session('last_activity');
                 $timeout = $preferences->session_timeout * 60;
 

@@ -409,9 +409,7 @@ class InventoryController extends BaseApiController
             return null;
         }
 
-        // Fall back to first available active warehouse when no branch context is provided
-        $firstWarehouse = \App\Models\Warehouse::where('is_active', true)->first();
-
-        return $firstWarehouse?->id;
+        // No branch context - do not fall back to a global warehouse to prevent cross-branch data leakage
+        return null;
     }
 }
