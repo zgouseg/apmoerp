@@ -55,6 +55,10 @@ class AuditViewButtons extends Command
 
     protected function auditFile(string $filePath): void
     {
+        if (! is_readable($filePath)) {
+            return;
+        }
+
         $content = file_get_contents($filePath);
         $lines = explode("\n", $content);
 
