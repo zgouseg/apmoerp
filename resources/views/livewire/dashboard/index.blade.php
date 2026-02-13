@@ -394,7 +394,7 @@
     </div>
 
 @script
-// UNFIXED-01 FIX: Use @script block for proper Livewire 4 component-scoped JavaScript
+// UNFIXED-01 FIX: Use @@script block for proper Livewire 4 component-scoped JavaScript
 const componentId = 'dashboard-index-' + ($wire.__instance?.id ?? Math.random().toString(36).substr(2, 9));
 
 // Initialize global chart storage if not exists

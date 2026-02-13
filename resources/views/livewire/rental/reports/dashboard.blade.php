@@ -173,7 +173,7 @@
 
 
 @script
-    // NEW-02/UNFIXED-01 FIX: Use @script block to prevent duplicate handler registration
+    // NEW-02/UNFIXED-01 FIX: Use @@script block to prevent duplicate handler registration
     const componentId = 'rental-dashboard-' + ($wire.__instance?.id ?? Math.random().toString(36).substr(2, 9));
     
     // Initialize global chart storage if not exists

@@ -166,7 +166,7 @@
 
 
 @script
-    // NEW-02/UNFIXED-01 FIX: Use @script block to prevent duplicate handler registration
+    // NEW-02/UNFIXED-01 FIX: Use @@script block to prevent duplicate handler registration
     // Charts are now scoped to this component and properly cleaned up on navigation
     const componentId = 'hrm-dashboard-' + ($wire.__instance?.id ?? Math.random().toString(36).substr(2, 9));
     

@@ -122,7 +122,7 @@
 
 
 @script
-    // Livewire 4 FIX: Wrap with @script for proper execution timing across SPA navigation
+    // Livewire 4 FIX: Wrap with @@script for proper execution timing across SPA navigation
     if (window.Echo && window.Laravel && window.Laravel.userId) {
         window.Echo.private('App.Models.User.' + window.Laravel.userId)
             .notification((notification) => {
