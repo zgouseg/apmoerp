@@ -1,6 +1,7 @@
 <div
     x-data="erpPosTerminal({ 
         branchId: {{ $branchId }},
+        warehouseId: {{ $warehouseId ?? 'null' }},
         baseCurrency: '{{ $baseCurrency }}',
         currencyRates: @json($currencyRates),
         currencySymbols: @json($currencySymbols)
@@ -131,7 +132,7 @@
                                 class="flex flex-col items-start rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-emerald-50 px-3 py-2 text-start text-xs text-slate-800 shadow-sm shadow-emerald-500/30 hover:border-emerald-300 hover:shadow-md">
                             <span class="font-semibold truncate" x-text="product.name ?? product.label ?? 'Item'"></span>
                             <span class="mt-0.5 text-[0.7rem] text-slate-500 truncate" x-text="product.sku ?? product.code ?? ''"></span>
-                            <span class="mt-1 text-[0.75rem] font-semibold text-emerald-700" x-text="(product.price ?? product.sale_price ?? 0).toFixed(2) + ' ' + (product.price_currency ?? 'EGP')"></span>
+                            <span class="mt-1 text-[0.75rem] font-semibold text-emerald-700" x-text="(product.default_price ?? product.price ?? product.sale_price ?? 0).toFixed(2) + ' ' + (product.price_currency ?? 'EGP')"></span>
                         </button>
                     </template>
                 </div>
@@ -409,6 +410,8 @@
 function erpPosTerminal(config) {
     return {
         branchId: config.branchId,
+        warehouseId: config.warehouseId,
+        apiBase: '/api/v1/branches/' + config.branchId,
         search: '',
         products: [],
         cart: [],
@@ -490,11 +493,15 @@ function erpPosTerminal(config) {
             }
             this.isSearching = true;
             try {
-                const res = await fetch(`/api/v1/products?search=${encodeURIComponent(this.search)}&limit=20`, {
-                    headers: { 'Accept': 'application/json' }
+                const res = await fetch(this.apiBase + `/products/search?q=${encodeURIComponent(this.search)}&per_page=20`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                    },
+                    credentials: 'same-origin'
                 });
-                const data = await res.json();
-                this.products = data.data || data || [];
+                const json = await res.json();
+                this.products = json.data || json || [];
             } catch (e) {
                 console.error('Search error:', e);
                 this.products = [];
@@ -503,16 +510,17 @@ function erpPosTerminal(config) {
         },
 
         addProduct(product) {
-            const existing = this.cart.find(c => c.product_id === (product.id ?? product.product_id));
+            const pid = product.id ?? product.product_id;
+            const existing = this.cart.find(c => c.product_id === pid);
             if (existing) {
                 existing.qty++;
             } else {
                 this.cart.push({
-                    product_id: product.id ?? product.product_id,
+                    product_id: pid,
                     name: product.name ?? product.label ?? 'Item',
                     sku: product.sku ?? product.code ?? '',
                     qty: 1,
-                    price: parseFloat(product.price ?? product.sale_price ?? 0),
+                    price: parseFloat(product.default_price ?? product.price ?? product.sale_price ?? 0),
                     discount: 0
                 });
             }
@@ -551,6 +559,7 @@ function erpPosTerminal(config) {
 
             const payload = {
                 branch_id: this.branchId,
+                warehouse_id: this.warehouseId,
                 items: this.cart.map(item => ({
                     product_id: item.product_id,
                     qty: item.qty,
@@ -580,13 +589,14 @@ function erpPosTerminal(config) {
             }
 
             try {
-                const res = await fetch('/api/v1/pos/checkout', {
+                const res = await fetch(this.apiBase + '/pos/checkout', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
                     },
+                    credentials: 'same-origin',
                     body: JSON.stringify(payload)
                 });
 
@@ -640,14 +650,15 @@ function erpPosTerminal(config) {
             
             for (const order of queue) {
                 try {
-                    await fetch('/api/v1/pos/checkout', {
+                    await fetch(this.apiBase + '/pos/checkout', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                             'Accept': 'application/json',
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
                         },
-                        body: JSON.stringify({ ...order, notes: 'Synced from offline POS' })
+                        credentials: 'same-origin',
+                        body: JSON.stringify({ ...order, warehouse_id: this.warehouseId, notes: 'Synced from offline POS' })
                     });
                 } catch (e) {
                     this.offlineQueue.push(order);
@@ -666,8 +677,12 @@ function erpPosTerminal(config) {
 
         async checkSession() {
             try {
-                const res = await fetch(`/api/v1/pos/session?branch_id=${this.branchId}`, {
-                    headers: { 'Accept': 'application/json' }
+                const res = await fetch(this.apiBase + '/pos/session', {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                    },
+                    credentials: 'same-origin'
                 });
                 const data = await res.json();
                 this.currentSession = data.data || null;
@@ -678,13 +693,14 @@ function erpPosTerminal(config) {
 
         async openSession() {
             try {
-                const res = await fetch('/api/v1/pos/session/open', {
+                const res = await fetch(this.apiBase + '/pos/session/open', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
                     },
+                    credentials: 'same-origin',
                     body: JSON.stringify({
                         branch_id: this.branchId,
                         opening_cash: this.sessionOpeningCash
@@ -704,13 +720,14 @@ function erpPosTerminal(config) {
         async closeSession() {
             if (!this.currentSession) return;
             try {
-                const res = await fetch(`/api/v1/pos/session/${this.currentSession.id}/close`, {
+                const res = await fetch(this.apiBase + `/pos/session/${this.currentSession.id}/close`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
                     },
+                    credentials: 'same-origin',
                     body: JSON.stringify({
                         closing_cash: this.sessionClosingCash,
                         notes: this.sessionNotes

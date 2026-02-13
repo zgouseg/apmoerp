@@ -19,11 +19,13 @@ class PosCheckoutRequest extends FormRequest
 
     public function rules(): array
     {
-        $branchId = $this->user()?->branch_id;
+        // Use the branch from the route (branch-scoped API) or fall back to user's branch
+        $branchId = $this->route('branch')?->id
+            ?? $this->attributes->get('branch_id')
+            ?? $this->user()?->branch_id;
 
         return [
             'items' => ['required', 'array', 'min:1'],
-            // V58-CRITICAL-02 FIX: Use BranchScopedExists for branch-aware validation
             'items.*.product_id' => ['required', new BranchScopedExists('products', 'id', $branchId)],
             'items.*.qty' => ['required', 'numeric', 'gt:0', 'lte:999999'],
             'items.*.price' => ['sometimes', 'numeric', 'gte:0'],
