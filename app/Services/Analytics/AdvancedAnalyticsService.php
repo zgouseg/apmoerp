@@ -331,8 +331,9 @@ class AdvancedAnalyticsService
         $atRisk = [];
         foreach ($customers as $customer) {
             // V35-HIGH-02 FIX: Use sale_date for days since last purchase calculation
-            $daysSinceLastPurchase = $customer->sales->first()
-                ? now()->diffInDays($customer->sales->first()->sale_date)
+            $lastSale = $customer->sales->first();
+            $daysSinceLastPurchase = $lastSale?->sale_date
+                ? now()->diffInDays($lastSale->sale_date)
                 : 999;
 
             $avgDaysBetweenPurchases = $this->calculateAvgDaysBetweenPurchases($customer);
@@ -459,7 +460,7 @@ class AdvancedAnalyticsService
             return $sale->sale_date->format('Y-m-d');
         })->map(function ($group) {
             return [
-                'date' => $group->first()->sale_date->format('Y-m-d'),
+                'date' => $group->first()?->sale_date?->format('Y-m-d') ?? 'unknown',
                 'total' => $group->sum('total_amount'),
                 'count' => $group->count(),
             ];
@@ -493,7 +494,7 @@ class AdvancedAnalyticsService
             return $sale->sale_date->format('Y-m-d');
         })->map(function ($group) {
             return [
-                'date' => $group->first()->sale_date->format('Y-m-d'),
+                'date' => $group->first()?->sale_date?->format('Y-m-d') ?? 'unknown',
                 'total' => $group->sum('total_amount'),
             ];
         })->sortByDesc('total')->take(5)->values()->toArray();

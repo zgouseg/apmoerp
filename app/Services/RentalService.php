@@ -475,15 +475,15 @@ class RentalService implements RentalServiceInterface
         $invoices = $query->get();
 
         return $invoices->map(function ($invoice) {
-            $daysOverdue = $invoice->due_date->diffInDays(now(), false);
+            $daysOverdue = $invoice->due_date ? $invoice->due_date->diffInDays(now(), false) : 0;
 
             return [
                 'invoice_id' => $invoice->id,
                 'invoice_code' => $invoice->code,
                 'contract_id' => $invoice->contract_id,
-                'unit' => $invoice->contract->unit->name ?? '',
-                'tenant' => $invoice->contract->tenant->name ?? '',
-                'due_date' => $invoice->due_date->format('Y-m-d'),
+                'unit' => $invoice->contract?->unit?->name ?? '',
+                'tenant' => $invoice->contract?->tenant?->name ?? '',
+                'due_date' => $invoice->due_date?->format('Y-m-d') ?? '',
                 'amount' => $invoice->amount,
                 'days_overdue' => $daysOverdue,
                 'period' => $invoice->period,
