@@ -162,7 +162,7 @@ class AdvancedAnalyticsService
         $forecast = $avg + ($trend * count($historical));
 
         $stdDev = $this->calculateStandardDeviation($historical);
-        $confidence = max(0, min(100, 100 - ($stdDev / $avg * 100)));
+        $confidence = $avg > 0 ? max(0, min(100, 100 - ($stdDev / $avg * 100))) : 0;
 
         return [
             'forecast' => max(0, $forecast),
@@ -956,6 +956,9 @@ class AdvancedAnalyticsService
      */
     protected function estimateRevenueImpact(float $currentPrice, float $newPrice, float $elasticity): array
     {
+        if ($currentPrice <= 0) {
+            return ['revenue_change' => 0, 'volume_change' => 0];
+        }
         $priceChange = (($newPrice - $currentPrice) / $currentPrice) * 100;
         $volumeChange = $priceChange * $elasticity;
         $revenueChange = $priceChange + $volumeChange + ($priceChange * $volumeChange / 100);
