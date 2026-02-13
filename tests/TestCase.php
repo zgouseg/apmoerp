@@ -15,6 +15,9 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
         
+        // Prevent @vite() from requiring a build manifest in tests
+        $this->withoutVite();
+        
         // Seed the database for tests
         $this->seed();
     }

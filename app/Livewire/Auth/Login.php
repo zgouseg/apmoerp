@@ -49,6 +49,8 @@ class Login extends Component
     {
         if (Auth::check()) {
             $this->redirectIntended($this->getDefaultRedirectDestination(), navigate: true);
+
+            return;
         }
     }
 
