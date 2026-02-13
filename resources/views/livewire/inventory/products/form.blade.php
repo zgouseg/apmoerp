@@ -285,7 +285,9 @@
                     {{ __('Module-Specific Fields') }}
                     @if($selectedModuleId)
                         <span class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-xs">
-                            @php($selectedModule = collect($modules)->firstWhere('id', $selectedModuleId))
+                            @php
+                                $selectedModule = collect($modules)->firstWhere('id', $selectedModuleId);
+                            @endphp
                             {{ data_get($selectedModule, 'name') }}
                         </span>
                     @endif

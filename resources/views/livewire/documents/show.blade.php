@@ -25,7 +25,9 @@
             <div class="bg-white rounded-xl shadow-sm p-6">
                 <h2 class="text-lg font-semibold text-slate-800 mb-4">{{ __('Preview') }}</h2>
                 <div class="flex items-center justify-center h-96 bg-slate-100 rounded-lg">
-                    @php($previewUrl = route('app.documents.download', ['document' => $document->id, 'inline' => true]))
+                    @php
+                        $previewUrl = route('app.documents.download', ['document' => $document->id, 'inline' => true]);
+                    @endphp
                     @if(str_contains($document->mime_type, 'image'))
                         <img src="{{ $previewUrl }}" alt="{{ $document->title }}" class="max-h-full max-w-full object-contain">
                     @elseif(str_contains($document->mime_type, 'pdf'))

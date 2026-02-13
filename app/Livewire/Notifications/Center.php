@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire\Notifications;
 
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -66,6 +67,7 @@ class Center extends Component
         }
     }
 
+    #[Layout('layouts.app')]
     public function render()
     {
         return view('livewire.notifications.center', [

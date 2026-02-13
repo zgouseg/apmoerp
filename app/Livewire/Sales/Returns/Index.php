@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\SaleService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -215,6 +216,7 @@ class Index extends Component
         }
     }
 
+    #[Layout('layouts.app')]
     public function render(): View
     {
         $branchId = $this->getUserBranchId();
