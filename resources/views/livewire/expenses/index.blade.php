@@ -92,7 +92,7 @@
                 </thead>
                 <tbody>
                     @forelse($expenses as $expense)
-                        <tr>
+                        <tr wire:key="expense-{{ $expense->id }}">
                             <td class="font-medium">{{ $expense->reference_number ?? '-' }}</td>
                             <td>{{ $expense->category?->localized_name ?? '-' }}</td>
                             <td>{{ $expense->expense_date->format('Y-m-d') }}</td>

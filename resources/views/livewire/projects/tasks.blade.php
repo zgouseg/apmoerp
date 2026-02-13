@@ -33,7 +33,7 @@
                         <span>{{ __('Assigned to') }}: {{ $task->assignee?->name }}</span>
                         @endif
                         @if($task->due_date)
-                        <span>{{ __('Due') }}: {{ $task->due_date->format('Y-m-d') }}</span>
+                        <span>{{ __('Due') }}: {{ $task->due_date?->format('Y-m-d') }}</span>
                         @endif
                     </div>
                 </div>

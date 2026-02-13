@@ -101,7 +101,7 @@
             </thead>
             <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
                 @forelse($tickets as $ticket)
-                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                    <tr wire:key="ticket-{{ $ticket->id }}" class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                         <td class="px-3 py-2 text-slate-700 dark:text-slate-200 font-medium">
                             {{ $ticket->ticket_number }}
                         </td>
@@ -135,7 +135,7 @@
                             {{ $ticket->assignedAgent?->name ?? __('Unassigned') }}
                         </td>
                         <td class="px-3 py-2 text-slate-600 dark:text-slate-300 text-xs">
-                            {{ $ticket->created_at->format('Y-m-d H:i') }}
+                            {{ $ticket->created_at?->format('Y-m-d H:i') }}
                         </td>
                         <td class="px-3 py-2 text-center">
                             <a href="{{ route('app.helpdesk.tickets.show', $ticket->id) }}"

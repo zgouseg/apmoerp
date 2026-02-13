@@ -108,7 +108,7 @@
                                     {{ ucfirst($requisition->priority ?? 'normal') }}
                                 </span>
                             </td>
-                            <td class="text-sm text-slate-500">{{ $requisition->created_at->format('Y-m-d') }}</td>
+                            <td class="text-sm text-slate-500">{{ $requisition->created_at?->format('Y-m-d') }}</td>
                             <td>
                                 <div class="flex items-center gap-2">
                                     @can('purchases.requisitions.approve')

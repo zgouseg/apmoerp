@@ -137,13 +137,13 @@
                     </div>
                     <div>
                         <dt class="text-sm font-medium text-slate-500">{{ __('Created') }}</dt>
-                        <dd class="mt-1 text-sm text-slate-900">{{ $ticket->created_at->format('Y-m-d H:i') }}</dd>
+                        <dd class="mt-1 text-sm text-slate-900">{{ $ticket->created_at?->format('Y-m-d H:i') }}</dd>
                     </div>
                     @if($ticket->due_date)
                         <div>
                             <dt class="text-sm font-medium text-slate-500">{{ __('Due Date') }}</dt>
                             <dd class="mt-1 text-sm @if($ticket->isOverdue()) text-red-600 @else text-slate-900 @endif">
-                                {{ $ticket->due_date->format('Y-m-d H:i') }}
+                                {{ $ticket->due_date?->format('Y-m-d H:i') }}
                                 @if($ticket->isOverdue())
                                     <span class="text-xs">({{ __('Overdue') }})</span>
                                 @endif

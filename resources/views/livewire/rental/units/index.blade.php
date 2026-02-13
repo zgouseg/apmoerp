@@ -69,7 +69,7 @@
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800 bg-white/80 dark:bg-slate-900/60">
                 @forelse ($units as $unit)
-                    <tr>
+                    <tr wire:key="unit-{{ $unit->id }}">
                         <td class="px-3 py-2 whitespace-nowrap text-xs text-slate-800 dark:text-slate-100">
                             {{ $unit->code }}
                         </td>

@@ -154,7 +154,7 @@
                                     <span class="erp-badge erp-badge-secondary">{{ __('Archived') }}</span>
                                 @endif
                             </td>
-                            <td>{{ $bom->created_at->format('Y-m-d') }}</td>
+                            <td>{{ $bom->created_at?->format('Y-m-d') }}</td>
                             <td>
                                 <div class="flex items-center gap-2">
                                     @can('manufacturing.edit')

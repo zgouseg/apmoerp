@@ -83,7 +83,9 @@ class Reports extends Component
     {
         // V35-HIGH-02 FIX: Use sale_date instead of created_at
         // V35-MED-06 FIX: Exclude non-revenue statuses
-        $query = Sale::where('branch_id', $this->branch->id)
+        // Use withOnly([]) to bypass default eager loading for aggregate queries
+        $query = Sale::withOnly([])
+            ->where('branch_id', $this->branch->id)
             ->whereNotIn('status', SaleStatus::nonRevenueStatuses())
             ->whereBetween('sale_date', [$this->fromDate, $this->toDate]);
 
@@ -92,7 +94,6 @@ class Reports extends Component
             'total_amount' => (clone $query)->sum('total_amount'),
             'average_sale' => (clone $query)->avg('total_amount') ?? 0,
             'paid_amount' => (clone $query)->sum('paid_amount'),
-            // due_total is an accessor, not a DB column - compute it from total_amount - paid_amount
             'due_amount' => (clone $query)->selectRaw('SUM(total_amount - paid_amount) as due')->value('due') ?? 0,
         ];
     }

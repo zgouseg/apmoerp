@@ -107,7 +107,7 @@
             </thead>
             <tbody class="divide-y divide-slate-100">
                 @forelse ($products as $product)
-                    <tr class="hover:bg-emerald-50/40">
+                    <tr wire:key="product-{{ $product->id }}" class="hover:bg-emerald-50/40">
                         <td class="px-3 py-2 text-xs text-slate-500">
                             {{ $product->id }}
                         </td>
@@ -125,10 +125,10 @@
                             @endif
                         </td>
                         <td class="px-3 py-2 text-xs text-slate-700">
-                            {{ $product->sku }}
+                            {{ $product->sku ?? '-' }}
                         </td>
                         <td class="px-3 py-2 text-xs text-slate-700">
-                            {{ $product->barcode }}
+                            {{ $product->barcode ?? '-' }}
                         </td>
                         <td class="px-3 py-2 text-xs text-slate-800">
                             {{ number_format($product->default_price ?? 0, 2) }}

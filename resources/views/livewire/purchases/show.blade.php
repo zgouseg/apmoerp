@@ -11,7 +11,7 @@
             </div>
             <div>
                 <h3 class="font-semibold mb-2">{{ __('Date') }}</h3>
-                <p>{{ $purchase->created_at->format('Y-m-d H:i') }}</p>
+                <p>{{ $purchase->created_at?->format('Y-m-d H:i') }}</p>
             </div>
         </div>
 

@@ -158,7 +158,7 @@
                 </thead>
                 <tbody>
                     @forelse($incomes as $income)
-                        <tr class="hover:bg-slate-50">
+                        <tr wire:key="income-{{ $income->id }}" class="hover:bg-slate-50">
                             <td class="font-medium text-slate-800">{{ $income->reference_number ?? '-' }}</td>
                             <td>
                                 <span class="px-2 py-1 text-xs rounded-full bg-emerald-100 text-emerald-700">

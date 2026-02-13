@@ -84,7 +84,7 @@
                             <div class="text-xs">{{ $activity->platform }} / {{ $activity->device_type }}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-gray-500 dark:text-gray-400">
-                            {{ $activity->created_at->format('Y-m-d H:i:s') }}
+                            {{ $activity->created_at?->format('Y-m-d H:i:s') }}
                         </td>
                     </tr>
                     @empty

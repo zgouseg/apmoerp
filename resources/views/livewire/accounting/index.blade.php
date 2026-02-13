@@ -164,7 +164,7 @@
                         </thead>
                         <tbody>
                             @forelse($accounts as $account)
-                                <tr class="hover:bg-slate-50">
+                                <tr wire:key="account-{{ $account->id }}" class="hover:bg-slate-50">
                                     <td class="font-mono text-slate-700">{{ $account->account_number }}</td>
                                     <td class="font-medium text-slate-800">{{ $account->localized_name ?? $account->name }}</td>
                                     <td>
@@ -237,7 +237,7 @@
                         </thead>
                         <tbody>
                             @forelse($journalEntries as $entry)
-                                <tr class="hover:bg-slate-50">
+                                <tr wire:key="entry-{{ $entry->id }}" class="hover:bg-slate-50">
                                     <td class="font-mono text-slate-700">{{ $entry->reference_number }}</td>
                                     <td>{{ $entry->entry_date?->format('Y-m-d') ?? '-' }}</td>
                                     <td class="max-w-xs truncate">{{ $entry->description ?? '-' }}</td>

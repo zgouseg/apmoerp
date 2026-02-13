@@ -101,7 +101,7 @@
                     </div>
                     <div>
                         <dt class="text-sm font-medium text-slate-500">{{ __('Uploaded At') }}</dt>
-                        <dd class="mt-1 text-sm text-slate-900">{{ $document->created_at->format('Y-m-d H:i') }}</dd>
+                        <dd class="mt-1 text-sm text-slate-900">{{ $document->created_at?->format('Y-m-d H:i') }}</dd>
                     </div>
                     @if($document->folder)
                         <div>
