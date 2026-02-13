@@ -46,7 +46,7 @@ class Show extends Component
             throw new HttpException(403);
         }
 
-        $this->purchase = $purchase->load(['items.product', 'supplier', 'branch']);
+        $this->purchase = $purchase->load(['items.product', 'supplier', 'branch', 'payments']);
     }
 
     public function render()
