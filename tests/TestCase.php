@@ -14,7 +14,18 @@ abstract class TestCase extends BaseTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
+        // SAFETY: Prevent RefreshDatabase from accidentally running against
+        // a MySQL/MariaDB production database. Tests should use SQLite in-memory.
+        $connection = config('database.default');
+        if (in_array($connection, ['mysql', 'mariadb', 'pgsql'])) {
+            $this->markTestSkipped(
+                "Tests are configured to use '{$connection}' connection. "
+                . 'RefreshDatabase would DROP ALL TABLES. '
+                . 'Set DB_CONNECTION=sqlite and DB_DATABASE=:memory: in phpunit.xml or .env.testing.'
+            );
+        }
+
         // Prevent @vite() from requiring a build manifest in tests
         $this->withoutVite();
         

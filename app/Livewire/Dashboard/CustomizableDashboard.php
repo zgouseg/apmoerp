@@ -254,7 +254,7 @@ class CustomizableDashboard extends Component
 
         return [
             'labels' => $labels,
-            'values' => $values,
+            'data' => $values,
         ];
     }
 
