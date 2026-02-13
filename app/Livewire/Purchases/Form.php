@@ -123,6 +123,8 @@ class Form extends Component
             ],
             'items.*.qty' => 'required|numeric|min:0.0001',
             'items.*.unit_cost' => 'required|numeric|min:0',
+            'items.*.discount' => 'nullable|numeric|min:0',
+            'items.*.tax_rate' => 'nullable|numeric|min:0|max:100',
         ];
     }
 

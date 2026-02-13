@@ -17,5 +17,5 @@ interface ProductRepositoryInterface extends BaseRepositoryInterface
 
     public function findBySku(string $sku, int $branchId): ?Product;
 
-    public function getAllChunked(int $chunkSize, callable $callback): void;
+    public function getAllChunked(int $chunkSize, callable $callback, ?int $branchId = null): void;
 }

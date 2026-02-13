@@ -172,6 +172,11 @@ class PurchaseService implements PurchaseServiceInterface
         return $this->handleServiceOperation(
             callback: function () use ($id) {
                 $p = $this->findBranchPurchaseOrFail($id);
+
+                if ($p->status !== 'draft') {
+                    throw new \InvalidArgumentException(__('Only draft purchases can be approved. Current status: :status', ['status' => $p->status]));
+                }
+
                 $p->status = 'confirmed';
                 $p->approved_at = now();
                 $p->save();
@@ -188,6 +193,11 @@ class PurchaseService implements PurchaseServiceInterface
         return $this->handleServiceOperation(
             callback: function () use ($id) {
                 $p = $this->findBranchPurchaseOrFail($id);
+
+                if ($p->status !== 'confirmed') {
+                    throw new \InvalidArgumentException(__('Only confirmed purchases can be received. Current status: :status', ['status' => $p->status]));
+                }
+
                 $p->status = 'received';
                 $p->received_at = now();
                 $p->save();

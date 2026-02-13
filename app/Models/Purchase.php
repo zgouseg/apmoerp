@@ -158,7 +158,7 @@ class Purchase extends BaseModel
     {
         return $query->where('payment_status', '!=', 'paid')
             ->whereNotNull('due_date')
-            ->where('due_date', '<', now());
+            ->where('due_date', '<', today());
     }
 
     // Business Logic

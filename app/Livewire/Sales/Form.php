@@ -140,6 +140,8 @@ class Form extends Component
             ],
             'items.*.qty' => 'required|numeric|min:0.0001',
             'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.discount' => 'nullable|numeric|min:0',
+            'items.*.tax_rate' => 'nullable|numeric|min:0|max:100',
             'payment_method' => 'required|string|in:cash,card,bank_transfer,cheque',
             'payment_amount' => [
                 'required',

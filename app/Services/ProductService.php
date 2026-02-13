@@ -156,10 +156,10 @@ class ProductService implements ProductServiceInterface
         );
     }
 
-    public function exportCsv(string $disk, string $path): string
+    public function exportCsv(string $disk, string $path, ?int $branchId = null): string
     {
         return $this->handleServiceOperation(
-            callback: function () use ($disk, $path) {
+            callback: function () use ($disk, $path, $branchId) {
                 $dynamicKeys = $this->moduleFields->exportColumns('inventory', 'products', null);
                 $dynamicKeys = array_values(array_unique($dynamicKeys));
 
@@ -188,7 +188,7 @@ class ProductService implements ProductServiceInterface
 
                         fputcsv($fh, $row);
                     }
-                });
+                }, $branchId);
 
                 rewind($fh);
                 $content = stream_get_contents($fh);

@@ -10,5 +10,5 @@ interface ProductServiceInterface
 
     public function importCsv(int $branchId, string $disk, string $path): int;
 
-    public function exportCsv(string $disk, string $path): string;
+    public function exportCsv(string $disk, string $path, ?int $branchId = null): string;
 }

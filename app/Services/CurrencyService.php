@@ -124,9 +124,8 @@ class CurrencyService
             return null;
         }
 
-        // Use bcmath for precise currency conversion
-        // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling
-        return decimal_float(bcmul((string) $amount, (string) $rate, 2));
+        // Use bcmath for precise currency conversion with 4 decimal intermediate precision
+        return decimal_float(bcmul((string) $amount, (string) $rate, 4));
     }
 
     public function setRate(string $from, string $to, float $rate, $effectiveDate = null): CurrencyRate

@@ -98,10 +98,16 @@ final class ProductRepository extends EloquentBaseRepository implements ProductR
     }
 
     /**
-     * Get all products for export (chunked)
+     * Get all products for export (chunked), scoped by branch
      */
-    public function getAllChunked(int $chunkSize, callable $callback): void
+    public function getAllChunked(int $chunkSize, callable $callback, ?int $branchId = null): void
     {
-        $this->query()->orderBy('id')->chunk($chunkSize, $callback);
+        $query = $this->query()->orderBy('id');
+
+        if ($branchId) {
+            $query->where('branch_id', $branchId);
+        }
+
+        $query->chunk($chunkSize, $callback);
     }
 }
