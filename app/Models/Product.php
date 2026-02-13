@@ -46,17 +46,8 @@ class Product extends BaseModel
     protected $with = ['branch', 'module'];
 
     /**
-     * Fields that should be guarded from mass assignment.
-     * These sensitive fields must be set explicitly by the application.
+     * The attributes that are mass assignable.
      */
-    protected $guarded = [
-        'id',
-        'uuid',
-        'code',
-        'created_by',
-        'updated_by',
-    ];
-
     protected $fillable = [
         'name', 'sku', 'barcode',
         'thumbnail', 'image', 'gallery',

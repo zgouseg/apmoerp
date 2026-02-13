@@ -38,7 +38,7 @@
             <div class="p-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     @forelse ($modules as $module)
-                        <div class="border border-slate-200 rounded-xl p-4 hover:shadow-md transition-all {{ ($enabledModules[$module['id']] ?? false) ? 'bg-emerald-50 border-emerald-200' : 'bg-white' }}">
+                        <div wire:key="module-{{ $module['id'] ?? $loop->index }}" class="border border-slate-200 rounded-xl p-4 hover:shadow-md transition-all {{ ($enabledModules[$module['id']] ?? false) ? 'bg-emerald-50 border-emerald-200' : 'bg-white' }}">
                             <label class="flex items-start gap-3 cursor-pointer">
                                 <input 
                                     type="checkbox" 

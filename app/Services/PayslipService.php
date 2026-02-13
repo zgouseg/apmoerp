@@ -134,26 +134,30 @@ class PayslipService
             $total = bcadd($total, $socialInsurance, 2);
         }
 
-        // Income Tax (progressive brackets)
-        $annualGross = $grossSalary * 12;
+        // Income Tax (progressive brackets) - use bcmath for financial precision
+        $annualGross = bcmul((string) $grossSalary, '12', 4);
         $taxBrackets = config('hrm.tax_brackets', []);
-        $annualTax = 0.0;
-        $previousLimit = 0;
+        $annualTax = '0';
+        $previousLimit = '0';
 
         foreach ($taxBrackets as $bracket) {
-            $limit = decimal_float($bracket['limit'] ?? PHP_FLOAT_MAX);
-            $rate = decimal_float($bracket['rate'] ?? 0);
+            $limit = (string) ($bracket['limit'] ?? '999999999');
+            $rate = (string) ($bracket['rate'] ?? '0');
 
-            if ($annualGross <= $previousLimit) {
+            if (bccomp($annualGross, $previousLimit, 4) <= 0) {
                 break;
             }
 
-            $taxableInBracket = min($annualGross, $limit) - $previousLimit;
-            $annualTax += max(0, $taxableInBracket) * $rate;
+            // taxableInBracket = min(annualGross, limit) - previousLimit
+            $effectiveLimit = bccomp($annualGross, $limit, 4) < 0 ? $annualGross : $limit;
+            $taxableInBracket = bcsub($effectiveLimit, $previousLimit, 4);
+            if (bccomp($taxableInBracket, '0', 4) > 0) {
+                $annualTax = bcadd($annualTax, bcmul($taxableInBracket, $rate, 4), 4);
+            }
             $previousLimit = $limit;
         }
 
-        $monthlyTax = decimal_float(bcdiv((string) $annualTax, '12', 4));
+        $monthlyTax = decimal_float(bcdiv($annualTax, '12', 4));
         if ($monthlyTax > 0) {
             $deductions['income_tax'] = round($monthlyTax, 2);
             $total += $monthlyTax;

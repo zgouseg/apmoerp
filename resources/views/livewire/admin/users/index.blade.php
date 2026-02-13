@@ -47,7 +47,7 @@
             </thead>
             <tbody class="divide-y divide-slate-100 bg-white">
                 @forelse ($users as $user)
-                    <tr class="hover:bg-emerald-50/40">
+                    <tr wire:key="user-{{ $user->id }}" class="hover:bg-emerald-50/40">
                         <td class="px-3 py-2 text-xs text-slate-500">
                             {{ $user->id }}
                         </td>

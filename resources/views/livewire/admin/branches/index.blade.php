@@ -143,7 +143,7 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
                     @forelse ($branches as $branch)
-                        <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                        <tr wire:key="branch-{{ $branch->id }}" class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-3">
                                     <div class="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm">

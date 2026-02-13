@@ -28,7 +28,7 @@
                 </thead>
                 <tbody>
                     @foreach($purchase->items as $item)
-                    <tr class="border-b">
+                    <tr wire:key="purchase-item-{{ $item->id }}" class="border-b">
                         <td class="py-2">{{ $item->product?->name ?? $item->product_name ?? __('N/A') }}</td>
                         <td class="text-right">{{ $item->quantity }}</td>
                         <td class="text-right">{{ number_format($item->unit_price, 2) }}</td>
