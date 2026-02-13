@@ -339,15 +339,14 @@
                     if (status === 500) {
                         preventDefault();
                         serverErrorCount++;
-                        setTimeout(() => { serverErrorCount = Math.max(0, serverErrorCount - 1); }, ERROR_RESET_MS);
+                        clearTimeout(window.__erpErrorResetTimer);
+                        window.__erpErrorResetTimer = setTimeout(() => { serverErrorCount = 0; }, ERROR_RESET_MS);
                         
-                        if (serverErrorCount <= MAX_SERVER_ERRORS) {
+                        if (serverErrorCount < MAX_SERVER_ERRORS) {
                             @if(config('app.debug'))
                             console.error('[ERP] Server error (500) on Livewire request. Error count:', serverErrorCount);
                             @endif
-                        }
-                        
-                        if (serverErrorCount >= MAX_SERVER_ERRORS) {
+                        } else {
                             @if(config('app.debug'))
                             console.error('[ERP] Too many server errors. Stopping automatic retries.');
                             @endif
