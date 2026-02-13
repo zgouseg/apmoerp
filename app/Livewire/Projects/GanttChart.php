@@ -275,7 +275,7 @@ class GanttChart extends Component
 
         $startDate = \Carbon\Carbon::parse($this->startDate);
         $endDate = \Carbon\Carbon::parse($this->endDate);
-        $totalDays = $startDate->diffInDays($endDate) + 1;
+        $totalDays = max(1, $startDate->diffInDays($endDate) + 1);
 
         $itemStartDate = \Carbon\Carbon::parse($itemStart);
         $itemEndDate = $itemEnd ? \Carbon\Carbon::parse($itemEnd) : $itemStartDate;

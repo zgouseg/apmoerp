@@ -206,7 +206,7 @@ class Timeline extends Component
     {
         $startDate = \Carbon\Carbon::parse($this->startDate);
         $endDate = \Carbon\Carbon::parse($this->endDate);
-        $totalDays = $startDate->diffInDays($endDate) + 1;
+        $totalDays = max(1, $startDate->diffInDays($endDate) + 1);
 
         $orderStart = $order['start_date'] ? \Carbon\Carbon::parse($order['start_date']) : $startDate;
         $orderEnd = $order['due_date'] ? \Carbon\Carbon::parse($order['due_date']) : $orderStart;
