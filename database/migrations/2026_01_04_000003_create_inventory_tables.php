@@ -384,6 +384,7 @@ return new class extends Migration
                 ->constrained('users')
                 ->cascadeOnDelete()
                 ->name('fk_stktrfa_approver__usr');
+            $table->unsignedSmallInteger('approval_level')->default(1);
             $table->string('status', 30)->default('pending');
             $table->text('comments')->nullable();
             $table->timestamp('responded_at')->nullable();
@@ -402,8 +403,10 @@ return new class extends Migration
             $table->string('document_type', 50);
             $table->string('file_name', 255);
             $table->string('file_path', 500);
+            $table->string('file_type', 100)->nullable();
             $table->unsignedInteger('file_size')->nullable();
             $table->string('mime_type', 100)->nullable();
+            $table->text('description')->nullable();
             $table->foreignId('uploaded_by')
                 ->nullable()
                 ->constrained('users')

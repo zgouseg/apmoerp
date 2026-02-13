@@ -394,14 +394,22 @@ class AccountingService
                 throw new Exception("Account ID {$line->account_id} not found during auto-post. Data integrity issue detected.");
             }
 
-            $netChange = $line->debit - $line->credit;
+            $netChange = decimal_float(bcsub((string) $line->debit, (string) $line->credit, 4));
 
             // For asset and expense accounts, debit increases balance
             // For liability, equity, and revenue accounts, credit increases balance
             if (in_array($account->type, ['asset', 'expense'], true)) {
-                $account->increment('balance', $netChange);
+                if ($netChange >= 0) {
+                    $account->increment('balance', $netChange);
+                } else {
+                    $account->decrement('balance', abs($netChange));
+                }
             } else {
-                $account->decrement('balance', $netChange);
+                if ($netChange >= 0) {
+                    $account->decrement('balance', $netChange);
+                } else {
+                    $account->increment('balance', abs($netChange));
+                }
             }
         }
 

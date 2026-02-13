@@ -166,7 +166,7 @@
                             <td class="px-4 py-3">
                                 <div class="text-sm text-slate-700 dark:text-slate-300">{{ $employee->position ?? '—' }}</div>
                                 @if($employee->branch)
-                                    <div class="text-xs text-slate-500 dark:text-slate-400">{{ $employee->branch->name }}</div>
+                                    <div class="text-xs text-slate-500 dark:text-slate-400">{{ $employee->branch?->name ?? '-' }}</div>
                                 @endif
                             </td>
                             <td class="px-4 py-3">
@@ -217,7 +217,7 @@
                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                         </svg>
-                                        {{ $employee->user->name ?? $employee->user->email }}
+                                        {{ $employee->user?->name ?? $employee->user?->email ?? '-' }}
                                     </span>
                                 @else
                                     <span class="text-xs text-slate-400 dark:text-slate-500">{{ __('Not linked') }}</span>

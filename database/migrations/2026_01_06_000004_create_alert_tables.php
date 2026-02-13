@@ -190,6 +190,7 @@ return new class extends Migration
                 ->constrained('branches')
                 ->cascadeOnDelete()
                 ->name('fk_supperf_branch__brnch');
+            $table->string('period', 50)->nullable();
             $table->unsignedSmallInteger('year');
             $table->unsignedTinyInteger('month');
             // Order metrics
@@ -197,12 +198,21 @@ return new class extends Migration
             $table->unsignedInteger('on_time_deliveries')->default(0);
             $table->unsignedInteger('late_deliveries')->default(0);
             $table->decimal('on_time_delivery_rate', 5, 2)->default(0);
+            // Quantity metrics
+            $table->decimal('total_ordered_qty', 18, 3)->default(0);
+            $table->decimal('total_received_qty', 18, 3)->default(0);
+            $table->decimal('total_rejected_qty', 18, 3)->default(0);
+            $table->decimal('quality_acceptance_rate', 5, 2)->default(0);
             // Quality metrics
             $table->unsignedInteger('total_items_received')->default(0);
             $table->unsignedInteger('items_accepted')->default(0);
             $table->unsignedInteger('items_rejected')->default(0);
             $table->decimal('quality_rate', 5, 2)->default(0);
+            // Returns
+            $table->unsignedInteger('total_returns')->default(0);
+            $table->decimal('return_rate', 5, 2)->default(0);
             // Value metrics
+            $table->decimal('total_purchase_value', 18, 2)->default(0);
             $table->decimal('total_order_value', 18, 4)->default(0);
             $table->decimal('total_paid', 18, 4)->default(0);
             $table->decimal('average_order_value', 18, 4)->default(0);
@@ -210,7 +220,10 @@ return new class extends Migration
             $table->decimal('average_lead_time_days', 8, 2)->default(0);
             $table->decimal('average_response_time_hours', 8, 2)->default(0);
             // Ratings
+            $table->decimal('performance_score', 5, 2)->default(0);
             $table->decimal('overall_score', 5, 2)->default(0);
+            $table->text('notes')->nullable();
+            $table->timestamp('calculated_at')->nullable();
             $table->timestamp('last_calculated_at')->nullable();
             $table->timestamps();
 

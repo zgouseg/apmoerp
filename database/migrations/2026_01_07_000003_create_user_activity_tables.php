@@ -45,6 +45,8 @@ return new class extends Migration
             $table->string('favoritable_type', 191);
             $table->unsignedBigInteger('favoritable_id');
             $table->string('name', 191)->nullable();
+            $table->string('route_name', 191)->nullable();
+            $table->string('label', 191)->nullable();
             $table->unsignedSmallInteger('sort_order')->default(0);
             $table->timestamps();
 
@@ -116,7 +118,15 @@ return new class extends Migration
                 ->constrained('users')
                 ->cascadeOnDelete()
                 ->name('fk_srchhst_user__usr');
+            $table->foreignId('branch_id')
+                ->nullable()
+                ->constrained('branches')
+                ->nullOnDelete()
+                ->name('fk_srchhst_branch__brnch');
+            $table->string('query', 500)->nullable();
             $table->string('search_query', 500);
+            $table->string('module', 100)->nullable();
+            $table->string('context', 191)->nullable();
             $table->string('search_type', 50)->nullable();
             $table->unsignedInteger('results_count')->default(0);
             $table->timestamps();
@@ -132,6 +142,8 @@ return new class extends Migration
             $table->unsignedBigInteger('searchable_id');
             $table->string('title', 500);
             $table->text('content')->nullable();
+            $table->string('module', 100)->nullable();
+            $table->string('icon', 100)->nullable();
             $table->string('category', 50)->nullable();
             $table->foreignId('branch_id')
                 ->nullable()
@@ -161,6 +173,7 @@ return new class extends Migration
             $table->text('data');
             $table->timestamp('read_at')->nullable();
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index(['notifiable_type', 'notifiable_id'], 'idx_notif_notifiable');
             $table->index('read_at', 'idx_notif_read_at');
@@ -215,7 +228,7 @@ return new class extends Migration
             $table->string('module_key', 100)->nullable(); // NEW-005 FIX
             $table->string('subject_type', 191)->nullable(); // NEW-005 FIX
             $table->unsignedBigInteger('subject_id')->nullable(); // NEW-005 FIX
-            $table->string('event', 30); // created, updated, deleted, restored
+            $table->string('event', 30)->nullable(); // created, updated, deleted, restored
             $table->json('old_values')->nullable();
             $table->json('new_values')->nullable();
             $table->string('url', 500)->nullable();

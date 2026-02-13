@@ -86,7 +86,7 @@ class ApprovalPanel extends Component
 
         // Role-based approval
         if ($this->pendingApproval->approver_role) {
-            return auth()->user()->hasRole($this->pendingApproval->approver_role);
+            return auth()->user()?->hasRole($this->pendingApproval->approver_role) ?? false;
         }
 
         return false;

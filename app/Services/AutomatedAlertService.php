@@ -247,7 +247,7 @@ class AutomatedAlertService
             // STILL-V9-CRITICAL-01 FIX: Calculate current stock from stock_movements via helper method
             $currentStock = \App\Services\StockService::getStock($product->id, $product->branch_id);
 
-            $daysUntilExpiry = now()->diffInDays($product->expiry_date);
+            $daysUntilExpiry = $product->expiry_date ? now()->diffInDays($product->expiry_date) : 0;
             $unitCost = $product->cost ? $product->cost : ($product->standard_cost ? $product->standard_cost : 0);
             // Calculate estimated loss with bcmath precision using actual stock from movements
             // V38-FINANCE-01 FIX: Use decimal_float() for proper precision handling

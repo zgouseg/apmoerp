@@ -44,4 +44,15 @@ return [
     */
     'security_deposit_percentage' => env('RENTAL_SECURITY_DEPOSIT_PERCENT', 20),
     'security_deposit_required' => env('RENTAL_SECURITY_DEPOSIT_REQUIRED', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Unit Turnover Buffer Hours
+    |--------------------------------------------------------------------------
+    |
+    | Hours reserved between a checkout and the next check-in for a rental
+    | unit (cleaning, inspection, etc.).
+    |
+    */
+    'buffer_hours' => (int) env('RENTAL_BUFFER_HOURS', 4),
 ];

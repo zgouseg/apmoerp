@@ -130,7 +130,7 @@
                             </td>
                             <td>
                                 <div class="flex items-center gap-2">
-                                    <span class="font-medium">{{ $bom->product->name ?? '-' }}</span>
+                                    <span class="font-medium">{{ $bom->product?->name ?? '-' }}</span>
                                 </div>
                             </td>
                             <td>

@@ -31,26 +31,38 @@ class PriceAuditObserver
             $changes = [];
 
             if ($product->isDirty('default_price')) {
+                $priceChange = bcsub((string) $newPrice, (string) $oldPrice, 4);
+                $changePct = bccomp((string) $oldPrice, '0', 4) > 0
+                    ? decimal_float(bcmul(bcdiv($priceChange, (string) $oldPrice, 6), '100', 2))
+                    : 0;
                 $changes['selling_price'] = [
                     'old' => $oldPrice,
                     'new' => $newPrice,
-                    'change' => $newPrice - $oldPrice,
-                    'change_percent' => $oldPrice > 0 ? (($newPrice - $oldPrice) / $oldPrice) * 100 : 0,
+                    'change' => decimal_float($priceChange),
+                    'change_percent' => $changePct,
                 ];
             }
 
             if ($product->isDirty('cost')) {
+                $costChange = bcsub((string) $newCost, (string) $oldCost, 4);
+                $costChangePct = bccomp((string) $oldCost, '0', 4) > 0
+                    ? decimal_float(bcmul(bcdiv($costChange, (string) $oldCost, 6), '100', 2))
+                    : 0;
                 $changes['cost'] = [
                     'old' => $oldCost,
                     'new' => $newCost,
-                    'change' => $newCost - $oldCost,
-                    'change_percent' => $oldCost > 0 ? (($newCost - $oldCost) / $oldCost) * 100 : 0,
+                    'change' => decimal_float($costChange),
+                    'change_percent' => $costChangePct,
                 ];
 
                 // Calculate margin change
                 if ($product->default_price > 0) {
-                    $oldMargin = $oldPrice > 0 ? (($oldPrice - $oldCost) / $oldPrice) * 100 : 0;
-                    $newMargin = $newPrice > 0 ? (($newPrice - $newCost) / $newPrice) * 100 : 0;
+                    $oldMargin = bccomp((string) $oldPrice, '0', 4) > 0
+                        ? decimal_float(bcmul(bcdiv(bcsub((string) $oldPrice, (string) $oldCost, 4), (string) $oldPrice, 6), '100', 2))
+                        : 0;
+                    $newMargin = bccomp((string) $newPrice, '0', 4) > 0
+                        ? decimal_float(bcmul(bcdiv(bcsub((string) $newPrice, (string) $newCost, 4), (string) $newPrice, 6), '100', 2))
+                        : 0;
                     $changes['margin_impact'] = [
                         'old_margin' => round($oldMargin, 2),
                         'new_margin' => round($newMargin, 2),

@@ -78,10 +78,10 @@
 
             <div>
                 <label class="erp-label">{{ __('Status') }}</label>
-                <select wire:model="status" class="erp-input">
-                    <option value="active">{{ __('Active') }}</option>
-                    <option value="inactive">{{ __('Inactive') }}</option>
-                </select>
+                <label class="inline-flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" wire:model="is_active" class="erp-checkbox" value="1">
+                    <span class="text-sm text-gray-700 dark:text-gray-300">{{ __('Active') }}</span>
+                </label>
             </div>
 
             <div class="md:col-span-2">

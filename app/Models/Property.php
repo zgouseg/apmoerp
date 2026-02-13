@@ -13,7 +13,7 @@ class Property extends BaseModel
 
     protected $table = 'properties';
 
-    protected $fillable = ['branch_id', 'name', 'address', 'notes', 'extra_attributes'];
+    protected $fillable = ['branch_id', 'name', 'code', 'address', 'notes', 'extra_attributes'];
 
     protected $casts = ['extra_attributes' => 'array'];
 

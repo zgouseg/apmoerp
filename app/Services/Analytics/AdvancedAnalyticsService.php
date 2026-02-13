@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Services\Analytics;
 
+use App\Enums\SaleStatus;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Services\DatabaseCompatibilityService;
 use Illuminate\Support\Facades\Cache;
-use App\Enums\SaleStatus;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -161,7 +162,7 @@ class AdvancedAnalyticsService
         $forecast = $avg + ($trend * count($historical));
 
         $stdDev = $this->calculateStandardDeviation($historical);
-        $confidence = max(0, min(100, 100 - ($stdDev / $avg * 100)));
+        $confidence = $avg > 0 ? max(0, min(100, 100 - ($stdDev / $avg * 100))) : 0;
 
         return [
             'forecast' => max(0, $forecast),
@@ -330,8 +331,9 @@ class AdvancedAnalyticsService
         $atRisk = [];
         foreach ($customers as $customer) {
             // V35-HIGH-02 FIX: Use sale_date for days since last purchase calculation
-            $daysSinceLastPurchase = $customer->sales->first()
-                ? now()->diffInDays($customer->sales->first()->sale_date)
+            $lastSale = $customer->sales->first();
+            $daysSinceLastPurchase = $lastSale?->sale_date
+                ? now()->diffInDays($lastSale->sale_date)
                 : 999;
 
             $avgDaysBetweenPurchases = $this->calculateAvgDaysBetweenPurchases($customer);
@@ -458,7 +460,7 @@ class AdvancedAnalyticsService
             return $sale->sale_date->format('Y-m-d');
         })->map(function ($group) {
             return [
-                'date' => $group->first()->sale_date->format('Y-m-d'),
+                'date' => $group->first()?->sale_date?->format('Y-m-d') ?? 'unknown',
                 'total' => $group->sum('total_amount'),
                 'count' => $group->count(),
             ];
@@ -492,7 +494,7 @@ class AdvancedAnalyticsService
             return $sale->sale_date->format('Y-m-d');
         })->map(function ($group) {
             return [
-                'date' => $group->first()->sale_date->format('Y-m-d'),
+                'date' => $group->first()?->sale_date?->format('Y-m-d') ?? 'unknown',
                 'total' => $group->sum('total_amount'),
             ];
         })->sortByDesc('total')->take(5)->values()->toArray();
@@ -955,6 +957,9 @@ class AdvancedAnalyticsService
      */
     protected function estimateRevenueImpact(float $currentPrice, float $newPrice, float $elasticity): array
     {
+        if ($currentPrice <= 0) {
+            return ['revenue_change' => 0, 'volume_change' => 0];
+        }
         $priceChange = (($newPrice - $currentPrice) / $currentPrice) * 100;
         $volumeChange = $priceChange * $elasticity;
         $revenueChange = $priceChange + $volumeChange + ($priceChange * $volumeChange / 100);
@@ -1021,11 +1026,14 @@ class AdvancedAnalyticsService
      */
     protected function getPeakHours(?int $branchId, array $dateRange): array
     {
+        $dbCompat = app(DatabaseCompatibilityService::class);
+        $hourExpr = $dbCompat->hourExpression('sale_date');
+
         $query = Sale::query()
-            ->select(DB::raw('HOUR(sale_date) as hour'), DB::raw('COUNT(*) as count'))
+            ->select(DB::raw("{$hourExpr} as hour"), DB::raw('COUNT(*) as count'))
             ->whereBetween('sale_date', $dateRange)
             ->whereNotIn('status', SaleStatus::nonRevenueStatuses())
-            ->groupBy(DB::raw('HOUR(sale_date)'))
+            ->groupBy(DB::raw($hourExpr))
             ->orderByDesc('count')
             ->limit(3);
         

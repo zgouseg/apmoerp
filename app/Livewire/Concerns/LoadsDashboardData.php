@@ -55,6 +55,12 @@ trait LoadsDashboardData
         }
 
         $this->branchId = current_branch_id();
+
+        // Fall back to the user's own branch when no context is set
+        if (! $this->branchId && $user->branch_id) {
+            $this->branchId = (int) $user->branch_id;
+        }
+
         // Use case-insensitive role check - seeder uses "Super Admin" (Title Case)
         $this->isAdmin = $user->hasAnyRole(['Super Admin', 'super-admin', 'Admin', 'admin']);
         $this->cacheTtl = (int) (\App\Models\SystemSetting::where('setting_key', 'advanced.cache_ttl')->value('value') ?? 300);

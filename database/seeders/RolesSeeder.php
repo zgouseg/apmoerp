@@ -138,9 +138,13 @@ class RolesSeeder extends Seeder
             'stock.transfer',
             // Sales
             'sales.view',
+            'sales.create',
             'sales.update',
             'sales.void',
             'sales.return',
+            'sales.manage',
+            'sales.export',
+            'sales.import',
             'sales.installments.view',
             // Purchases
             'purchases.view',
@@ -171,12 +175,20 @@ class RolesSeeder extends Seeder
             'suppliers.view-financial',
             'suppliers.view-purchases',
             // Banking
+            'banking.view',
             'banking.create',
             'banking.edit',
+            'banking.reconcile',
+            // Accounting
+            'accounting.view',
+            'accounting.create',
+            'accounting.update',
             // Expenses/Income
+            'expenses.view',
             'expenses.manage',
             'expenses.create',
             'expenses.edit',
+            'income.view',
             'income.manage',
             'income.create',
             'income.edit',
@@ -366,13 +378,21 @@ class RolesSeeder extends Seeder
     {
         return [
             'dashboard.view',
+            // Accounting
+            'accounting.view',
+            'accounting.create',
+            'accounting.update',
             // Banking
+            'banking.view',
             'banking.create',
             'banking.edit',
+            'banking.reconcile',
             // Expenses/Income
+            'expenses.view',
             'expenses.manage',
             'expenses.create',
             'expenses.edit',
+            'income.view',
             'income.manage',
             'income.create',
             'income.edit',

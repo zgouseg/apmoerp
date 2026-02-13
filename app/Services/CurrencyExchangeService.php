@@ -115,12 +115,12 @@ class CurrencyExchangeService
         // Try inverse rates
         if ($fromRate === null) {
             $inverseRate = $this->getDirectRate($this->baseCurrency, $fromCurrency, $date);
-            $fromRate = $inverseRate ? (1 / $inverseRate) : null;
+            $fromRate = ($inverseRate && $inverseRate != 0) ? (1 / $inverseRate) : null;
         }
 
         if ($toRate === null) {
             $inverseRate = $this->getDirectRate($toCurrency, $this->baseCurrency, $date);
-            $toRate = $inverseRate ? (1 / $inverseRate) : null;
+            $toRate = ($inverseRate && $inverseRate != 0) ? (1 / $inverseRate) : null;
         }
 
         if ($fromRate !== null && $toRate !== null) {

@@ -150,7 +150,7 @@
                             <span class="text-xs text-emerald-600" title="{{ __('Compression ratio') }}">-{{ $item->compression_ratio }}%</span>
                         @endif
                     </div>
-                    <p class="text-xs text-slate-400 mt-1">{{ $item->user->name ?? __('Unknown') }}</p>
+                    <p class="text-xs text-slate-400 mt-1">{{ $item->user?->name ?? __('Unknown') }}</p>
                 </div>
             </div>
         @empty

@@ -262,9 +262,13 @@ class TranslationManager extends Component
      */
     protected function jsonToPhpArray($json)
     {
+        if (! is_string($json)) {
+            return var_export([], true);
+        }
+
         $array = json_decode($json, true);
 
-        return var_export($array, true);
+        return var_export($array ?? [], true);
     }
 
     public function clearCache()

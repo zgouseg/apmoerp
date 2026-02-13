@@ -33,7 +33,7 @@
         <div class="space-y-2">
             @foreach($overduePayments->take(5) as $payment)
             <div class="flex justify-between items-center text-sm">
-                <span class="text-red-700 dark:text-red-300">{{ $payment->plan->customer->name }} - {{ __('Installment') }} #{{ $payment->installment_number }}</span>
+                <span class="text-red-700 dark:text-red-300">{{ $payment->plan?->customer?->name ?? '-' }} - {{ __('Installment') }} #{{ $payment->installment_number }}</span>
                 <span class="font-bold text-red-800 dark:text-red-200">{{ number_format($payment->remaining_amount, 2) }}</span>
             </div>
             @endforeach
@@ -77,8 +77,8 @@
                     @forelse($plans as $plan)
                     <tr>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="font-medium text-gray-900 dark:text-white">{{ $plan->customer->name }}</div>
-                            <div class="text-sm text-gray-500">{{ __('Invoice') }}: {{ $plan->sale->code ?? 'N/A' }}</div>
+                            <div class="font-medium text-gray-900 dark:text-white">{{ $plan->customer?->name ?? '-' }}</div>
+                            <div class="text-sm text-gray-500">{{ __('Invoice') }}: {{ $plan->sale?->code ?? 'N/A' }}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-white">
                             {{ number_format($plan->total_amount, 2) }}

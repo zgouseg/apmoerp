@@ -75,7 +75,7 @@ class CustomerBehaviorService
                 // Calculate RFM scores
                 $customers = $data->map(function ($row) use ($customersMap) {
                     $customer = $customersMap->get($row->customer_id);
-                    $daysSinceLastPurchase = now()->diffInDays($row->last_purchase);
+                    $daysSinceLastPurchase = $row->last_purchase ? now()->diffInDays($row->last_purchase) : 999;
 
                     return [
                         'customer_id' => $row->customer_id,

@@ -45,7 +45,7 @@
                         <div class="border-l-4 {{ $reply->is_internal ? 'border-yellow-500' : 'border-blue-500' }} pl-4">
                             <div class="flex items-center justify-between mb-2">
                                 <div class="text-sm font-medium text-slate-700 dark:text-slate-200">
-                                    {{ $reply->user->name }}
+                                    {{ $reply->user?->name ?? __('Unknown') }}
                                     @if($reply->is_internal)
                                         <span class="ml-2 text-xs px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
                                             {{ __('Internal') }}

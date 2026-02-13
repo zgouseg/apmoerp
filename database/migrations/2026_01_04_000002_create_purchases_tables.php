@@ -138,19 +138,40 @@ return new class extends Migration
                 ->constrained('purchase_requisitions')
                 ->nullOnDelete()
                 ->name('fk_supqt_req__prreq');
+            $table->string('code', 50)->nullable();
             $table->string('reference_number', 50);
             $table->date('quotation_date');
             $table->date('valid_until')->nullable();
             $table->string('status', 30)->default('pending'); // pending, accepted, rejected, expired
-            $table->decimal('subtotal', 18, 4)->default(0);
-            $table->decimal('tax_amount', 18, 4)->default(0);
-            $table->decimal('discount_amount', 18, 4)->default(0);
-            $table->decimal('total_amount', 18, 4)->default(0);
             $table->string('currency', 10)->default('USD');
+            $table->decimal('subtotal', 18, 4)->default(0);
+            $table->decimal('sub_total', 18, 4)->default(0);
+            $table->decimal('tax_amount', 18, 4)->default(0);
+            $table->decimal('tax_total', 18, 4)->default(0);
+            $table->decimal('discount_amount', 18, 4)->default(0);
+            $table->decimal('discount_total', 18, 4)->default(0);
+            $table->decimal('shipping_total', 18, 4)->default(0);
+            $table->decimal('total_amount', 18, 4)->default(0);
+            $table->decimal('grand_total', 18, 4)->default(0);
             $table->unsignedSmallInteger('lead_time_days')->nullable();
+            $table->string('payment_terms', 191)->nullable();
+            $table->string('delivery_terms', 191)->nullable();
+            $table->unsignedSmallInteger('delivery_days')->nullable();
             $table->text('terms_conditions')->nullable();
+            $table->text('terms_and_conditions')->nullable();
+            $table->text('rejection_reason')->nullable();
             $table->text('notes')->nullable();
             $table->json('extra_attributes')->nullable();
+            $table->foreignId('created_by')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete()
+                ->name('fk_supqt_created_by__usr');
+            $table->foreignId('updated_by')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete()
+                ->name('fk_supqt_updated_by__usr');
             $table->timestamps();
             $table->softDeletes();
 

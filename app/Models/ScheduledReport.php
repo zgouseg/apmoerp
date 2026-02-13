@@ -29,6 +29,7 @@ class ScheduledReport extends Model
         'cron_expression',
         'filters',
         'recipient_email',
+        'is_active',
         'last_status',
         'last_run_at',
         'last_error',
@@ -41,6 +42,7 @@ class ScheduledReport extends Model
      */
     protected $casts = [
         'filters' => 'array',
+        'is_active' => 'boolean',
         'last_run_at' => 'datetime',
     ];
 

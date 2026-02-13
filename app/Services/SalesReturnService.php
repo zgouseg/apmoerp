@@ -529,9 +529,9 @@ class SalesReturnService
             return 0;
         }
 
-        $discountPerUnit = $saleItem->discount / $saleItem->qty;
+        $discountPerUnit = decimal_float(bcdiv((string) $saleItem->discount, (string) $saleItem->qty, 4));
 
-        return $discountPerUnit * $qtyReturned;
+        return decimal_float(bcmul((string) $discountPerUnit, (string) $qtyReturned, 4));
     }
 
     protected function calculateItemTax($saleItem, float $qtyReturned): float
@@ -541,9 +541,12 @@ class SalesReturnService
         }
 
         // Calculate proportional tax
-        $taxPerUnit = ($saleItem->line_total - ($saleItem->unit_price * $saleItem->qty - $saleItem->discount)) / $saleItem->qty;
+        $subtotal = bcmul((string) $saleItem->unit_price, (string) $saleItem->qty, 4);
+        $netSubtotal = bcsub($subtotal, (string) $saleItem->discount, 4);
+        $taxTotal = bcsub((string) $saleItem->line_total, $netSubtotal, 4);
+        $taxPerUnit = bcdiv($taxTotal, (string) $saleItem->qty, 4);
 
-        return $taxPerUnit * $qtyReturned;
+        return decimal_float(bcmul($taxPerUnit, (string) $qtyReturned, 4));
     }
 
     /**

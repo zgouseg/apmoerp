@@ -230,7 +230,7 @@ class CustomizableDashboard extends Component
         $totalsByDate = $this->scopeQueryToBranch(\App\Models\Sale::query())
             ->whereNotIn('status', SaleStatus::nonRevenueStatuses())
             ->whereDate('sale_date', '>=', $start)
-            ->selectRaw('DATE(sale_date) as date, SUM(grand_total) as total')
+            ->selectRaw('DATE(sale_date) as date, SUM(total_amount) as total')
             ->groupBy('date')
             ->orderBy('date')
             ->pluck('total', 'date')

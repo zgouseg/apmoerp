@@ -151,6 +151,13 @@ class Form extends Component
 
         // V23-MED-05 FIX: Don't overwrite created_by on updates
         $validated['branch_id'] = $this->income?->branch_id ?? $branchId;
+
+        // Convert single attachment to JSON array for database storage
+        if (isset($validated['attachment'])) {
+            $validated['attachments'] = $validated['attachment'] ? [$validated['attachment']] : [];
+            unset($validated['attachment']);
+        }
+
         if (! $this->editMode) {
             // V33-CRIT-02 FIX: Use actual_user_id() for proper audit attribution during impersonation
             $validated['created_by'] = actual_user_id();

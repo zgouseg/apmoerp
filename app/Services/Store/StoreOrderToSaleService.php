@@ -204,6 +204,10 @@ class StoreOrderToSaleService
                     }
                 }
             } catch (\Throwable $e) {
+                Log::warning('StoreOrderToSaleService: product lookup failed', [
+                    'order_id' => $order->getKey(),
+                    'error' => $e->getMessage(),
+                ]);
             }
 
             // HIGH-03 FIX: Skip items without product mapping to avoid null product_id

@@ -55,13 +55,13 @@
                         <div class="flex gap-4 @if($reply->isInternal()) bg-yellow-50 @else bg-slate-50 @endif p-4 rounded-lg">
                             <div class="flex-shrink-0">
                                 <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
-                                    {{ substr($reply->user->name, 0, 2) }}
+                                    {{ substr($reply->user?->name ?? '??', 0, 2) }}
                                 </div>
                             </div>
                             <div class="flex-1">
                                 <div class="flex items-center justify-between mb-2">
                                     <div>
-                                        <span class="font-semibold text-slate-900">{{ $reply->user->name }}</span>
+                                        <span class="font-semibold text-slate-900">{{ $reply->user?->name ?? __('Unknown') }}</span>
                                         @if($reply->isInternal())
                                             <span class="ml-2 px-2 py-0.5 text-xs bg-yellow-200 text-yellow-800 rounded">{{ __('Internal Note') }}</span>
                                         @endif

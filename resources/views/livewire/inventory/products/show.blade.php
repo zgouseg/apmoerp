@@ -21,11 +21,11 @@
                 </div>
                 <div>
                     <dt class="text-sm font-medium text-gray-500">{{ __('Category') }}</dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ $product->category->name ?? __('Uncategorized') }}</dd>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ $product->category?->name ?? __('Uncategorized') }}</dd>
                 </div>
                 <div>
                     <dt class="text-sm font-medium text-gray-500">{{ __('Unit') }}</dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ $product->unit->name ?? __('N/A') }}</dd>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ $product->unit?->name ?? __('N/A') }}</dd>
                 </div>
                 <div>
                     <dt class="text-sm font-medium text-gray-500">{{ __('Price') }}</dt>

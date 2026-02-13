@@ -99,7 +99,7 @@ class Form extends Component
             $this->isEditing = true;
             $this->asset = $asset;
             $this->fill($asset->toArray());
-            $this->purchase_date = $asset->purchase_date->format('Y-m-d');
+            $this->purchase_date = $asset->purchase_date?->format('Y-m-d') ?? now()->format('Y-m-d');
             $this->warranty_expiry = $asset->warranty_expiry?->format('Y-m-d') ?? '';
         } else {
             $this->authorize('fixed-assets.create');

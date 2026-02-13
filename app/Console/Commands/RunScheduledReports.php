@@ -90,7 +90,7 @@ class RunScheduledReports extends Command
             $result = $this->reportService->generateAndSend(
                 $template,
                 $schedule->format,
-                explode(',', $schedule->recipient_emails),
+                explode(',', $schedule->recipient_emails ?? ''),
                 $filters,
                 $schedule->name
             );
@@ -130,8 +130,8 @@ class RunScheduledReports extends Command
     protected function calculateNextRun($schedule): string
     {
         $now = now();
-        $time = explode(':', $schedule->time_of_day);
-        $hour = (int) $time[0];
+        $time = explode(':', $schedule->time_of_day ?? '08:00');
+        $hour = (int) ($time[0] ?? 8);
         $minute = (int) ($time[1] ?? 0);
 
         switch ($schedule->frequency) {

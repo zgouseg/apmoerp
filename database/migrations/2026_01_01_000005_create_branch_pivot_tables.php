@@ -48,6 +48,9 @@ return new class extends Migration
             $table->string('module_key', 50)->nullable();
             $table->boolean('enabled')->default(true);
             $table->json('settings')->nullable();
+            $table->json('activation_constraints')->nullable();
+            $table->json('permission_overrides')->nullable();
+            $table->boolean('inherit_settings')->default(true);
             $table->timestamp('activated_at')->nullable();
             $table->timestamp('deactivated_at')->nullable();
             $table->timestamps();
