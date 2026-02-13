@@ -658,7 +658,7 @@ function erpPosTerminal(config) {
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
                         },
                         credentials: 'same-origin',
-                        body: JSON.stringify({ ...order, warehouse_id: this.warehouseId, notes: 'Synced from offline POS' })
+                        body: JSON.stringify({ ...order, warehouse_id: this.warehouseId, notes: (order.notes ? order.notes + ' | ' : '') + 'Synced from offline POS' })
                     });
                 } catch (e) {
                     this.offlineQueue.push(order);

@@ -20,6 +20,7 @@ class PosCheckoutRequest extends FormRequest
     public function rules(): array
     {
         // Use the branch from the route (branch-scoped API) or fall back to user's branch
+        // The attributes->get('branch_id') path is used by SetBranchContext middleware
         $branchId = $this->route('branch')?->id
             ?? $this->attributes->get('branch_id')
             ?? $this->user()?->branch_id;

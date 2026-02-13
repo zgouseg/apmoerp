@@ -79,6 +79,12 @@ class Terminal extends Component
             ->where('is_active', true)
             ->orderByDesc('is_default')
             ->value('id');
+
+        if (! $this->warehouseId) {
+            \Illuminate\Support\Facades\Log::warning('POS Terminal: No active warehouse found for branch', [
+                'branch_id' => $this->branchId,
+            ]);
+        }
     }
 
     public function render()
