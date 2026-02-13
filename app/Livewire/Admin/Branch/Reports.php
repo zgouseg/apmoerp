@@ -181,10 +181,10 @@ class Reports extends Component
      */
     public function getDailySales(): array
     {
-        return Sale::where('branch_id', $this->branch->id)
-            // V35-MED-06 FIX: Exclude non-revenue statuses
+        return DB::table('sales')
+            ->where('branch_id', $this->branch->id)
+            ->whereNull('deleted_at')
             ->whereNotIn('status', SaleStatus::nonRevenueStatuses())
-            // V35-HIGH-02 FIX: Use sale_date instead of created_at
             ->whereBetween('sale_date', [$this->fromDate, $this->toDate])
             ->select(DB::raw('DATE(sale_date) as date'), DB::raw('SUM(total_amount) as total'))
             ->groupBy('date')
