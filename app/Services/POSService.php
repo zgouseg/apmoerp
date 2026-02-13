@@ -183,12 +183,12 @@ class POSService implements POSServiceInterface
                     $lineDisc = $this->discounts->lineTotal($qty, $price, $itemDiscountPercent, (bool) ($it['percent'] ?? true));
 
                     if ($user && $user->daily_discount_limit !== null && $lineDisc > 0) {
-                        $totalUsedWithThisLine = $previousDailyDiscount + $discountTotal + $lineDisc;
-                        if ($totalUsedWithThisLine > $user->daily_discount_limit) {
+                        $totalUsedWithThisLine = bcadd(bcadd((string) $previousDailyDiscount, (string) $discountTotal, 4), (string) $lineDisc, 4);
+                        if (bccomp($totalUsedWithThisLine, (string) $user->daily_discount_limit, 4) > 0) {
                             abort(422, __('Daily discount limit of :limit EGP exceeded. Already used: :used EGP, this transaction adds: :add EGP', [
                                 'limit' => number_format($user->daily_discount_limit, 2),
-                                'used' => number_format($previousDailyDiscount, 2),
-                                'add' => number_format($discountTotal + $lineDisc, 2),
+                                'used' => number_format(decimal_float($previousDailyDiscount), 2),
+                                'add' => number_format(decimal_float(bcadd((string) $discountTotal, (string) $lineDisc, 4)), 2),
                             ]));
                         }
                     }

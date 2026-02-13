@@ -46,7 +46,7 @@ class Form extends Component
 
     public string $shipping_address = '';
 
-    public string $status = 'active';
+    public bool $is_active = true;
 
     private static array $customerColumns = [];
 
@@ -64,7 +64,7 @@ class Form extends Component
             'currency' => 'nullable|string|size:3',
             'address' => $this->unicodeText(required: false, max: 500),
             'shipping_address' => $this->unicodeText(required: false, max: 500),
-            'status' => 'required|in:active,inactive',
+            'is_active' => 'required|boolean',
             'notes' => $this->unicodeText(required: false),
         ];
     }
@@ -93,7 +93,7 @@ class Form extends Component
             $this->currency = $customer->currency ?? '';
             $this->address = $customer->address ?? '';
             $this->shipping_address = $customer->shipping_address ?? '';
-            $this->status = $customer->status ?? 'active';
+            $this->is_active = (bool) ($customer->is_active ?? true);
             $this->notes = $customer->notes ?? '';
         } else {
             $this->authorize('customers.manage');
@@ -116,9 +116,6 @@ class Form extends Component
         }
 
         $validated['branch_id'] = $branchId;
-
-        // Ensure status aligns with the database column
-        $validated['status'] = $validated['status'] ?? 'active';
 
         // Only set created_by for new records
         if (! $this->editMode) {

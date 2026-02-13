@@ -77,8 +77,10 @@ class WriteAuditTrail
                 'new_values' => method_exists($event, 'new') ? (array) $event->new() : [],
                 'meta' => ! empty($meta) ? $meta : null,
             ]);
-        } catch (\Throwable) {
-            // swallow errors
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('WriteAuditTrail: failed to write audit log', [
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 }
