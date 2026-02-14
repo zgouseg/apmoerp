@@ -84,7 +84,7 @@
                 <tbody>
                     @forelse($transfers ?? [] as $transfer)
                         <tr class="hover:bg-slate-50">
-                            <td class="text-sm text-slate-500">{{ $transfer->created_at->format('Y-m-d H:i') }}</td>
+                            <td class="text-sm text-slate-500">{{ $transfer->created_at?->format('Y-m-d H:i') }}</td>
                             <td class="font-medium">{{ $transfer->fromWarehouse->name ?? '-' }}</td>
                             <td class="font-medium">{{ $transfer->toWarehouse->name ?? '-' }}</td>
                             <td>

@@ -27,7 +27,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                     @forelse($currencies as $currency)
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                        <tr wire:key="currency-{{ $currency->id }}" class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
                             <td class="px-4 py-3">
                                 <span class="font-mono font-bold text-gray-900 dark:text-white">{{ $currency->code }}</span>
                             </td>

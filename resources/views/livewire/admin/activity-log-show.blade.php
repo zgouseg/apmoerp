@@ -23,7 +23,7 @@
                 <div>
                     <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ __('Date & Time') }}</dt>
                     <dd class="mt-1 text-sm text-gray-900 dark:text-white">
-                        {{ $activity->created_at->format('M d, Y \a\t H:i:s') }}
+                        {{ $activity->created_at?->format('M d, Y \a\t H:i:s') }}
                         <span class="text-gray-500 dark:text-gray-400">({{ $activity->created_at->diffForHumans() }})</span>
                     </dd>
                 </div>

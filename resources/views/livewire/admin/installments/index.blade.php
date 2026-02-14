@@ -106,7 +106,7 @@
                             @if($plan->next_payment)
                                 <div class="text-sm">
                                     <span class="{{ $plan->next_payment->isOverdue() ? 'text-red-600' : 'text-gray-600 dark:text-gray-400' }}">
-                                        {{ $plan->next_payment->due_date->format('Y-m-d') }}
+                                        {{ $plan->next_payment?->due_date?->format('Y-m-d') }}
                                     </span>
                                     <button wire:click="openPaymentModal({{ $plan->next_payment->id }})" class="ml-2 text-emerald-600 hover:text-emerald-800">
                                         {{ __('Pay') }}

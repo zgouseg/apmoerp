@@ -35,8 +35,8 @@
             </div>
             <div class="erp-card p-4 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
                 <p class="text-sm text-purple-600 mb-1">{{ __('Last Updated') }}</p>
-                <p class="text-lg font-bold text-purple-800">{{ $product->updated_at->format('M d, Y') }}</p>
-                <p class="text-xs text-purple-600 mt-1">{{ $product->updated_at->format('H:i') }}</p>
+                <p class="text-lg font-bold text-purple-800">{{ $product->updated_at?->format('M d, Y') }}</p>
+                <p class="text-xs text-purple-600 mt-1">{{ $product->updated_at?->format('H:i') }}</p>
             </div>
         </div>
 
@@ -88,7 +88,7 @@
                             @foreach($stockMovements as $movement)
                                 <tr>
                                     <td class="whitespace-nowrap">
-                                        {{ $movement->created_at->format('M d, Y H:i') }}
+                                        {{ $movement->created_at?->format('M d, Y H:i') }}
                                     </td>
                                     <td>
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
@@ -150,7 +150,7 @@
                                         {{ __('by') }} <span class="font-medium">{{ $log->user?->name ?: __('System') }}</span>
                                     </span>
                                 </div>
-                                <span class="text-xs text-slate-500">{{ $log->created_at->format('M d, Y H:i') }}</span>
+                                <span class="text-xs text-slate-500">{{ $log->created_at?->format('M d, Y H:i') }}</span>
                             </div>
                             @if($log->old_values || $log->new_values)
                                 <div class="mt-2 text-sm text-slate-600">

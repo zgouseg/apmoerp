@@ -168,6 +168,8 @@ class Index extends Component
 
     public function deleteTranslation($key, $group)
     {
+        $this->authorize('translations.manage');
+
         // Security: Validate inputs
         if (! is_string($key) || ! is_string($group)) {
             $this->dispatch('notify', [

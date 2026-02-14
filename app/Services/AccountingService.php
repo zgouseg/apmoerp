@@ -151,7 +151,7 @@ class AccountingService
                 }
             }
 
-            // Credit: Discount (if applicable)
+            // Debit: Sales Discount (contra-revenue, reduces gross sales)
             if ($sale->discount_amount > 0) {
                 $discountAccount = AccountMapping::getAccount('sales', 'sales_discount', $sale->branch_id);
                 if ($discountAccount) {
@@ -160,7 +160,7 @@ class AccountingService
                         'account_id' => $discountAccount->id,
                         'debit' => $sale->discount_amount,
                         'credit' => 0,
-                        'description' => 'Discount given',
+                        'description' => 'Sales discount (contra-revenue)',
                     ];
                 }
             }
@@ -449,14 +449,15 @@ class AccountingService
                 if (! $account) {
                     throw new Exception("Account ID {$line->account_id} not found for journal entry line. Data integrity issue detected.");
                 }
-                $netChange = $line->debit - $line->credit;
+                $netChange = bcsub((string) $line->debit, (string) $line->credit, 4);
+                $netChangeFloat = (float) $netChange;
 
                 // For asset and expense accounts, debit increases balance
                 // For liability, equity, and revenue accounts, credit increases balance
                 if (in_array($account->type, ['asset', 'expense'], true)) {
-                    $account->increment('balance', $netChange);
+                    $account->increment('balance', $netChangeFloat);
                 } else {
-                    $account->decrement('balance', $netChange);
+                    $account->decrement('balance', $netChangeFloat);
                 }
             }
 

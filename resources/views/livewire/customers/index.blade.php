@@ -76,7 +76,7 @@
                 </thead>
                 <tbody>
                     @forelse($customers as $customer)
-                        <tr>
+                        <tr wire:key="customer-{{ $customer->id }}">
                             <td class="font-medium text-slate-800">{{ $customer->name }}</td>
                             <td>{{ $customer->email ?? '-' }}</td>
                             <td dir="ltr">{{ $customer->phone ?? '-' }}</td>

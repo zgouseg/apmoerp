@@ -66,7 +66,8 @@ class CashFlowForecastService
     {
         // Use actual database column names: due_date (not payment_due_date accessor)
         // Calculate due_total as (total_amount - paid_amount) since it's an accessor
-        return Sale::select(
+        return Sale::withOnly([])
+            ->select(
             'id',
             'customer_id',
             'due_date as due_date',
@@ -87,7 +88,8 @@ class CashFlowForecastService
     {
         // Use actual database column names: due_date (not payment_due_date accessor)
         // Calculate due_total as (total_amount - paid_amount) since it's an accessor
-        return Purchase::select(
+        return Purchase::withOnly([])
+            ->select(
             'id',
             'supplier_id',
             'due_date as due_date',

@@ -78,8 +78,8 @@
                 @forelse($activities as $activity)
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                            <div>{{ $activity->created_at->format('M d, Y') }}</div>
-                            <div class="text-xs">{{ $activity->created_at->format('H:i:s') }}</div>
+                            <div>{{ $activity->created_at?->format('M d, Y') }}</div>
+                            <div class="text-xs">{{ $activity->created_at?->format('H:i:s') }}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             @if($activity->causer)

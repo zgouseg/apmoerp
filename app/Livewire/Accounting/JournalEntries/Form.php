@@ -225,7 +225,10 @@ class Form extends Component
 
     public function render()
     {
+        $branchId = Auth::user()?->branch_id;
+
         $accounts = Account::where('is_active', true)
+            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->orderBy('account_number')
             ->get(['id', 'account_number', 'name']);
 

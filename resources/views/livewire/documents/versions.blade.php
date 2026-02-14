@@ -50,7 +50,7 @@
                         @endif
                         <div class="flex items-center gap-4 mt-3 text-xs text-slate-500">
                             <span>{{ __('By') }} {{ $version->uploader->name }}</span>
-                            <span>{{ $version->created_at->format('Y-m-d H:i') }}</span>
+                            <span>{{ $version->created_at?->format('Y-m-d H:i') }}</span>
                             <span>{{ $version->created_at->diffForHumans() }}</span>
                         </div>
                     </div>

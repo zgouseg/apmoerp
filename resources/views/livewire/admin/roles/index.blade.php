@@ -53,7 +53,7 @@
                 </thead>
                 <tbody>
                     @forelse($roles as $role)
-                        <tr>
+                        <tr wire:key="role-{{ $role->id }}">
                             <td class="font-medium text-slate-800">
                                 <div class="flex items-center gap-2">
                                     {{-- Role Type Indicator --}}

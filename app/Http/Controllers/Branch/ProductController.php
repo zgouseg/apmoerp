@@ -150,9 +150,10 @@ class ProductController extends Controller
         return $this->ok(['imported' => $count], __('Imported'));
     }
 
-    public function export()
+    public function export(Request $request)
     {
-        $path = $this->products->exportCsv('local', 'exports/products.csv');
+        $branchId = $this->resolveBranchId($request);
+        $path = $this->products->exportCsv('local', 'exports/products.csv', $branchId);
 
         return $this->ok([
             'path' => $path,

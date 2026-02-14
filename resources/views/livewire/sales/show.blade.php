@@ -11,7 +11,7 @@
             </div>
             <div>
                 <h3 class="font-semibold mb-2">{{ __('Date') }}</h3>
-                <p>{{ $sale->created_at->format('Y-m-d H:i') }}</p>
+                <p>{{ $sale->created_at?->format('Y-m-d H:i') }}</p>
             </div>
         </div>
 
@@ -28,7 +28,7 @@
                 </thead>
                 <tbody>
                     @foreach($sale->items as $item)
-                    <tr class="border-b">
+                    <tr wire:key="sale-item-{{ $item->id }}" class="border-b">
                         <td class="py-2">{{ $item->product?->name ?? $item->product_name ?? __('N/A') }}</td>
                         <td class="text-right">{{ $item->quantity }}</td>
                         <td class="text-right">{{ number_format($item->unit_price, 2) }}</td>

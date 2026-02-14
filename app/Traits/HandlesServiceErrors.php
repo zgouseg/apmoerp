@@ -55,7 +55,7 @@ trait HandlesServiceErrors
             'line' => $exception->getLine(),
             'trace' => $exception->getTraceAsString(),
             'user_id' => actual_user_id(),
-            'branch_id' => request()->attributes->get('branch_id'),
+            'branch_id' => request()?->attributes?->get('branch_id'),
         ], $context));
     }
 
@@ -71,7 +71,7 @@ trait HandlesServiceErrors
             'service' => $serviceName,
             'operation' => $operation,
             'user_id' => actual_user_id(),
-            'branch_id' => request()->attributes->get('branch_id'),
+            'branch_id' => request()?->attributes?->get('branch_id'),
         ], $context));
     }
 
@@ -87,7 +87,7 @@ trait HandlesServiceErrors
             'service' => $serviceName,
             'operation' => $operation,
             'user_id' => actual_user_id(),
-            'branch_id' => request()->attributes->get('branch_id'),
+            'branch_id' => request()?->attributes?->get('branch_id'),
         ], $context));
     }
 }

@@ -72,7 +72,7 @@
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800 bg-white/80 dark:bg-slate-900/60">
                 @forelse ($contracts as $row)
-                    <tr>
+                    <tr wire:key="contract-{{ $row->id }}">
                         <td class="px-3 py-2 whitespace-nowrap text-xs text-slate-800 dark:text-slate-100">
                             {{ $row->tenant?->name ?? __('Unknown') }}
                             <span class="block text-[11px] text-slate-400">

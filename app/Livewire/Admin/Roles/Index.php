@@ -169,6 +169,7 @@ class Index extends Component
         $roles = Role::query()
             ->where('guard_name', 'web')
             ->when($this->search, fn ($q) => $q->where('name', 'like', "%{$this->search}%"))
+            ->with('permissions')
             ->withCount('permissions', 'users')
             ->orderBy($this->sortField, $this->sortDirection)
             ->paginate(15);

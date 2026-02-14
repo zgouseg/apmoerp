@@ -52,6 +52,11 @@ class SaleService implements SaleServiceInterface
             callback: function () use ($saleId, $items, $reason) {
                 $sale = $this->findBranchSaleOrFail($saleId)->load('items');
 
+                // Prevent returning cancelled, voided, or already fully returned sales
+                if (in_array($sale->status, ['cancelled', 'voided', 'returned'], true)) {
+                    throw new \InvalidArgumentException(__('Cannot return items from a :status sale.', ['status' => $sale->status]));
+                }
+
                 return DB::transaction(function () use ($sale, $items, $reason) {
                     // V22-HIGH-07 FIX: Calculate previously returned quantities per sale_item
                     // This prevents over-returning items across multiple return requests

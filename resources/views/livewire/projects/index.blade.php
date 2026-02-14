@@ -118,7 +118,7 @@
                 </thead>
                 <tbody class="bg-white divide-y divide-slate-200">
                     @forelse($projects as $project)
-                    <tr class="hover:bg-slate-50 transition-colors">
+                    <tr wire:key="project-{{ $project->id }}" class="hover:bg-slate-50 transition-colors">
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
                             {{ $project->code }}
                         </td>

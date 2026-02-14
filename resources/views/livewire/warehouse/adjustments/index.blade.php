@@ -83,7 +83,7 @@
                 <tbody>
                     @forelse($adjustments ?? [] as $adjustment)
                         <tr class="hover:bg-slate-50">
-                            <td class="text-sm text-slate-500">{{ $adjustment->created_at->format('Y-m-d H:i') }}</td>
+                            <td class="text-sm text-slate-500">{{ $adjustment->created_at?->format('Y-m-d H:i') }}</td>
                             <td class="font-medium text-slate-800">{{ $adjustment->reason }}</td>
                             <td>
                                 <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">

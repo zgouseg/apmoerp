@@ -157,11 +157,11 @@
                 </thead>
                 <tbody>
                     @forelse($purchases as $purchase)
-                        <tr class="hover:bg-slate-50">
+                        <tr wire:key="purchase-{{ $purchase->id }}" class="hover:bg-slate-50">
                             <td class="font-medium text-slate-800">{{ $purchase->code }}</td>
                             <td>{{ $purchase->supplier?->name ?? '-' }}</td>
                             <td>{{ $purchase->branch?->name ?? '-' }}</td>
-                            <td>{{ $purchase->created_at->format('Y-m-d H:i') }}</td>
+                            <td>{{ $purchase->created_at?->format('Y-m-d H:i') ?? '-' }}</td>
                             <td class="font-semibold text-purple-600">{{ number_format($purchase->grand_total, 2) }} {{ __('EGP') }}</td>
                             <td class="text-blue-600">{{ number_format($purchase->paid_total, 2) }}</td>
                             <td class="{{ $purchase->due_total > 0 ? 'text-red-600 font-medium' : 'text-slate-500' }}">

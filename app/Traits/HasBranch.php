@@ -91,7 +91,8 @@ trait HasBranch
             return $query->where($this->getTable().'.branch_id', $branchId);
         }
 
-        return $query;
+        // No branch context: return empty result set to prevent data leak
+        return $query->whereNull($this->getTable().'.id');
     }
 
     /**

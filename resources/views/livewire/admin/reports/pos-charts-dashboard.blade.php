@@ -73,8 +73,7 @@
     </div>
 
 @script
-// UNFIXED-01 FIX: Use @script block for proper Livewire 4 component-scoped JavaScript
-const componentId = 'pos-charts-' + ($wire.__instance?.id ?? Math.random().toString(36).substr(2, 9));
+const componentId = 'pos-charts-' + $wire.$id;
 
 window.__lwCharts = window.__lwCharts || {};
 

@@ -100,6 +100,8 @@ class CustomizeExport extends Component
 
     public function saveLayout(): void
     {
+        $this->authorize('reports.export');
+
         $this->validate();
 
         $this->exportService->saveLayout(auth()->id(), $this->entityType, [

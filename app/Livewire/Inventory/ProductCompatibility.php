@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\ProductCompatibility as ProductCompatibilityModel;
 use App\Models\VehicleModel;
 use App\Services\SparePartsService;
+use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -75,6 +76,7 @@ class ProductCompatibility extends Component
         }
     }
 
+    #[Layout('layouts.app')]
     public function render()
     {
         $brands = $this->sparePartsService->getBrands();

@@ -44,7 +44,7 @@
                 </thead>
                 <tbody>
                     @forelse($suppliers as $supplier)
-                        <tr>
+                        <tr wire:key="supplier-{{ $supplier->id }}">
                             <td class="font-medium text-slate-800">{{ $supplier->name }}</td>
                             <td>{{ $supplier->company_name ?? '-' }}</td>
                             <td>{{ $supplier->email ?? '-' }}</td>

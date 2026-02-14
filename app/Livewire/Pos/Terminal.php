@@ -6,6 +6,7 @@ namespace App\Livewire\Pos;
 
 use App\Models\Branch;
 use App\Models\Currency;
+use App\Models\Warehouse;
 use App\Services\BranchContextManager;
 use App\Services\CurrencyService;
 use Illuminate\Support\Facades\Auth;
@@ -18,6 +19,8 @@ class Terminal extends Component
     public int $branchId;
 
     public string $branchName = '';
+
+    public ?int $warehouseId = null;
 
     /**
      * Indicates the authenticated user can view/switch all branches.
@@ -70,6 +73,18 @@ class Terminal extends Component
 
         $branch = Branch::find($this->branchId);
         $this->branchName = $branch?->name ?? __('Branch not found');
+
+        // Resolve default warehouse for the branch (required for POS checkout)
+        $this->warehouseId = Warehouse::where('branch_id', $this->branchId)
+            ->where('is_active', true)
+            ->orderByDesc('is_default')
+            ->value('id');
+
+        if (! $this->warehouseId) {
+            \Illuminate\Support\Facades\Log::warning('POS Terminal: No active warehouse found for branch', [
+                'branch_id' => $this->branchId,
+            ]);
+        }
     }
 
     public function render()
@@ -102,6 +117,7 @@ class Terminal extends Component
         return view('livewire.pos.terminal', [
             'branchId' => $this->branchId,
             'branchName' => $this->branchName,
+            'warehouseId' => $this->warehouseId,
             'currencies' => $currencies,
             'currencyData' => $currencyData,
             'currencySymbols' => $currencySymbols,

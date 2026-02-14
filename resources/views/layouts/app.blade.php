@@ -309,6 +309,11 @@
         
         // Livewire 4: Unified error handling using commit hooks
         document.addEventListener('livewire:init', () => {
+            // Track 500 errors to prevent infinite refresh loops
+            let serverErrorCount = 0;
+            const MAX_SERVER_ERRORS = 3;
+            const ERROR_RESET_MS = 30000; // Reset counter after 30 seconds
+            
             Livewire.hook('commit', ({ fail }) => {
                 fail(({ status, preventDefault }) => {
                     if (status === 419 || status === 401) {
@@ -329,6 +334,23 @@
                                 window.location.href = '{{ route("dashboard") }}';
                             }
                         }, 1500);
+                    }
+                    // Handle 500 Server Error - prevent infinite refresh loops
+                    if (status === 500) {
+                        preventDefault();
+                        serverErrorCount++;
+                        clearTimeout(window.__erpErrorResetTimer);
+                        window.__erpErrorResetTimer = setTimeout(() => { serverErrorCount = 0; }, ERROR_RESET_MS);
+                        
+                        if (serverErrorCount < MAX_SERVER_ERRORS) {
+                            @if(config('app.debug'))
+                            console.error('[ERP] Server error (500) on Livewire request. Error count:', serverErrorCount);
+                            @endif
+                        } else {
+                            @if(config('app.debug'))
+                            console.error('[ERP] Too many server errors. Stopping automatic retries.');
+                            @endif
+                        }
                     }
                 });
             });

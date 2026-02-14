@@ -51,7 +51,12 @@ class RentalService implements RentalServiceInterface
     {
         return $this->handleServiceOperation(
             callback: function () use ($unitId, $status) {
-                $u = RentalUnit::findOrFail($unitId);
+                $branchId = auth()->user()?->branch_id;
+                $query = RentalUnit::query();
+                if ($branchId) {
+                    $query->whereHas('property', fn ($q) => $q->where('branch_id', $branchId));
+                }
+                $u = $query->findOrFail($unitId);
                 $u->status = $status;
                 $u->save();
 

@@ -117,7 +117,7 @@
                                     {{ $tenant->is_active ? __('Active') : __('Inactive') }}
                                 </span>
                             </td>
-                            <td class="text-slate-500 text-sm">{{ $tenant->created_at->format('Y-m-d') }}</td>
+                            <td class="text-slate-500 text-sm">{{ $tenant->created_at?->format('Y-m-d') }}</td>
                             <td>
                                 <div class="flex items-center gap-2">
                                     <a href="{{ route('app.rental.tenants.edit', $tenant->id) }}" class="text-blue-600 hover:text-blue-800" title="{{ __('Edit') }}">

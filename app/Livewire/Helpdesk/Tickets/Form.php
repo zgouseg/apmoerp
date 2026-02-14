@@ -164,10 +164,13 @@ class Form extends Component
             ]);
         }
 
+        $branchId = Auth::user()?->branch_id;
+
         $categories = TicketCategory::orderBy('name')->get();
         $priorities = TicketPriority::orderBy('sort_order')->get();
         $sla_policies = TicketSLAPolicy::where('is_active', true)->orderBy('name')->get();
-        $customers = Customer::orderBy('name')->limit(100)->get();
+        $customers = Customer::when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+            ->orderBy('name')->limit(100)->get();
         $agents = User::whereHas('roles', function ($q) {
             $q->where('name', 'agent')->orWhere('name', 'admin');
         })->orderBy('name')->get();

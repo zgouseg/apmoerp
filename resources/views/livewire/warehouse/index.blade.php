@@ -173,7 +173,7 @@
                         </thead>
                         <tbody>
                             @forelse($warehouses as $warehouse)
-                                <tr class="hover:bg-slate-50">
+                                <tr wire:key="warehouse-{{ $warehouse->id }}" class="hover:bg-slate-50">
                                     <td class="font-medium text-slate-800">{{ $warehouse->name }}</td>
                                     <td class="font-mono text-slate-600">{{ $warehouse->code ?? '-' }}</td>
                                     <td class="text-slate-600">{{ $warehouse->address ?? '-' }}</td>
@@ -234,8 +234,8 @@
                         </thead>
                         <tbody>
                             @forelse($movements as $movement)
-                                <tr class="hover:bg-slate-50">
-                                    <td class="text-slate-600">{{ $movement->created_at->format('Y-m-d H:i') }}</td>
+                                <tr wire:key="movement-{{ $movement->id }}" class="hover:bg-slate-50">
+                                    <td class="text-slate-600">{{ $movement->created_at?->format('Y-m-d H:i') ?? '-' }}</td>
                                     <td class="font-medium text-slate-800">{{ $movement->product?->name ?? '-' }}</td>
                                     <td>{{ $movement->warehouse?->name ?? '-' }}</td>
                                     <td>
