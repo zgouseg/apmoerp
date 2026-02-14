@@ -224,8 +224,7 @@
     </div>
 
 @script
-// UNFIXED-01 FIX: Use @@script block for proper Livewire 4 component-scoped JavaScript
-const componentId = 'customizable-dashboard-' + ($wire.__instance?.id ?? Math.random().toString(36).substr(2, 9));
+const componentId = 'customizable-dashboard-' + $wire.$id;
 
 // Initialize global storages if not exists
 window.__lwCharts = window.__lwCharts || {};

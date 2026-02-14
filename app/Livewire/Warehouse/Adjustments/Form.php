@@ -180,13 +180,14 @@ class Form extends Component
     public function render()
     {
         $user = auth()->user();
+        $branchId = $user?->branch_id;
 
-        $warehouses = Warehouse::when($user->branch_id, fn ($q) => $q->where('branch_id', $user->branch_id))
+        $warehouses = Warehouse::when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->where('is_active', true)
             ->orderBy('name')
             ->get();
 
-        $products = Product::when($user->branch_id, fn ($q) => $q->where('branch_id', $user->branch_id))
+        $products = Product::when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->where('status', 'active')
             ->orderBy('name')
             ->get();
