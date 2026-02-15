@@ -12,7 +12,7 @@ use Illuminate\Console\Command;
  */
 class RepairUserPasswords extends Command
 {
-    protected $signature = 'user:repair-passwords {--email=} {--admin-only : Disabled}';
+    protected $signature = 'user:repair-passwords {--email=} {--admin-only : No longer functional}';
 
     protected $description = '[DISABLED] This command has been disabled for security reasons.';
 

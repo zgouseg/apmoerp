@@ -14,9 +14,9 @@ use Illuminate\Console\Command;
 class ConsolidateMigrationsCommand extends Command
 {
     protected $signature = 'migrations:consolidate
-                            {--backup : Disabled}
-                            {--activate : Disabled}
-                            {--dry-run : Disabled}';
+                            {--backup : No longer functional}
+                            {--activate : No longer functional}
+                            {--dry-run : No longer functional}';
 
     protected $description = '[DISABLED] This command has been disabled for security reasons.';
 
