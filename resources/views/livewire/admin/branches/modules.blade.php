@@ -59,7 +59,7 @@
                                         <p class="text-sm text-slate-500 mt-1">{{ $module['description'] }}</p>
                                     @endif
                                     <span class="inline-block mt-2 px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded font-mono">
-                                        {{ $module['key'] }}
+                                        {{ $module['module_key'] }}
                                     </span>
                                 </div>
                             </label>

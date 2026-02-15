@@ -62,12 +62,13 @@
                 <div>
                     <label class="erp-label">{{ __('Icon') }}</label>
                     <div x-data="{ showIconPicker: false, searchIcon: '' }" class="relative">
-                        <div class="flex gap-3">
+                        <div class="flex gap-3 items-center">
                             <button type="button" @click="showIconPicker = !showIconPicker" 
-                                    class="erp-input w-20 text-center text-2xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700">
+                                    class="erp-input w-20 text-center text-2xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700"
+                                    title="{{ __('Click to select icon') }}">
                                 {{ $icon }}
                             </button>
-                            <input type="text" wire:model="icon" class="erp-input flex-1" placeholder="{{ __('Or type custom icon/emoji...') }}">
+                            <span class="text-sm text-slate-500 dark:text-slate-400">{{ __('Click to change icon') }}</span>
                         </div>
                         
                         {{-- Icon Picker Dropdown --}}
@@ -220,16 +221,16 @@
                             </div>
                         </div>
                     </div>
-                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ __('Click to open icon picker or type custom icon') }}</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ __('Select an icon from the picker above') }}</p>
                 </div>
 
                 <div>
                     <label class="erp-label">{{ __('Color Theme') }}</label>
                     <div class="flex gap-2 flex-wrap">
                         @foreach(['emerald' => 'bg-emerald-500', 'blue' => 'bg-blue-500', 'purple' => 'bg-purple-500', 'red' => 'bg-red-500', 'amber' => 'bg-amber-500', 'cyan' => 'bg-cyan-500', 'pink' => 'bg-pink-500', 'indigo' => 'bg-indigo-500', 'teal' => 'bg-teal-500', 'orange' => 'bg-orange-500'] as $colorName => $colorClass)
-                            <label class="cursor-pointer">
-                                <input type="radio" wire:model="color" value="{{ $colorName }}" class="sr-only">
-                                <div class="w-8 h-8 rounded-full {{ $colorClass }} {{ $color === $colorName ? 'ring-2 ring-offset-2 ring-slate-400 dark:ring-offset-slate-800' : '' }} hover:scale-110 transition-transform"></div>
+                            <label class="cursor-pointer" title="{{ ucfirst($colorName) }}">
+                                <input type="radio" wire:model.live="color" value="{{ $colorName }}" class="sr-only peer">
+                                <div class="w-8 h-8 rounded-full {{ $colorClass }} peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-slate-400 dark:peer-checked:ring-offset-slate-800 hover:scale-110 transition-transform"></div>
                             </label>
                         @endforeach
                     </div>

@@ -843,36 +843,36 @@
         scrollToActiveItem() {
             // Use a small delay to ensure DOM is fully rendered and any collapse animations complete
             setTimeout(() => {
-                // Find the main navigation container using data attribute
-                const nav = this.$el.querySelector('[data-sidebar-main-nav]');
-                if (!nav) return;
+                // Find the scrollable container (erp-sidebar-scroll wraps header+nav+footer)
+                const scrollContainer = this.$el.querySelector('.erp-sidebar-scroll');
+                if (!scrollContainer) return;
                 
                 // Find the active item (prefer sub-item, then parent item)
-                const activeSubItem = nav.querySelector('.erp-sidebar-subitem.active');
-                const activeParentItem = nav.querySelector('.erp-sidebar-item.active');
+                const activeSubItem = scrollContainer.querySelector('.erp-sidebar-subitem.active');
+                const activeParentItem = scrollContainer.querySelector('.erp-sidebar-item.active');
                 const activeItem = activeSubItem || activeParentItem;
                 
                 if (!activeItem) return;
                 
                 // Get the bounding rectangles
-                const navRect = nav.getBoundingClientRect();
+                const containerRect = scrollContainer.getBoundingClientRect();
                 const itemRect = activeItem.getBoundingClientRect();
                 
                 // Check if item is already visible in the viewport
-                const isVisible = itemRect.top >= navRect.top && 
-                                  itemRect.bottom <= navRect.bottom;
+                const isVisible = itemRect.top >= containerRect.top && 
+                                  itemRect.bottom <= containerRect.bottom;
                 
                 // Only scroll if the item is not visible
                 if (!isVisible) {
                     // Calculate the scroll position to center the active item
-                    const scrollTop = nav.scrollTop + (itemRect.top - navRect.top) - (navRect.height / 2) + (itemRect.height / 2);
+                    const scrollTop = scrollContainer.scrollTop + (itemRect.top - containerRect.top) - (containerRect.height / 2) + (itemRect.height / 2);
                     
                     // Ensure the scroll position is within valid bounds
-                    const maxScroll = nav.scrollHeight - nav.clientHeight;
+                    const maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
                     const finalScrollTop = Math.max(0, Math.min(scrollTop, maxScroll));
                     
                     // Scroll to the active item (instant to avoid layout jank on initial load)
-                    nav.scrollTo({ 
+                    scrollContainer.scrollTo({ 
                         top: finalScrollTop, 
                         behavior: 'instant' 
                     });
@@ -995,32 +995,8 @@
     }"
     @click.away="showSearchResults = false"
 >
-    {{-- Sidebar Header --}}
-    <div class="erp-sidebar-header">
-        <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
-            <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white font-bold text-lg shadow-lg shadow-emerald-500/30">
-                {{ strtoupper(mb_substr(config('app.name', 'G'), 0, 1)) }}
-            </span>
-            <div class="flex flex-col min-w-0">
-                <span class="text-sm font-semibold truncate text-white">{{ $user->name ?? __('User') }}</span>
-                <span class="text-xs text-emerald-300 truncate">{{ $user?->roles?->first()?->name ?? __('User') }}</span>
-            </div>
-        </a>
-
-        {{-- Mobile Close Button --}}
-        <button 
-            @click="sidebarOpen = false" 
-            class="lg:hidden p-2 rounded-lg hover:bg-slate-800 transition-colors text-slate-400 hover:text-white"
-            aria-label="{{ __('Close sidebar') }}"
-        >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-        </button>
-    </div>
-
-    {{-- Search Box --}}
-    <div class="px-3 py-2">
+    {{-- Search Box (stays fixed at top) --}}
+    <div class="px-3 py-2 flex-shrink-0 border-block-end border-slate-700/30" style="border-bottom: 1px solid rgba(148, 163, 184, 0.1);">
         <div class="relative">
             <input
                 type="text"
@@ -1044,6 +1020,33 @@
                 </svg>
             </button>
         </div>
+    </div>
+
+    {{-- Scrollable area: header, branch switcher, navigation, and footer --}}
+    <div class="erp-sidebar-scroll">
+
+    {{-- Sidebar Header (scrolls with content) --}}
+    <div class="erp-sidebar-header">
+        <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
+            <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white font-bold text-lg shadow-lg shadow-emerald-500/30">
+                {{ strtoupper(mb_substr(config('app.name', 'G'), 0, 1)) }}
+            </span>
+            <div class="flex flex-col min-w-0">
+                <span class="text-sm font-semibold truncate text-white">{{ $user->name ?? __('User') }}</span>
+                <span class="text-xs text-emerald-300 truncate">{{ $user?->roles?->first()?->name ?? __('User') }}</span>
+            </div>
+        </a>
+
+        {{-- Mobile Close Button --}}
+        <button 
+            @click="sidebarOpen = false" 
+            class="lg:hidden p-2 rounded-lg hover:bg-slate-800 transition-colors text-slate-400 hover:text-white"
+            aria-label="{{ __('Close sidebar') }}"
+        >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
     </div>
 
     {{-- Branch Switcher (Admin only) --}}
@@ -1236,4 +1239,6 @@
             </span>
         </div>
     </div>
+
+    </div>{{-- End erp-sidebar-scroll --}}
 </aside>
