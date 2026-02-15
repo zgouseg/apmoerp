@@ -1,7 +1,6 @@
 <?php
 
 use App\Console\Commands\ClosePosDay;
-use App\Console\Commands\RepairUserPasswords;
 use App\Console\Commands\SendScheduledReports;
 use App\Console\Commands\SystemDiagnostics;
 use App\Models\Branch;
@@ -127,7 +126,6 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withCommands([
         SendScheduledReports::class,
         ClosePosDay::class,
-        RepairUserPasswords::class,
         SystemDiagnostics::class,
     ])
     // Note: Scheduling is defined in routes/console.php using Schedule facade
