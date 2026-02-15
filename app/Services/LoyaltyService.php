@@ -296,7 +296,7 @@ class LoyaltyService
                 if ($returnAmount !== null && $sale->grand_total > 0) {
                     // Partial return - reverse proportional points using BCMath
                     $returnRatio = bcdiv((string) $returnAmount, (string) $sale->grand_total, 6);
-                    $pointsToReverse = (int) floor(decimal_float(bcmul((string) $originalTransaction->points, $returnRatio, 2)));
+                    $pointsToReverse = (int) floor(decimal_float(bcmul((string) $originalTransaction->points, $returnRatio, 6)));
                 } else {
                     // Full return - reverse all points from this sale
                     $pointsToReverse = $originalTransaction->points;

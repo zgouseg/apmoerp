@@ -262,10 +262,10 @@ class ManufacturingService
     {
         // Validate quantities are non-negative
         if ($quantity <= 0) {
-            throw new \InvalidArgumentException('Production quantity must be positive');
+            throw new \InvalidArgumentException("Production quantity must be positive. Got: {$quantity}");
         }
         if ($scrapQuantity < 0) {
-            throw new \InvalidArgumentException('Scrap quantity cannot be negative');
+            throw new \InvalidArgumentException("Scrap quantity cannot be negative. Got: {$scrapQuantity}");
         }
 
         DB::transaction(function () use ($order, $quantity, $scrapQuantity) {
