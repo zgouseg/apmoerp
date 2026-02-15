@@ -10,11 +10,11 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class Index extends Component
 {
-    use WithPagination;
-
+    use AuthorizesRequests, WithPagination;
     #[Url]
     public string $search = '';
 

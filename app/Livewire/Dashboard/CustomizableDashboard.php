@@ -444,7 +444,8 @@ class CustomizableDashboard extends Component
                     }
                 }
                 $widget['key'] = $key;
-                $widget['visible'] = $widget['default_enabled'];
+                // Respect user's hidden widgets even if the saved order was missing this key.
+                $widget['visible'] = $widget['default_enabled'] && ! in_array($key, $this->hiddenWidgets);
                 $this->widgets[] = $widget;
             }
         }
@@ -484,6 +485,9 @@ class CustomizableDashboard extends Component
 
         $this->saveUserPreferences();
         $this->loadUserPreferences();
+
+        // Ensure JS widgets (charts/sortable) are re-initialized after DOM updates
+        $this->dispatch('dashboard-refreshed');
     }
 
     /**
@@ -541,6 +545,8 @@ class CustomizableDashboard extends Component
         $this->layoutMode = 'default';
         $this->saveUserPreferences();
         $this->loadUserPreferences();
+
+        $this->dispatch('dashboard-refreshed');
     }
 
     /**

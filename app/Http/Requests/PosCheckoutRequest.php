@@ -34,7 +34,10 @@ class PosCheckoutRequest extends FormRequest
             'items.*.percent' => ['sometimes', 'boolean'],
             'items.*.tax_id' => ['sometimes', 'integer', new BranchScopedExists('taxes', 'id', $branchId, allowNull: true)],
             'customer_id' => ['sometimes', 'integer', new BranchScopedExists('customers', 'id', $branchId, allowNull: true)],
-            'warehouse_id' => ['sometimes', 'integer', new BranchScopedExists('warehouses', 'id', $branchId, allowNull: true)],
+            // CRIT-POS-01 FIX: POS checkout always moves stock and POSService requires warehouse_id.
+            // Make it explicit at validation time so the UI gets a clear 422 validation response
+            // instead of a later abort() inside the service.
+            'warehouse_id' => ['required', 'integer', new BranchScopedExists('warehouses', 'id', $branchId, allowNull: true)],
         ];
     }
 

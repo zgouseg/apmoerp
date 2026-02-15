@@ -56,11 +56,15 @@ class Form extends Component
         ];
     }
 
-    public function mount(?ProductionOrder $productionOrder = null): void
+    /**
+     * NOTE: Route parameter name is {order} (see routes/web.php).
+     * For implicit model binding to work, the mount() parameter name must match.
+     */
+    public function mount(?ProductionOrder $order = null): void
     {
-        if ($productionOrder && $productionOrder->exists) {
+        if ($order && $order->exists) {
             $this->authorize('manufacturing.edit');
-            $this->productionOrder = $productionOrder;
+            $this->productionOrder = $order;
             $this->editMode = true;
             $this->fillFormFromModel();
         } else {

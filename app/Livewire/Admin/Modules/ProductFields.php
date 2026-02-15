@@ -9,10 +9,12 @@ use App\Models\ModuleProductField;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 #[Layout('layouts.app')]
 class ProductFields extends Component
 {
+    use AuthorizesRequests;
     public ?int $moduleId = null;
 
     public ?Module $module = null;

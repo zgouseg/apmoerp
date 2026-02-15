@@ -132,7 +132,7 @@
                                 class="flex flex-col items-start rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-emerald-50 px-3 py-2 text-start text-xs text-slate-800 shadow-sm shadow-emerald-500/30 hover:border-emerald-300 hover:shadow-md">
                             <span class="font-semibold truncate" x-text="product.name ?? product.label ?? 'Item'"></span>
                             <span class="mt-0.5 text-[0.7rem] text-slate-500 truncate" x-text="product.sku ?? product.code ?? ''"></span>
-                            <span class="mt-1 text-[0.75rem] font-semibold text-emerald-700" x-text="(product.default_price ?? product.price ?? product.sale_price ?? 0).toFixed(2) + ' ' + (product.price_currency ?? 'EGP')"></span>
+                            <span class="mt-1 text-[0.75rem] font-semibold text-emerald-700" x-text="(product.default_price ?? product.price ?? product.sale_price ?? 0).toFixed(2) + ' ' + (product.price_currency ?? baseCurrency)"></span>
                         </button>
                     </template>
                 </div>
@@ -191,7 +191,7 @@
                                     {{ __('Remove') }}
                                 </button>
                                 <p class="text-[0.75rem] font-semibold text-slate-800"
-                                   x-text="calculateItemTotal(item).toFixed(2) + ' ' + (item.price_currency ?? 'EGP')"></p>
+                                   x-text="calculateItemTotal(item).toFixed(2) + ' ' + (item.price_currency ?? baseCurrency)"></p>
                             </div>
                         </div>
                     </template>
@@ -201,17 +201,17 @@
                 <div class="mt-3 border-t border-slate-200 pt-2 space-y-1 text-xs">
                     <div class="flex justify-between">
                         <span class="text-slate-600">{{ __('Subtotal') }}</span>
-                        <span x-text="subtotal.toFixed(2) + ' EGP'"></span>
+                        <span x-text="subtotal.toFixed(2) + ' ' + baseCurrency"></span>
                     </div>
                     <div class="flex justify-between text-amber-600" x-show="discountTotal > 0">
                         <span>{{ __('Discount') }}</span>
-                        <span x-text="'-' + discountTotal.toFixed(2) + ' EGP'"></span>
+                        <span x-text="'-' + discountTotal.toFixed(2) + ' ' + baseCurrency"></span>
                     </div>
                     <div class="flex justify-between font-semibold text-emerald-700 text-base pt-1 border-t">
                         <span>{{ __('Total') }}</span>
-                        <span x-text="total.toFixed(2) + ' EGP'"></span>
+                        <span x-text="total.toFixed(2) + ' ' + baseCurrency"></span>
                     </div>
-                    <div class="flex justify-between text-xs text-blue-500 bg-blue-50 rounded px-1 py-0.5 mt-1" x-show="displayCurrency !== 'EGP'">
+                    <div class="flex justify-between text-xs text-blue-500 bg-blue-50 rounded px-1 py-0.5 mt-1" x-show="displayCurrency !== baseCurrency">
                         <span>≈ {{ __('Approx.') }}</span>
                         <span x-text="formatCurrency(total)"></span>
                     </div>
@@ -246,15 +246,15 @@
             <div class="mb-4 p-3 bg-emerald-50 rounded-xl">
                 <div class="flex justify-between text-sm">
                     <span class="text-slate-600">{{ __('Total Amount') }}</span>
-                    <span class="font-bold text-emerald-700 text-lg" x-text="total.toFixed(2) + ' EGP'"></span>
+                    <span class="font-bold text-emerald-700 text-lg" x-text="total.toFixed(2) + ' ' + baseCurrency"></span>
                 </div>
                 <div class="flex justify-between text-sm mt-2" x-show="totalPaid > 0">
                     <span class="text-slate-600">{{ __('Paid') }}</span>
-                    <span class="font-semibold text-blue-600" x-text="totalPaid.toFixed(2) + ' EGP'"></span>
+                    <span class="font-semibold text-blue-600" x-text="totalPaid.toFixed(2) + ' ' + baseCurrency"></span>
                 </div>
                 <div class="flex justify-between text-sm mt-2" :class="remaining > 0 ? 'text-red-600' : 'text-emerald-600'">
                     <span>{{ __('Remaining') }}</span>
-                    <span class="font-semibold" x-text="remaining.toFixed(2) + ' EGP'"></span>
+                    <span class="font-semibold" x-text="remaining.toFixed(2) + ' ' + baseCurrency"></span>
                 </div>
             </div>
 
@@ -323,7 +323,7 @@
             <div class="p-3 bg-amber-50 rounded-xl mb-4" x-show="change > 0">
                 <div class="flex justify-between">
                     <span class="text-amber-700">{{ __('Change to return') }}</span>
-                    <span class="font-bold text-amber-700 text-lg" x-text="change.toFixed(2) + ' EGP'"></span>
+                    <span class="font-bold text-amber-700 text-lg" x-text="change.toFixed(2) + ' ' + baseCurrency"></span>
                 </div>
             </div>
 
@@ -370,7 +370,7 @@
                 <div class="mb-4 p-3 bg-slate-50 rounded-xl text-sm">
                     <div class="flex justify-between mb-2">
                         <span class="text-slate-600">{{ __('Opening Cash') }}</span>
-                        <span x-text="(currentSession?.opening_cash ?? 0).toFixed(2) + ' EGP'"></span>
+                        <span x-text="(currentSession?.opening_cash ?? 0).toFixed(2) + ' ' + baseCurrency"></span>
                     </div>
                     <div class="flex justify-between mb-2">
                         <span class="text-slate-600">{{ __('Opened At') }}</span>
@@ -404,345 +404,12 @@
     </div>
 
 
-@script
-// This ensures the script is properly executed during SPA navigation with wire:navigate
-function erpPosTerminal(config) {
-    return {
-        branchId: config.branchId,
-        warehouseId: config.warehouseId,
-        apiBase: '/api/v1/branches/' + config.branchId,
-        search: '',
-        products: [],
-        cart: [],
-        offline: false,
-        offlineQueue: [],
-        isSearching: false,
-        isCheckingOut: false,
-        message: null,
-        showPaymentModal: false,
-        showSessionModal: false,
-        payments: [{ method: 'cash', amount: 0 }],
-        currentSession: null,
-        sessionOpeningCash: 0,
-        sessionClosingCash: 0,
-        sessionNotes: '',
-        displayCurrency: config.baseCurrency || 'EGP',
-        baseCurrency: config.baseCurrency || 'EGP',
-        currencyRates: config.currencyRates || { 'EGP': 1 },
-        currencySymbols: config.currencySymbols || { 'EGP': 'ج.م' },
 
-        convertAmount(amount) {
-            const rate = this.currencyRates[this.displayCurrency] || 1;
-            return (amount * rate).toFixed(2);
-        },
+{{--
+    NOTE:
+    POS terminal JS is implemented in `resources/js/pos.js` (loaded by Vite via `resources/js/app.js`).
+    We intentionally keep it out of this Blade file to avoid duplicate/conflicting global functions,
+    especially during `wire:navigate`.
+--}}
 
-        formatCurrency(amount) {
-            const converted = this.convertAmount(amount);
-            return converted + ' ' + this.displayCurrency;
-        },
-
-        get subtotal() {
-            return this.cart.reduce((sum, item) => sum + (item.qty * item.price), 0);
-        },
-
-        get discountTotal() {
-            return this.cart.reduce((sum, item) => {
-                const lineTotal = item.qty * item.price;
-                const discount = (item.discount || 0) / 100;
-                return sum + (lineTotal * discount);
-            }, 0);
-        },
-
-        get total() {
-            return this.subtotal - this.discountTotal;
-        },
-
-        get totalPaid() {
-            return this.payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
-        },
-
-        get remaining() {
-            return Math.max(0, this.total - this.totalPaid);
-        },
-
-        get change() {
-            return Math.max(0, this.totalPaid - this.total);
-        },
-
-        calculateItemTotal(item) {
-            const lineTotal = item.qty * item.price;
-            const discount = (item.discount || 0) / 100;
-            return lineTotal - (lineTotal * discount);
-        },
-
-        init() {
-            this.loadOfflineQueue();
-            this.checkSession();
-            window.addEventListener('offline', () => this.offline = true);
-            window.addEventListener('online', () => {
-                this.offline = false;
-                this.syncOfflineQueue();
-            });
-        },
-
-        async fetchProducts() {
-            if (this.search.length < 2) {
-                this.products = [];
-                return;
-            }
-            this.isSearching = true;
-            try {
-                const res = await fetch(this.apiBase + `/products/search?q=${encodeURIComponent(this.search)}&per_page=20`, {
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
-                    },
-                    credentials: 'same-origin'
-                });
-                const json = await res.json();
-                this.products = json.data || json || [];
-            } catch (e) {
-                console.error('Search error:', e);
-                this.products = [];
-            }
-            this.isSearching = false;
-        },
-
-        addProduct(product) {
-            const pid = product.id ?? product.product_id;
-            const existing = this.cart.find(c => c.product_id === pid);
-            if (existing) {
-                existing.qty++;
-            } else {
-                this.cart.push({
-                    product_id: pid,
-                    name: product.name ?? product.label ?? 'Item',
-                    sku: product.sku ?? product.code ?? '',
-                    qty: 1,
-                    price: parseFloat(product.default_price ?? product.price ?? product.sale_price ?? 0),
-                    discount: 0
-                });
-            }
-        },
-
-        updateQty(index, qty) {
-            if (qty < 1) this.cart[index].qty = 1;
-        },
-
-        updatePrice(index, price) {
-            if (price < 0) this.cart[index].price = 0;
-        },
-
-        removeItem(index) {
-            this.cart.splice(index, 1);
-        },
-
-        openPaymentModal() {
-            this.payments = [{ method: 'cash', amount: this.total }];
-            this.showPaymentModal = true;
-        },
-
-        addPayment() {
-            this.payments.push({ method: 'cash', amount: 0 });
-        },
-
-        removePayment(index) {
-            if (this.payments.length > 1) {
-                this.payments.splice(index, 1);
-            }
-        },
-
-        async checkout() {
-            if (!this.cart.length) return;
-            this.isCheckingOut = true;
-
-            const payload = {
-                branch_id: this.branchId,
-                warehouse_id: this.warehouseId,
-                items: this.cart.map(item => ({
-                    product_id: item.product_id,
-                    qty: item.qty,
-                    price: item.price,
-                    discount: item.discount || 0,
-                    percent: true
-                })),
-                payments: this.payments.filter(p => p.amount > 0).map(p => ({
-                    method: p.method,
-                    amount: p.amount,
-                    reference_no: p.reference_no || null,
-                    card_type: p.card_type || null,
-                    card_last_four: p.card_last_four || null,
-                    bank_name: p.bank_name || null,
-                    cheque_number: p.cheque_number || null,
-                    cheque_date: p.cheque_date || null
-                }))
-            };
-
-            if (this.offline) {
-                this.offlineQueue.push({ ...payload, timestamp: Date.now() });
-                this.saveOfflineQueue();
-                this.showMessage('success', '{{ __('Order queued for sync when online') }}');
-                this.resetCart();
-                this.isCheckingOut = false;
-                return;
-            }
-
-            try {
-                const res = await fetch(this.apiBase + '/pos/checkout', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify(payload)
-                });
-
-                const data = await res.json();
-                if (res.ok && data.data) {
-                    this.showMessage('success', '{{ __('Sale completed successfully!') }}');
-                    this.resetCart();
-                    this.showPaymentModal = false;
-                    if (typeof erpShowNotification === 'function') {
-                        erpShowNotification('{{ __('Sale completed') }}', 'success');
-                    }
-                } else {
-                    throw new Error(data.message || 'Checkout failed');
-                }
-            } catch (e) {
-                console.error('Checkout error:', e);
-                this.showMessage('error', e.message || '{{ __('Checkout failed. Please try again.') }}');
-            }
-
-            this.isCheckingOut = false;
-        },
-
-        resetCart() {
-            this.cart = [];
-            this.payments = [{ method: 'cash', amount: 0 }];
-        },
-
-        showMessage(type, text) {
-            this.message = { type, text };
-            setTimeout(() => this.message = null, 5000);
-        },
-
-        clearMessage() {
-            this.message = null;
-        },
-
-        saveOfflineQueue() {
-            localStorage.setItem('pos_offline_queue', JSON.stringify(this.offlineQueue));
-        },
-
-        loadOfflineQueue() {
-            const saved = localStorage.getItem('pos_offline_queue');
-            this.offlineQueue = saved ? JSON.parse(saved) : [];
-        },
-
-        async syncOfflineQueue() {
-            if (!this.offlineQueue.length || this.offline) return;
-            
-            const queue = [...this.offlineQueue];
-            this.offlineQueue = [];
-            
-            for (const order of queue) {
-                try {
-                    await fetch(this.apiBase + '/pos/checkout', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
-                        },
-                        credentials: 'same-origin',
-                        body: JSON.stringify({ ...order, warehouse_id: this.warehouseId, notes: (order.notes ? order.notes + ' | ' : '') + 'Synced from offline POS' })
-                    });
-                } catch (e) {
-                    this.offlineQueue.push(order);
-                }
-            }
-            
-            this.saveOfflineQueue();
-            if (this.offlineQueue.length === 0) {
-                this.showMessage('success', '{{ __('All offline orders synced!') }}');
-            }
-        },
-
-        openSessionModal() {
-            this.showSessionModal = true;
-        },
-
-        async checkSession() {
-            try {
-                const res = await fetch(this.apiBase + '/pos/session', {
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
-                    },
-                    credentials: 'same-origin'
-                });
-                const data = await res.json();
-                this.currentSession = data.data || null;
-            } catch (e) {
-                console.error('Session check error:', e);
-            }
-        },
-
-        async openSession() {
-            try {
-                const res = await fetch(this.apiBase + '/pos/session/open', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({
-                        branch_id: this.branchId,
-                        opening_cash: this.sessionOpeningCash
-                    })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    this.currentSession = data.data;
-                    this.showSessionModal = false;
-                    this.showMessage('success', '{{ __('Session opened successfully') }}');
-                }
-            } catch (e) {
-                this.showMessage('error', '{{ __('Failed to open session') }}');
-            }
-        },
-
-        async closeSession() {
-            if (!this.currentSession) return;
-            try {
-                const res = await fetch(this.apiBase + `/pos/session/${this.currentSession.id}/close`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({
-                        closing_cash: this.sessionClosingCash,
-                        notes: this.sessionNotes
-                    })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    this.currentSession = null;
-                    this.showSessionModal = false;
-                    this.showMessage('success', '{{ __('Session closed successfully') }}');
-                }
-            } catch (e) {
-                this.showMessage('error', '{{ __('Failed to close session') }}');
-            }
-        }
-    };
-}
-@endscript
 </div>

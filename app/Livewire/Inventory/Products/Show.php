@@ -7,10 +7,12 @@ namespace App\Livewire\Inventory\Products;
 use App\Models\Product;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 #[Layout('layouts.app')]
 class Show extends Component
 {
+    use AuthorizesRequests;
     public Product $product;
 
     public function mount(Product $product): void

@@ -2,6 +2,7 @@ import './bootstrap';
 import { erpPosTerminal } from './pos';
 import Swal from 'sweetalert2';
 import Chart from 'chart.js/auto';
+import Sortable from 'sortablejs';
 
 // Livewire 4 uses wire:navigate for SPA-like navigation
 // No need for Turbo.js - Livewire handles navigation natively
@@ -9,6 +10,7 @@ import Chart from 'chart.js/auto';
 window.erpPosTerminal = erpPosTerminal;
 window.Swal = Swal;
 window.Chart = Chart;
+window.Sortable = Sortable;
 
 const NotificationSound = {
     audio: null,

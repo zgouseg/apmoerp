@@ -9,10 +9,12 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 #[Layout('layouts.app')]
 class Form extends Component
 {
+    use AuthorizesRequests;
     public ?IncomeCategory $category = null;
 
     public string $name = '';

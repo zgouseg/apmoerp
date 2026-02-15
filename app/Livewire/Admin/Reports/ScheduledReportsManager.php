@@ -6,6 +6,7 @@ namespace App\Livewire\Admin\Reports;
 
 use App\Models\ReportTemplate;
 use App\Models\ScheduledReport;
+use App\Models\Branch;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -33,6 +34,12 @@ class ScheduledReportsManager extends Component
 
     public string $filtersJson = '{}';
 
+    /**
+     * UI helper for super admins: pick a branch from dropdown instead of typing branch_id in JSON.
+     * null = all branches (no branch filter).
+     */
+    public ?int $filterBranchId = null;
+
     // Simplified schedule options
     public string $frequency = 'daily';
 
@@ -43,6 +50,32 @@ class ScheduledReportsManager extends Component
     public string $dayOfMonth = '1';
 
     public bool $showAdvanced = false;
+
+    /**
+     * Determine if current user can schedule reports for multiple branches.
+     */
+    protected function canSelectAnyBranch(): bool
+    {
+        $user = Auth::user();
+
+        return (bool) ($user && ($user->hasRole('Super Admin') || $user->can('branches.view-all')));
+    }
+
+    /**
+     * Branch context (if selected) is the safest default for scheduled reports.
+     */
+    protected function defaultBranchId(): ?int
+    {
+        $branchId = current_branch_id();
+
+        if ($branchId) {
+            return (int) $branchId;
+        }
+
+        $user = Auth::user();
+
+        return $user?->branch_id ? (int) $user->branch_id : null;
+    }
 
     #[Layout('layouts.app')]
     public function render()
@@ -63,6 +96,12 @@ class ScheduledReportsManager extends Component
             'availableRoutes' => $this->availableRoutes,
             'users' => User::query()->orderBy('name')->get(['id', 'name']),
             'templates' => $this->templates,
+            'canSelectBranch' => $this->canSelectAnyBranch(),
+            'branches' => $this->canSelectAnyBranch()
+                ? Branch::query()->active()->orderBy('name')->get(['id', 'name'])
+                : collect(),
+            // Used for displaying branch names in the listing table
+            'branchNames' => Branch::query()->pluck('name', 'id')->toArray(),
         ]);
     }
 
@@ -80,6 +119,7 @@ class ScheduledReportsManager extends Component
         $this->filtersJson = '{}';
         $this->frequency = 'daily';
         $this->timeOfDay = '08:00';
+        $this->filterBranchId = $this->defaultBranchId();
     }
 
     protected function rules(): array
@@ -91,12 +131,41 @@ class ScheduledReportsManager extends Component
             'cronExpression' => ['required', 'string', 'max:191'],
             'recipientEmail' => ['nullable', 'email', 'max:191'],
             'filtersJson' => ['nullable', 'string'],
+            'filterBranchId' => ['nullable', 'integer', 'exists:branches,id'],
         ];
+    }
+
+    /**
+     * Always enforce a safe branch scope for scheduled reports.
+     * - Non-super-admins: forced to their current branch.
+     * - Super-admins: can select a branch (or leave empty for all branches).
+     */
+    protected function applyBranchFilter(array $filters): array
+    {
+        if ($this->canSelectAnyBranch()) {
+            if ($this->filterBranchId) {
+                $filters['branch_id'] = (int) $this->filterBranchId;
+            } else {
+                unset($filters['branch_id']);
+            }
+
+            return $filters;
+        }
+
+        $branchId = $this->defaultBranchId();
+
+        if (! $branchId) {
+            abort(403, __('User must be assigned to a branch to perform this action'));
+        }
+
+        $filters['branch_id'] = (int) $branchId;
+
+        return $filters;
     }
 
     public function createNew(): void
     {
-        $this->reset(['editingId', 'routeName', 'cronExpression', 'recipientEmail', 'filtersJson', 'templateId']);
+        $this->reset(['editingId', 'routeName', 'cronExpression', 'recipientEmail', 'filtersJson', 'templateId', 'filterBranchId']);
         $this->cronExpression = '0 8 * * *';
         $this->filtersJson = '{}';
         $this->frequency = 'daily';
@@ -105,6 +174,7 @@ class ScheduledReportsManager extends Component
         $this->dayOfMonth = '1';
         $this->showAdvanced = false;
         $this->recipientEmail = Auth::user()?->email;
+        $this->filterBranchId = $this->defaultBranchId();
     }
 
     public function updatedFrequency(): void
@@ -181,9 +251,13 @@ class ScheduledReportsManager extends Component
         $this->routeName = $report->route_name;
         $this->cronExpression = $report->cron_expression;
         $this->recipientEmail = $report->recipient_email;
-        $this->filtersJson = json_encode($report->filters ?? [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        $filtersArray = $report->filters ?? [];
+        $this->filtersJson = json_encode($filtersArray, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         $this->templateId = $report->report_template_id;
         $this->showAdvanced = ! empty($report->filters);
+
+        // UX: show branch dropdown instead of asking admin to type branch_id manually
+        $this->filterBranchId = isset($filtersArray['branch_id']) ? (int) $filtersArray['branch_id'] : $this->defaultBranchId();
 
         // Parse the cron expression to set frequency fields
         $this->parseCronExpression();
@@ -231,6 +305,9 @@ class ScheduledReportsManager extends Component
             }
         }
 
+        // UX + Security: branch dropdown -> filters['branch_id']
+        $filters = $this->applyBranchFilter($filters);
+
         $userId = $this->userId ?: Auth::id();
 
         ScheduledReport::query()->updateOrCreate(
@@ -252,6 +329,12 @@ class ScheduledReportsManager extends Component
 
     public function delete(int $id): void
     {
+        $user = Auth::user();
+
+        if (! $user || ! $user->can('reports.scheduled.manage')) {
+            abort(403);
+        }
+
         ScheduledReport::query()->whereKey($id)->delete();
     }
 
@@ -268,7 +351,16 @@ class ScheduledReportsManager extends Component
         }
 
         $this->routeName = $template->route_name;
-        $this->filtersJson = json_encode($template->default_filters ?? [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+
+        $defaults = $template->default_filters ?? [];
+        $this->filtersJson = json_encode($defaults, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+
+        // If template already includes a branch filter, reflect it in the dropdown.
+        if (is_array($defaults) && isset($defaults['branch_id'])) {
+            $this->filterBranchId = (int) $defaults['branch_id'];
+        } else {
+            $this->filterBranchId = $this->defaultBranchId();
+        }
     }
 
     public function getAvailableRoutesProperty(): array

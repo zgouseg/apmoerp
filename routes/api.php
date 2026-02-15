@@ -21,7 +21,9 @@ Route::prefix('v1')->group(function () {
     });
 
     // Internal diagnostics endpoint
-    Route::prefix('internal')->middleware(['auth:sanctum', 'throttle:api'])->group(function () {
+    // CRIT-AUTH-02 FIX: Use the defined Sanctum guard name (config/auth.php -> guards.api)
+    // to avoid "Auth guard [sanctum] is not defined".
+    Route::prefix('internal')->middleware(['auth:api', 'throttle:api'])->group(function () {
         Route::get('/diagnostics', [DiagnosticsController::class, 'index']);
     });
 

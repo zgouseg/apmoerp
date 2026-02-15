@@ -162,9 +162,9 @@
 	    class="{{ $containerClass }}"
 	>
         @foreach($widgets as $widget)
-            @if($widget['visible'])
+            @if($widget['visible'] || $isEditing)
 	            <div 
-	                class="widget-item relative {{ $widgetSpanClass($widget) }} {{ $isEditing ? 'ring-2 ring-dashed ring-amber-300 dark:ring-amber-600' : '' }}"
+	                class="widget-item relative {{ $widgetSpanClass($widget) }} {{ $isEditing ? 'ring-2 ring-dashed ring-amber-300 dark:ring-amber-600' : '' }} {{ $isEditing && ! $widget['visible'] ? 'opacity-70' : '' }}"
                     data-widget="{{ $widget['key'] }}"
                     wire:key="widget-{{ $widget['key'] }}"
                 >
@@ -179,45 +179,69 @@
 	                    </div>
 	                @endif
 
-                    @switch($widget['key'])
-                        @case('quick_actions')
-                            @include('livewire.dashboard.partials.quick-actions-widget')
-                            @break
-                        @case('stats_cards')
-                            @include('livewire.dashboard.partials.stats-widget')
-                            @break
-                        @case('performance')
-                            @include('livewire.dashboard.partials.performance-widget')
-                            @break
-                        @case('sales_chart')
-                            @include('livewire.dashboard.partials.sales-chart-widget')
-                            @break
-                        @case('inventory_chart')
-                            @include('livewire.dashboard.partials.inventory-chart-widget')
-                            @break
-                        @case('payment_mix')
-                            @include('livewire.dashboard.partials.payment-mix-widget')
-                            @break
-                        @case('low_stock')
-                            @include('livewire.dashboard.partials.low-stock-widget')
-                            @break
-                        @case('recent_sales')
-                            @include('livewire.dashboard.partials.recent-sales-widget')
-                            @break
-                        @case('recent_activity')
-                            @include('livewire.dashboard.partials.recent-activity-widget')
-                            @break
-                        @case('quick_stats')
-                            @include('livewire.dashboard.partials.quick-stats-widget')
-                            @break
-                        @case('motorcycle_stats')
-                        @case('spares_stats')
-                        @case('rental_stats')
-                        @case('manufacturing_stats')
-                        @case('wood_stats')
-                            @include('livewire.dashboard.partials.module-stats-widget', ['widgetConfig' => $widget])
-                            @break
-                    @endswitch
+                    @if($isEditing && ! $widget['visible'])
+                        <div class="bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-2xl" aria-hidden="true">{{ $widget['icon'] }}</span>
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-slate-800 dark:text-white">{{ __($widget['title']) }}</h3>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400">{{ __('Hidden widget') }}</p>
+                                    </div>
+                                </div>
+
+                                <button type="button"
+                                        wire:click="toggleWidget('{{ $widget['key'] }}')"
+                                        class="inline-flex items-center px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 transition-colors">
+                                    {{ __('Show') }}
+                                </button>
+                            </div>
+
+                            <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">
+                                {{ __('This widget is currently hidden. You can enable it, and you can also drag it to reorder your dashboard.') }}
+                            </p>
+                        </div>
+                    @else
+                        @switch($widget['key'])
+                            @case('quick_actions')
+                                @include('livewire.dashboard.partials.quick-actions-widget')
+                                @break
+                            @case('stats_cards')
+                                @include('livewire.dashboard.partials.stats-widget')
+                                @break
+                            @case('performance')
+                                @include('livewire.dashboard.partials.performance-widget')
+                                @break
+                            @case('sales_chart')
+                                @include('livewire.dashboard.partials.sales-chart-widget')
+                                @break
+                            @case('inventory_chart')
+                                @include('livewire.dashboard.partials.inventory-chart-widget')
+                                @break
+                            @case('payment_mix')
+                                @include('livewire.dashboard.partials.payment-mix-widget')
+                                @break
+                            @case('low_stock')
+                                @include('livewire.dashboard.partials.low-stock-widget')
+                                @break
+                            @case('recent_sales')
+                                @include('livewire.dashboard.partials.recent-sales-widget')
+                                @break
+                            @case('recent_activity')
+                                @include('livewire.dashboard.partials.recent-activity-widget')
+                                @break
+                            @case('quick_stats')
+                                @include('livewire.dashboard.partials.quick-stats-widget')
+                                @break
+                            @case('motorcycle_stats')
+                            @case('spares_stats')
+                            @case('rental_stats')
+                            @case('manufacturing_stats')
+                            @case('wood_stats')
+                                @include('livewire.dashboard.partials.module-stats-widget', ['widgetConfig' => $widget])
+                                @break
+                        @endswitch
+                    @endif
                 </div>
             @endif
         @endforeach
@@ -388,35 +412,31 @@ function initAll() {
         updateSalesChart(payload.sales);
         updateInventoryChart(payload.inventory);
     });
+
+    // Re-init charts/sortable after widgets are shown/hidden or dashboard is reset.
+    Livewire.on('dashboard-refreshed', () => {
+        setTimeout(() => {
+            initDashboardCharts();
+            initSortable();
+        }, 0);
+    });
 }
 
-// Load Chart.js and Sortable if not already loaded
-let scriptsLoaded = 0;
-const scriptsNeeded = 2;
-
-function checkAllLoaded() {
-    scriptsLoaded++;
-    if (scriptsLoaded >= scriptsNeeded) {
-        initAll();
+// Initialize (Chart.js & SortableJS are bundled via Vite in resources/js/app.js)
+const boot = () => {
+    if (typeof Chart === 'undefined') {
+        console.warn('[Dashboard] Chart.js is not available. Make sure resources/js/app.js imports chart.js');
     }
-}
+    if (typeof Sortable === 'undefined') {
+        console.warn('[Dashboard] SortableJS is not available. Make sure resources/js/app.js imports sortablejs');
+    }
+    initAll();
+};
 
-if (typeof Chart === 'undefined') {
-    const scriptEl = document.createElement('script');
-    scriptEl.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-    scriptEl.onload = checkAllLoaded;
-    document.head.appendChild(scriptEl);
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
 } else {
-    checkAllLoaded();
-}
-
-if (typeof Sortable === 'undefined') {
-    const sortableScript = document.createElement('script');
-    sortableScript.src = 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js';
-    sortableScript.onload = checkAllLoaded;
-    document.head.appendChild(sortableScript);
-} else {
-    checkAllLoaded();
+    boot();
 }
 
 // Clean up when navigating away

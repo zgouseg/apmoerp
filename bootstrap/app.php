@@ -74,13 +74,18 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\ClearBranchContext::class,
         ]);
 
+        // CRIT-AUTH-01 FIX: `AssignGuard` expects an auth *guard name* (as defined in config/auth.php).
+        // This project defines the Sanctum guard as `api` (driver: sanctum).
+        // Using an undefined guard name (e.g. `sanctum`) causes 500 errors on every API call
+        // due to "Auth guard [sanctum] is not defined.".
         $middleware->group('api-auth', [
-            \App\Http\Middleware\AssignGuard::class.':sanctum',
+            \App\Http\Middleware\AssignGuard::class.':api',
             \App\Http\Middleware\EnsureBranchAccess::class,
             \App\Http\Middleware\Authenticate::class,
             \App\Http\Middleware\Require2FA::class,
         ]);
 
+        // CRIT-AUTH-01 FIX: Same guard issue as `api-auth` group.
         $middleware->group('pos-protected', [
             \App\Http\Middleware\ForceJsonResponse::class,
             \App\Http\Middleware\ValidateJson::class,
@@ -92,7 +97,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\SetLocale::class,
             \App\Http\Middleware\ETag::class,
             \App\Http\Middleware\PaginationSanitizer::class,
-            \App\Http\Middleware\AssignGuard::class.':sanctum',
+            \App\Http\Middleware\AssignGuard::class.':api',
             \App\Http\Middleware\EnsureBranchAccess::class,
             \App\Http\Middleware\Authenticate::class,
             \App\Http\Middleware\VerifyPosOpen::class,

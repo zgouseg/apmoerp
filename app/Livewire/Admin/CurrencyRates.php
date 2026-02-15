@@ -9,12 +9,12 @@ use App\Services\CurrencyService;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 #[Layout('layouts.app')]
 class CurrencyRates extends Component
 {
-    use WithPagination;
-
+    use AuthorizesRequests, WithPagination;
     public string $baseCurrency = 'EGP';
 
     public float $convertAmount = 100;

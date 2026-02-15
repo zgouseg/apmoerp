@@ -45,12 +45,15 @@ class Expenses extends Component
 
     public ?int $task_id = null;
 
-    public function mount(int $projectId): void
+    /**
+     * NOTE: Route parameter name is {project} (see routes/web.php).
+     */
+    public function mount(int $project): void
     {
         $this->authorize('projects.expenses.view');
         $this->project = Project::query()
             ->forUserBranches(auth()->user())
-            ->findOrFail($projectId);
+            ->findOrFail($project);
         $this->expense_date = now()->format('Y-m-d');
         $this->user_id = auth()->id();
     }

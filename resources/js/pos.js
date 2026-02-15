@@ -1,370 +1,410 @@
 // resources/js/pos.js
 /**
- * POS Terminal Frontend Logic
- * 
- * This module handles the Point of Sale (POS) terminal functionality including:
- * - Product search via API
- * - Shopping cart management with localStorage persistence
- * - Checkout process via API
- * - Offline mode with queue synchronization
- * 
- * The POS terminal is designed to work both online and offline, storing transactions
- * in localStorage when offline and syncing them when connection is restored.
- * 
- * @param {Object} options - Configuration options
- * @param {number} options.branchId - The branch ID for this POS terminal
- * @returns {Object} Alpine.js component data object
+ * POS Terminal Frontend (Alpine component)
+ *
+ * IMPORTANT:
+ * - The POS Blade view (`resources/views/livewire/pos/terminal.blade.php`) expects a rich Alpine data object.
+ * - Previously, the view shipped with an inline `erpPosTerminal()` implementation, but the Vite bundle
+ *   (app.js -> imports this file) overwrote it after HTML parsing. That mismatch broke the POS UI
+ *   (missing properties/methods) and caused "endless loading" / non-working buttons.
+ *
+ * This file is now the single source of truth.
  */
 
-// Configuration Constants
-const CONFIG = {
-    /** Maximum allowed quantity per cart item */
-    MAX_QUANTITY: 999999,
-    
-    /** Maximum allowed price per item */
-    MAX_PRICE: 9999999.99,
-    
-    /** Timeout for product search requests (milliseconds) */
-    SEARCH_TIMEOUT: 10000,
-    
-    /** Timeout for checkout requests (milliseconds) */
-    CHECKOUT_TIMEOUT: 15000,
-};
+// ---------- Small utilities ----------
 
-export function erpPosTerminal(options) {
-    const branchId = options.branchId;
+/** Create a UUIDv4 (good enough for idempotency keys in the browser). */
+function uuidv4() {
+    // Prefer crypto API when available
+    if (window.crypto?.randomUUID) {
+        return window.crypto.randomUUID();
+    }
+
+    // Fallback (RFC4122-ish)
+    const rnd = (n) => (Math.random() * n) | 0;
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = rnd(16);
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+    });
+}
+
+/** Normalize common API response shapes to a data payload. */
+function unwrapApiResponse(responseData) {
+    // ApiResponse::success => { success: true, message, data }
+    if (responseData && typeof responseData === 'object' && 'data' in responseData) {
+        return responseData.data;
+    }
+    return responseData;
+}
+
+/**
+ * Extract a user-facing message from Axios errors.
+ * Keeps the UI from looking like "it is loading forever".
+ */
+function axiosErrorMessage(error, fallback = 'Request failed') {
+    if (!error) return fallback;
+    if (error.code === 'ECONNABORTED') return 'Request timed out. Please try again.';
+
+    const status = error.response?.status;
+    const data = error.response?.data;
+
+    if (status === 401) return 'Session expired. Please login again.';
+    if (status === 403) return 'You do not have permission to perform this action.';
+    if (status === 409) return data?.message || 'Conflict. Please refresh and retry.';
+    if (status === 422) {
+        // Validation response formats
+        if (data?.errors && typeof data.errors === 'object') {
+            const flat = Object.values(data.errors).flat().filter(Boolean);
+            if (flat.length) return flat.join(' ');
+        }
+        return data?.message || 'Validation failed.';
+    }
+    if (status >= 500) return 'Server error. Please try again later.';
+
+    return data?.message || error.message || fallback;
+}
+
+// ---------- POS Alpine component ----------
+
+export function erpPosTerminal(config = {}) {
+    const branchId = Number(config.branchId || 0);
+    const warehouseId = config.warehouseId !== undefined ? Number(config.warehouseId) : null;
+
+    const apiBase = `/api/v1/branches/${branchId}`;
+    // Keep backward-compatible localStorage keys (older builds used these)
+    const storageKey = `pos_cart_branch_${branchId}`;
+    const offlineQueueKey = `pos_offline_sales_branch_${branchId}`;
+
+    const TIMEOUTS = {
+        search: 10000,
+        checkout: 20000,
+        session: 12000,
+        sync: 25000,
+    };
 
     return {
-        // ========== State Properties ==========
-        
-        /** @type {number} Current branch ID */
+        // ---------- Config ----------
         branchId,
-        
-        /** @type {string} Current search query for products */
-        search: '',
-        
-        /** @type {boolean} Whether a product search is in progress */
-        isSearching: false,
-        
-        /** @type {Array} List of products matching current search */
-        products: [],
-        
-        /** @type {Array} Shopping cart items */
-        cart: [],
-        
-        /** @type {boolean} Whether checkout is in progress */
-        isCheckingOut: false,
-        
-        /** @type {Object|null} Current user message {type: 'success'|'error'|'info', text: string} */
-        message: null,
-        
-        /** @type {boolean} Whether the system is offline */
-        offline: !window.navigator.onLine,
+        warehouseId,
+        apiBase,
 
-        /** @type {Array} Queue of offline sales to sync when connection is restored */
+        baseCurrency: config.baseCurrency || 'EGP',
+        displayCurrency: config.baseCurrency || 'EGP',
+        currencyRates: config.currencyRates || { EGP: 1 },
+        currencySymbols: config.currencySymbols || { EGP: 'EGP' },
+
+        // ---------- State ----------
+        search: '',
+        isSearching: false,
+        products: [],
+
+        cart: [],
+
+        // UI
+        message: null,
+        offline: !window.navigator.onLine,
         offlineQueue: [],
 
-        // ========== Lifecycle Methods ==========
-        
-        /**
-         * Initialize the POS terminal
-         * Sets up cart persistence and online/offline event listeners
-         */
-        init() {
-            this.loadCart();
-            this.loadOfflineQueue();
+        // Payments modal
+        showPaymentModal: false,
+        payments: [{ method: 'cash', amount: 0 }],
 
-            // Listen for connection status changes
-            window.addEventListener('online', () => {
-                this.offline = false;
-            });
+        // Session modal
+        showSessionModal: false,
+        currentSession: null,
+        sessionOpeningCash: 0,
+        sessionClosingCash: 0,
+        sessionNotes: '',
 
-            window.addEventListener('offline', () => {
-                this.offline = true;
-            });
+        // ---------- Computed totals (base currency) ----------
+        get subtotal() {
+            return (this.cart || []).reduce((sum, item) => {
+                const qty = parseFloat(item.qty) || 0;
+                const price = parseFloat(item.price) || 0;
+                return sum + qty * price;
+            }, 0);
         },
 
-        // ========== Storage Keys ==========
-        
-        /**
-         * Get the localStorage key for the cart
-         * Cart data is stored per branch to avoid conflicts
-         * @returns {string} Storage key
-         */
-        get storageKey() {
-            return `erp_pos_cart_branch_${this.branchId}`;
-        },
+        get discountTotal() {
+            return (this.cart || []).reduce((sum, item) => {
+                const qty = parseFloat(item.qty) || 0;
+                const price = parseFloat(item.price) || 0;
+                const discount = parseFloat(item.discount) || 0;
+                const isPercent = !!item.percent;
 
-        /**
-         * Get the localStorage key for the offline queue
-         * Offline sales are queued per branch for later synchronization
-         * @returns {string} Storage key
-         */
-        get offlineQueueKey() {
-            return `erp_pos_offline_sales_branch_${this.branchId}`;
-        },
-
-        // ========== Cart Persistence Methods ==========
-        
-        /**
-         * Load cart from localStorage
-         * Restores the cart state when the page is refreshed
-         */
-        loadCart() {
-            try {
-                const raw = window.localStorage.getItem(this.storageKey);
-                this.cart = raw ? JSON.parse(raw) : [];
-            } catch (e) {
-                console.error('Failed to load POS cart from storage', e);
-                this.cart = [];
-            }
-        },
-
-        /**
-         * Persist cart to localStorage
-         * Saves the current cart state for later retrieval
-         */
-        persistCart() {
-            try {
-                window.localStorage.setItem(this.storageKey, JSON.stringify(this.cart));
-            } catch (e) {
-                console.error('Failed to persist POS cart to storage', e);
-            }
-        },
-
-        loadOfflineQueue() {
-            try {
-                const raw = window.localStorage.getItem(this.offlineQueueKey);
-                this.offlineQueue = raw ? JSON.parse(raw) : [];
-            } catch (e) {
-                console.error('Failed to load POS offline queue', e);
-                this.offlineQueue = [];
-            }
-        },
-
-        persistOfflineQueue() {
-            try {
-                window.localStorage.setItem(this.offlineQueueKey, JSON.stringify(this.offlineQueue ?? []));
-            } catch (e) {
-                console.error('Failed to persist POS offline queue', e);
-            }
-        },
-
-        
-        async syncOfflineQueue() {
-            if (!this.offlineQueue || !this.offlineQueue.length) {
-                this.message = {
-                    type: 'info',
-                    text: 'لا توجد طلبات Offline للمزامنة.',
-                };
-                return;
-            }
-
-            const queue = [...this.offlineQueue];
-
-            for (const item of queue) {
-                try {
-                    await window.axios.post(`/api/v1/branches/${this.branchId}/pos/checkout`, item.payload ?? {});
-                    
-                    // Remove synced item from queue and persist immediately
-                    this.offlineQueue.shift();
-                    this.persistOfflineQueue();
-                } catch (error) {
-                    console.error('Failed to sync offline sale', error);
-                    this.message = {
-                        type: 'error',
-                        text: 'حدث خطأ أثناء مزامنة بعض طلبات الـ Offline.',
-                    };
-                    return;
-                }
-            }
-
-            this.message = {
-                type: 'success',
-                text: 'تمت مزامنة كل الطلبات الـ Offline بنجاح.',
-            };
+                const lineSub = qty * price;
+                const lineDisc = isPercent ? (lineSub * discount) / 100 : discount;
+                return sum + Math.max(0, lineDisc);
+            }, 0);
         },
 
         get total() {
-            return (this.cart || []).reduce((sum, item) => {
-                const qty = Number(item.qty ?? 0);
-                const price = Number(item.price ?? 0);
-                return sum + qty * price;
-            }, 0);
+            const t = this.subtotal - this.discountTotal;
+            return Math.max(0, t);
+        },
+
+        get totalPaid() {
+            return (this.payments || []).reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+        },
+
+        get remaining() {
+            return Math.max(0, this.total - this.totalPaid);
+        },
+
+        get change() {
+            return Math.max(0, this.totalPaid - this.total);
+        },
+
+        // ---------- Formatting / helpers ----------
+        convertAmount(amount) {
+            const rate = this.currencyRates?.[this.displayCurrency] || 1;
+            return (parseFloat(amount) || 0) * rate;
+        },
+
+        formatCurrency(amount) {
+            const converted = this.convertAmount(amount).toFixed(2);
+            return `${converted} ${this.displayCurrency}`;
+        },
+
+        calculateItemTotal(item) {
+            const qty = parseFloat(item?.qty) || 0;
+            const price = parseFloat(item?.price) || 0;
+            const discount = parseFloat(item?.discount) || 0;
+            const isPercent = !!item?.percent;
+
+            const lineSub = qty * price;
+            const lineDisc = isPercent ? (lineSub * discount) / 100 : discount;
+            return Math.max(0, lineSub - Math.max(0, lineDisc));
         },
 
         clearMessage() {
             this.message = null;
         },
 
+        showMessage(type, text, timeoutMs = 5000) {
+            this.message = { type, text };
+            if (timeoutMs) {
+                window.setTimeout(() => {
+                    // Only clear if it's the same message (avoid race conditions)
+                    if (this.message?.text === text) this.message = null;
+                }, timeoutMs);
+            }
+        },
+
+        // ---------- Lifecycle ----------
+        init() {
+            this.loadCart();
+            this.loadOfflineQueue();
+
+            // initial status
+            this.offline = !window.navigator.onLine;
+
+            // If user comes back online, try syncing automatically
+            window.addEventListener('online', () => {
+                this.offline = false;
+                this.syncOfflineQueue();
+            });
+            window.addEventListener('offline', () => {
+                this.offline = true;
+            });
+
+            // Session state
+            this.checkSession();
+        },
+
+        // ---------- Local storage ----------
+        loadCart() {
+            try {
+                let raw = window.localStorage.getItem(storageKey);
+
+                // Legacy (older inline POS script)
+                if (!raw) {
+                    const legacy = window.localStorage.getItem('pos_cart');
+                    if (legacy) {
+                        raw = legacy;
+                        // migrate
+                        window.localStorage.setItem(storageKey, legacy);
+                        window.localStorage.removeItem('pos_cart');
+                    }
+                }
+
+                this.cart = raw ? JSON.parse(raw) : [];
+            } catch (e) {
+                console.error('[POS] Failed to load cart', e);
+                this.cart = [];
+            }
+        },
+
+        persistCart() {
+            try {
+                window.localStorage.setItem(storageKey, JSON.stringify(this.cart || []));
+            } catch (e) {
+                console.error('[POS] Failed to persist cart', e);
+            }
+        },
+
+        loadOfflineQueue() {
+            try {
+                let raw = window.localStorage.getItem(offlineQueueKey);
+
+                // Legacy (older inline POS script)
+                if (!raw) {
+                    const legacy = window.localStorage.getItem('pos_offline_queue');
+                    if (legacy) {
+                        raw = legacy;
+                        window.localStorage.setItem(offlineQueueKey, legacy);
+                        window.localStorage.removeItem('pos_offline_queue');
+                    }
+                }
+
+                this.offlineQueue = raw ? JSON.parse(raw) : [];
+            } catch (e) {
+                console.error('[POS] Failed to load offline queue', e);
+                this.offlineQueue = [];
+            }
+        },
+
+        persistOfflineQueue() {
+            try {
+                window.localStorage.setItem(offlineQueueKey, JSON.stringify(this.offlineQueue || []));
+            } catch (e) {
+                console.error('[POS] Failed to persist offline queue', e);
+            }
+        },
+
+        // ---------- Products ----------
         async fetchProducts() {
-            // Validation: minimum search length
             if (!this.search || this.search.length < 2) {
                 this.products = [];
                 return;
             }
 
-            // Check online status
-            if (!window.navigator.onLine) {
-                this.message = {
-                    type: 'info',
-                    text: 'الاتصال غير متاح، لا يمكن البحث عن المنتجات الآن.',
-                };
+            if (this.offline) {
+                this.showMessage('info', 'Offline: product search is unavailable.');
                 return;
             }
 
-            // Prevent concurrent searches
-            if (this.isSearching) {
-                return;
-            }
-
+            if (this.isSearching) return;
             this.isSearching = true;
             this.products = [];
             this.clearMessage();
 
             try {
-                const response = await window.axios.get(`/api/v1/branches/${this.branchId}/products/search`, {
+                const res = await window.axios.get(`${apiBase}/products/search`, {
                     params: { q: this.search },
-                    timeout: CONFIG.SEARCH_TIMEOUT,
+                    timeout: TIMEOUTS.search,
                 });
 
-                let data = response.data;
+                const payload = unwrapApiResponse(res.data);
 
-                // Handle standardized API response format
-                if (data && data.success === true && Array.isArray(data.data)) {
-                    this.products = data.data;
-                } else if (Array.isArray(data)) {
-                    // Fallback for direct array response
-                    this.products = data;
-                } else if (data && Array.isArray(data.data)) {
-                    // Fallback for nested data
-                    this.products = data.data;
+                // Support paginated responses
+                if (Array.isArray(payload)) {
+                    this.products = payload;
+                } else if (payload && Array.isArray(payload.data)) {
+                    this.products = payload.data;
                 } else {
                     this.products = [];
-                    console.warn('Unexpected API response format:', data);
                 }
-            } catch (error) {
-                console.error('POS search error', error);
-                
-                // Handle specific error types
-                let errorMessage = 'حدث خطأ أثناء البحث عن المنتجات.';
-                if (error.code === 'ECONNABORTED') {
-                    errorMessage = 'انتهت مهلة الطلب. يرجى المحاولة مرة أخرى.';
-                } else if (error.response) {
-                    // Server responded with error
-                    if (error.response.status === 401) {
-                        errorMessage = 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.';
-                    } else if (error.response.status === 403) {
-                        errorMessage = 'ليس لديك صلاحية للبحث عن المنتجات.';
-                    } else if (error.response.status >= 500) {
-                        errorMessage = 'خطأ في الخادم. يرجى المحاولة لاحقاً.';
-                    } else if (error.response.data?.message) {
-                        errorMessage = error.response.data.message;
-                    }
-                } else if (error.request) {
-                    // Request made but no response
-                    errorMessage = 'لا يمكن الاتصال بالخادم. يرجى التحقق من الاتصال.';
-                }
-
-                this.message = {
-                    type: 'error',
-                    text: errorMessage,
-                };
+            } catch (e) {
+                console.error('[POS] search error', e);
+                this.showMessage('error', axiosErrorMessage(e, 'Search failed.'));
             } finally {
                 this.isSearching = false;
             }
         },
 
         addProduct(product) {
-            if (!product) {
-                return;
-            }
+            if (!product) return;
 
             const id = product.id ?? product.product_id;
-            if (!id) {
+            if (!id) return;
+
+            const existing = (this.cart || []).find((i) => i.product_id === id);
+            if (existing) {
+                existing.qty = (parseFloat(existing.qty) || 0) + 1;
+                this.persistCart();
                 return;
             }
 
-            const existingIndex = this.cart.findIndex((item) => item.product_id === id);
+            const price =
+                product.default_price ??
+                product.price ??
+                product.sale_price ??
+                product.unit_price ??
+                0;
 
-            if (existingIndex !== -1) {
-                this.cart[existingIndex].qty = Number(this.cart[existingIndex].qty ?? 0) + 1;
-            } else {
-                this.cart.push({
-                    product_id: id,
-                    name: product.name ?? product.label ?? 'Item',
-                    qty: 1,
-                    price: Number(product.price ?? product.sale_price ?? 0),
-                    discount: 0,
-                    percent: false,
-                    tax_id: product.tax_id ?? null,
-                });
-            }
+            this.cart.push({
+                product_id: id,
+                name: product.name ?? product.label ?? 'Item',
+                qty: 1,
+                price: parseFloat(price) || 0,
+                discount: 0,
+                percent: true,
+                tax_id: product.tax_id ?? null,
+            });
 
             this.persistCart();
         },
 
         removeItem(index) {
-            if (index < 0 || index >= this.cart.length) {
-                return;
-            }
+            if (!Array.isArray(this.cart)) return;
+            if (index < 0 || index >= this.cart.length) return;
             this.cart.splice(index, 1);
             this.persistCart();
         },
 
         updateQty(index, qty) {
-            if (index < 0 || index >= this.cart.length) {
-                return;
-            }
-            
-            // Parse and validate quantity
-            const value = Number(qty ?? 0);
-            
-            // Ensure positive quantity, minimum 0.01, maximum CONFIG.MAX_QUANTITY
-            if (isNaN(value) || value <= 0) {
+            if (!Array.isArray(this.cart)) return;
+            if (index < 0 || index >= this.cart.length) return;
+
+            const v = parseFloat(qty);
+            if (!Number.isFinite(v) || v <= 0) {
                 this.cart[index].qty = 1;
-            } else if (value > CONFIG.MAX_QUANTITY) {
-                this.cart[index].qty = CONFIG.MAX_QUANTITY;
-                this.message = {
-                    type: 'warning',
-                    text: `الكمية القصوى المسموح بها هي ${CONFIG.MAX_QUANTITY}.`,
-                };
             } else {
-                this.cart[index].qty = value;
+                this.cart[index].qty = Math.min(v, 999999);
             }
-            
+
             this.persistCart();
         },
 
         updatePrice(index, price) {
-            if (index < 0 || index >= this.cart.length) {
-                return;
-            }
-            
-            // Parse and validate price
-            const value = Number(price ?? 0);
-            
-            // Ensure non-negative price, maximum CONFIG.MAX_PRICE
-            if (isNaN(value) || value < 0) {
+            if (!Array.isArray(this.cart)) return;
+            if (index < 0 || index >= this.cart.length) return;
+
+            const v = parseFloat(price);
+            if (!Number.isFinite(v) || v < 0) {
                 this.cart[index].price = 0;
-            } else if (value > CONFIG.MAX_PRICE) {
-                this.cart[index].price = CONFIG.MAX_PRICE;
-                this.message = {
-                    type: 'warning',
-                    text: `السعر القصوى المسموح به هو ${CONFIG.MAX_PRICE}.`,
-                };
             } else {
-                // Round to 2 decimal places
-                this.cart[index].price = Math.round(value * 100) / 100;
+                // keep 2 decimals for UI; backend stores 4 decimals and rounds
+                this.cart[index].price = Math.round(v * 100) / 100;
             }
-            
+
             this.persistCart();
         },
 
-        enqueueOfflineSale(payload) {
-            if (!this.offlineQueue) {
-                this.offlineQueue = [];
+        // ---------- Payments UI ----------
+        openPaymentModal() {
+            if (!this.cart?.length) {
+                this.showMessage('info', 'Cart is empty.');
+                return;
             }
+            this.payments = [{ method: 'cash', amount: this.total }];
+            this.showPaymentModal = true;
+        },
+
+        addPayment() {
+            this.payments.push({ method: 'cash', amount: 0 });
+        },
+
+        removePayment(index) {
+            if (this.payments.length <= 1) return;
+            this.payments.splice(index, 1);
+        },
+
+        // ---------- Checkout / Offline queue ----------
+        enqueueOfflineSale(payload) {
+            this.offlineQueue = this.offlineQueue || [];
             this.offlineQueue.push({
                 payload,
                 queued_at: new Date().toISOString(),
@@ -373,128 +413,197 @@ export function erpPosTerminal(options) {
         },
 
         async checkout() {
-            // Validation: check cart has items
-            if (!this.cart.length) {
-                this.message = {
-                    type: 'info',
-                    text: 'لا توجد عناصر في السلة.',
-                };
+            if (!this.cart?.length) {
+                this.showMessage('info', 'Cart is empty.');
                 return;
             }
 
-            // Prevent double submit
-            if (this.isCheckingOut) {
+            if (!this.warehouseId) {
+                // Backend requires it (and now request validation too)
+                this.showMessage('error', 'Warehouse is required. Please select a warehouse for this terminal.');
                 return;
             }
 
-            // Validate cart items
-            const invalidItems = this.cart.filter(item => !item.product_id || Number(item.qty) <= 0);
-            if (invalidItems.length > 0) {
-                this.message = {
-                    type: 'error',
-                    text: 'بعض العناصر في السلة غير صالحة. يرجى التحقق من الكميات.',
-                };
-                return;
-            }
+            if (this.isCheckingOut) return;
+            this.isCheckingOut = true;
+            this.clearMessage();
 
+            // Build payload (base currency)
             const items = this.cart.map((item) => ({
                 product_id: item.product_id,
-                qty: Number(item.qty ?? 1),
-                price: Number(item.price ?? 0),
-                discount: Number(item.discount ?? 0),
+                qty: parseFloat(item.qty) || 1,
+                price: parseFloat(item.price) || 0,
+                discount: parseFloat(item.discount) || 0,
                 percent: !!item.percent,
                 tax_id: item.tax_id ?? null,
             }));
 
+            const payments = (this.payments || [])
+                .filter((p) => (parseFloat(p.amount) || 0) > 0)
+                .map((p) => {
+                    const meta = {
+                        // card
+                        card_type: p.card_type || null,
+                        card_last_four: p.card_last_four || null,
+                        // transfer
+                        bank_name: p.bank_name || null,
+                        reference_no: p.reference_no || null,
+                        // cheque
+                        cheque_number: p.cheque_number || null,
+                        cheque_date: p.cheque_date || null,
+                    };
+
+                    // Remove empty keys to keep payload tidy
+                    Object.keys(meta).forEach((k) => {
+                        if (!meta[k]) delete meta[k];
+                    });
+
+                    return {
+                        method: p.method || 'cash',
+                        amount: parseFloat(p.amount) || 0,
+                        currency: this.baseCurrency,
+                        ...(Object.keys(meta).length ? { meta } : {}),
+                    };
+                });
+
             const payload = {
+                client_uuid: uuidv4(),
+                warehouse_id: this.warehouseId,
+                channel: 'pos',
+                currency: this.baseCurrency,
                 items,
+                payments,
+                // Keep business date explicit (helps offline/backdated flows)
+                sale_date: new Date().toISOString().slice(0, 10),
             };
 
-            // Offline: enqueue and clear cart
+            // Offline -> queue and clear
             if (this.offline) {
                 this.enqueueOfflineSale(payload);
                 this.cart = [];
                 this.persistCart();
-                this.message = {
-                    type: 'info',
-                    text: 'تم حفظ الطلب في وضع عدم الاتصال. سيتم مزامنته عند توفر الإنترنت.',
-                };
+                this.showPaymentModal = false;
+                this.payments = [{ method: 'cash', amount: 0 }];
+                this.showMessage('info', 'Saved offline. Will sync when online.');
+                this.isCheckingOut = false;
                 return;
             }
 
-            this.isCheckingOut = true;
-            this.clearMessage();
-
             try {
-                const response = await window.axios.post(`/api/v1/branches/${this.branchId}/pos/checkout`, payload, {
-                    timeout: CONFIG.CHECKOUT_TIMEOUT,
+                const res = await window.axios.post(`${apiBase}/pos/checkout`, payload, {
+                    timeout: TIMEOUTS.checkout,
                 });
 
-                // Extract message from standardized API response
-                const data = response.data ?? {};
-                let msg = 'تم تنفيذ عملية البيع بنجاح.';
-                
-                if (data.success === true && data.message) {
-                    msg = data.message;
-                } else if (data.message) {
-                    msg = data.message;
-                } else if (data.status) {
-                    msg = data.status;
-                }
+                // success
+                const msg = res.data?.message || 'Checkout completed.';
 
-                // Clear cart on success
                 this.cart = [];
                 this.persistCart();
+                this.showPaymentModal = false;
+                this.payments = [{ method: 'cash', amount: 0 }];
 
-                this.message = {
-                    type: 'success',
-                    text: msg,
-                };
-
-                // Optional: Show sale details if available
-                if (data.data && data.data.code) {
-                    console.log('Sale created:', data.data.code);
-                }
-            } catch (error) {
-                console.error('POS checkout error', error);
-                
-                // Handle specific error types
-                let errorMessage = 'فشل تنفيذ عملية البيع.';
-                if (error.code === 'ECONNABORTED') {
-                    errorMessage = 'انتهت مهلة الطلب. يرجى المحاولة مرة أخرى.';
-                } else if (error.response) {
-                    // Server responded with error
-                    if (error.response.status === 401) {
-                        errorMessage = 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.';
-                    } else if (error.response.status === 403) {
-                        errorMessage = 'ليس لديك صلاحية لإجراء عمليات البيع.';
-                    } else if (error.response.status === 422) {
-                        // Validation error
-                        if (error.response.data?.errors) {
-                            const errors = Object.values(error.response.data.errors).flat();
-                            errorMessage = errors.join(' ');
-                        } else if (error.response.data?.message) {
-                            errorMessage = error.response.data.message;
-                        }
-                    } else if (error.response.status >= 500) {
-                        errorMessage = 'خطأ في الخادم. يرجى المحاولة لاحقاً.';
-                    } else if (error.response.data?.message) {
-                        errorMessage = error.response.data.message;
-                    }
-                } else if (error.request) {
-                    // Request made but no response
-                    errorMessage = 'لا يمكن الاتصال بالخادم. يرجى التحقق من الاتصال.';
-                }
-
-                this.message = {
-                    type: 'error',
-                    text: errorMessage,
-                };
+                this.showMessage('success', msg);
+            } catch (e) {
+                console.error('[POS] checkout error', e);
+                this.showMessage('error', axiosErrorMessage(e, 'Checkout failed.'));
             } finally {
                 this.isCheckingOut = false;
+            }
+        },
+
+        async syncOfflineQueue() {
+            if (!this.offlineQueue?.length) {
+                this.showMessage('info', 'No offline orders to sync.');
+                return;
+            }
+
+            if (this.offline) {
+                this.showMessage('info', 'Still offline. Sync will start when online.');
+                return;
+            }
+
+            // Process sequentially to keep things deterministic (and avoid server overload)
+            const queue = [...this.offlineQueue];
+            for (const entry of queue) {
+                try {
+                    await window.axios.post(`${apiBase}/pos/checkout`, entry.payload ?? {}, {
+                        timeout: TIMEOUTS.sync,
+                    });
+
+                    // Remove the first item (FIFO)
+                    this.offlineQueue.shift();
+                    this.persistOfflineQueue();
+                } catch (e) {
+                    console.error('[POS] offline sync error', e);
+                    this.showMessage('error', axiosErrorMessage(e, 'Failed to sync offline orders.'));
+                    return;
+                }
+            }
+
+            this.showMessage('success', 'Offline orders synced successfully.');
+        },
+
+        // ---------- POS Session ----------
+        openSessionModal() {
+            this.showSessionModal = true;
+        },
+
+        async checkSession() {
+            if (!branchId) return;
+
+            try {
+                const res = await window.axios.get(`${apiBase}/pos/session`, { timeout: TIMEOUTS.session });
+                const data = unwrapApiResponse(res.data);
+                this.currentSession = data || null;
+            } catch (e) {
+                // Do not block the POS UI if session endpoint is unavailable
+                console.warn('[POS] Session check failed', e);
+                this.currentSession = null;
+            }
+        },
+
+        async openSession() {
+            try {
+                const res = await window.axios.post(
+                    `${apiBase}/pos/session/open`,
+                    { opening_cash: parseFloat(this.sessionOpeningCash) || 0 },
+                    { timeout: TIMEOUTS.session }
+                );
+                const data = unwrapApiResponse(res.data);
+                this.currentSession = data || null;
+                this.sessionOpeningCash = 0;
+                this.showSessionModal = false;
+                this.showMessage('success', res.data?.message || 'Session opened.');
+            } catch (e) {
+                console.error('[POS] open session error', e);
+                this.showMessage('error', axiosErrorMessage(e, 'Failed to open session.'));
+            }
+        },
+
+        async closeSession() {
+            if (!this.currentSession?.id) return;
+
+            try {
+                const res = await window.axios.post(
+                    `${apiBase}/pos/session/${this.currentSession.id}/close`,
+                    {
+                        closing_cash: parseFloat(this.sessionClosingCash) || 0,
+                        notes: this.sessionNotes || null,
+                    },
+                    { timeout: TIMEOUTS.session }
+                );
+                this.currentSession = null;
+                this.sessionClosingCash = 0;
+                this.sessionNotes = '';
+                this.showSessionModal = false;
+                this.showMessage('success', res.data?.message || 'Session closed.');
+            } catch (e) {
+                console.error('[POS] close session error', e);
+                this.showMessage('error', axiosErrorMessage(e, 'Failed to close session.'));
             }
         },
     };
 }
 
+// Make it available to inline x-data="erpPosTerminal(...)"
 window.erpPosTerminal = erpPosTerminal;

@@ -50,12 +50,15 @@ class Tasks extends Component
 
     public array $selectedDependencies = [];
 
-    public function mount(int $projectId): void
+    /**
+     * NOTE: Route parameter name is {project} (see routes/web.php).
+     */
+    public function mount(int $project): void
     {
         $this->authorize('projects.tasks.view');
         $this->project = Project::query()
             ->forUserBranches(auth()->user())
-            ->findOrFail($projectId);
+            ->findOrFail($project);
     }
 
     /**

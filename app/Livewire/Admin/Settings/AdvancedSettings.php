@@ -8,9 +8,11 @@ use App\Services\SettingsService;
 use App\Services\Sms\SmsManager;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class AdvancedSettings extends Component
 {
+    use AuthorizesRequests;
     public string $activeTab = 'general';
 
     public array $general = [

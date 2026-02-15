@@ -7,13 +7,17 @@ namespace App\Livewire\Inventory\ProductStoreMappings;
 use App\Models\Product;
 use App\Models\ProductStoreMapping;
 use App\Models\Store;
-use Illuminate\Support\Facades\Auth;
+use App\Rules\BranchScopedExists;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
+#[Layout('layouts.app')]
 class Form extends Component
 {
+    use AuthorizesRequests;
+
     public ?int $mappingId = null;
 
     public ?int $productId = null;
@@ -26,81 +30,52 @@ class Form extends Component
 
     public string $external_sku = '';
 
+    /**
+     * @var array<int, array{id:int,name:string,type:string}>
+     */
     public array $stores = [];
 
     public function mount(?int $product = null, ?int $mapping = null): void
     {
-        $user = Auth::user();
+        $this->authorize('inventory.products.view');
 
-        if (! $user || ! $user->can('inventory.products.view')) {
-            abort(403);
+        if (! $product) {
+            abort(404);
         }
 
-        $this->productId = $product;
-
-        if ($product) {
-            $this->product = Product::findOrFail($product);
-            $this->authorizeProductBranch($this->product);
-        }
+        $this->productId = (int) $product;
+        $this->product = Product::findOrFail($this->productId);
 
         if ($mapping) {
-            $this->mappingId = $mapping;
+            $this->mappingId = (int) $mapping;
             $this->loadMapping();
         }
 
         $this->loadStores();
     }
 
-    protected function requireUserBranch(): int
-    {
-        $user = Auth::user();
-
-        if (! $user || ! $user->branch_id) {
-            abort(403, __('User must be assigned to a branch to perform this action'));
-        }
-
-        return $user->branch_id;
-    }
-
-    protected function authorizeProductBranch(Product $product): void
-    {
-        $userBranchId = $this->requireUserBranch();
-
-        if ($product->branch_id !== $userBranchId) {
-            abort(403, __('Access denied to product from another branch'));
-        }
-    }
-
-    protected function authorizeAction(string $permission): void
-    {
-        $user = Auth::user();
-
-        if (! $user || ! $user->can($permission)) {
-            abort(403, __('Unauthorized'));
-        }
-    }
-
     protected function loadStores(): void
     {
-        $query = Store::where('is_active', true);
+        if (! $this->product) {
+            $this->stores = [];
 
-        if ($this->product && $this->product->branch_id) {
-            $query->where(function ($q) {
-                $q->where('branch_id', $this->product->branch_id)
-                    ->orWhereNull('branch_id');
-            });
+            return;
         }
 
-        $this->stores = $query->orderBy('name')->get(['id', 'name', 'type'])->toArray();
+        // Stores are branch-owned. Only show stores for the product's branch.
+        $this->stores = Store::query()
+            ->where('is_active', true)
+            ->where('branch_id', $this->product->branch_id)
+            ->orderBy('name')
+            ->get(['id', 'name', 'type'])
+            ->toArray();
     }
 
     protected function loadMapping(): void
     {
-        $mapping = ProductStoreMapping::with('product')->findOrFail($this->mappingId);
-
-        if ($mapping->product) {
-            $this->authorizeProductBranch($mapping->product);
-        }
+        $mapping = ProductStoreMapping::query()
+            ->where('product_id', $this->productId)
+            ->findOrFail($this->mappingId);
 
         $this->store_id = $mapping->store_id;
         $this->external_id = $mapping->external_id ?? '';
@@ -109,27 +84,22 @@ class Form extends Component
 
     protected function rules(): array
     {
-        $branchId = auth()->user()?->branch_id;
+        // Validate store belongs to the SAME branch as the product.
+        $branchId = $this->product?->branch_id;
 
         return [
-            // V58-CRITICAL-02 FIX: Use BranchScopedExists for branch-aware validation
-            'store_id' => ['required', new \App\Rules\BranchScopedExists('stores', 'id', $branchId)],
-            'external_id' => 'required|string|max:255',
-            'external_sku' => 'nullable|string|max:255',
+            'store_id' => ['required', new BranchScopedExists('stores', 'id', $branchId)],
+            'external_id' => ['required', 'string', 'max:255'],
+            'external_sku' => ['nullable', 'string', 'max:255'],
         ];
     }
 
     public function save(): mixed
     {
-        if ($this->mappingId) {
-            $this->authorizeAction('inventory.products.update');
-        } else {
-            $this->authorizeAction('inventory.products.create');
-        }
+        // Re-authorize on mutation
+        $this->authorize($this->mappingId ? 'inventory.products.update' : 'inventory.products.create');
 
-        if ($this->product) {
-            $this->authorizeProductBranch($this->product);
-        } else {
+        if (! $this->product) {
             abort(422, __('Product is required'));
         }
 
@@ -143,11 +113,9 @@ class Form extends Component
         ];
 
         if ($this->mappingId) {
-            $mapping = ProductStoreMapping::with('product')->findOrFail($this->mappingId);
-
-            if ($mapping->product) {
-                $this->authorizeProductBranch($mapping->product);
-            }
+            $mapping = ProductStoreMapping::query()
+                ->where('product_id', $this->productId)
+                ->findOrFail($this->mappingId);
 
             $mapping->update($data);
             session()->flash('success', __('Mapping updated successfully'));
@@ -170,13 +138,14 @@ class Form extends Component
 
                 return null;
             } catch (\Illuminate\Database\QueryException $e) {
-                // Fallback for older Laravel or PDO drivers that don't throw UniqueConstraintViolationException
+                // Fallback for older drivers that don't throw UniqueConstraintViolationException
                 $errorCode = $e->errorInfo[1] ?? 0;
                 if ($errorCode === 1062 || $errorCode === 19 || $errorCode === 2627) {
                     $this->addError('store_id', __('This product is already mapped to this store'));
 
                     return null;
                 }
+
                 throw $e;
             }
 
@@ -186,7 +155,6 @@ class Form extends Component
         $this->redirectRoute('app.inventory.products.store-mappings', ['product' => $this->productId], navigate: true);
     }
 
-    #[Layout('layouts.app')]
     public function render()
     {
         return view('livewire.inventory.product-store-mappings.form');

@@ -23,6 +23,7 @@
                         <tr>
                             <th class="px-3 py-2 text-left text-[11px] font-medium text-slate-500">#</th>
                             <th class="px-3 py-2 text-left text-[11px] font-medium text-slate-500">{{ __('Report') }}</th>
+                            <th class="px-3 py-2 text-left text-[11px] font-medium text-slate-500">{{ __('Branch') }}</th>
                             <th class="px-3 py-2 text-left text-[11px] font-medium text-slate-500">{{ __('Schedule') }}</th>
                             <th class="px-3 py-2 text-left text-[11px] font-medium text-slate-500">{{ __('Recipient') }}</th>
                             <th class="px-3 py-2 text-right text-[11px] font-medium text-slate-500">{{ __('Actions') }}</th>
@@ -32,6 +33,8 @@
                         @forelse($reports as $report)
                             @php
                                 $tpl = $report->template;
+                                $filters = is_array($report->filters) ? $report->filters : [];
+                                $branchId = $filters['branch_id'] ?? null;
                             @endphp
                             <tr>
                                 <td class="px-3 py-1.5">{{ $report->id }}</td>
@@ -43,6 +46,13 @@
                                         </div>
                                     @else
                                         <span class="text-[11px] text-slate-400">{{ __('Custom') }}</span>
+                                    @endif
+                                </td>
+                                <td class="px-3 py-1.5 text-[11px] text-slate-700">
+                                    @if($branchId)
+                                        <span class="font-medium text-slate-800">{{ $branchNames[$branchId] ?? ('#'.$branchId) }}</span>
+                                    @else
+                                        <span class="text-slate-400">{{ __('All') }}</span>
                                     @endif
                                 </td>
                                 <td class="px-3 py-1.5 text-[11px] text-slate-700">
@@ -64,7 +74,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-3 py-3 text-center text-xs text-slate-500">
+                                <td colspan="6" class="px-3 py-3 text-center text-xs text-slate-500">
                                     {{ __('No scheduled reports yet. Create your first one!') }}
                                 </td>
                             </tr>
@@ -107,6 +117,28 @@
                             {{ __('Choose which report to schedule') }}
                         </p>
                     </div>
+
+                    {{-- Branch Selection (Super Admin UX) --}}
+                    @if($canSelectBranch)
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-500 mb-0.5">
+                                {{ __('Branch') }}
+                            </label>
+                            <select wire:model="filterBranchId"
+                                    class="w-full rounded border border-slate-200 bg-white px-2 py-1 text-xs">
+                                <option value="">{{ __('All branches') }}</option>
+                                @foreach($branches as $branch)
+                                    <option value="{{ $branch->id }}">{{ $branch->name }}</option>
+                                @endforeach
+                            </select>
+                            @error('filterBranchId')
+                            <p class="mt-0.5 text-[11px] text-red-500">{{ $message }}</p>
+                            @enderror
+                            <p class="mt-0.5 text-[10px] text-slate-400">
+                                {{ __('Instead of typing branch_id in JSON, select the branch here.') }}
+                            </p>
+                        </div>
+                    @endif
 
                     {{-- Frequency Selection --}}
                     <div>
@@ -234,7 +266,7 @@
                                 <span class="text-[9px] text-amber-600">({{ __('optional, for developers') }})</span>
                             </label>
                             <textarea wire:model="filtersJson" rows="3"
-                                      placeholder='{"branch_id": 1}'
+                                      placeholder='{"from": "2025-01-01", "to": "2025-01-31"}'
                                       class="w-full rounded border border-amber-200 bg-white px-2 py-1 text-xs font-mono"></textarea>
                             @error('filtersJson')
                             <p class="mt-0.5 text-[11px] text-red-500">{{ $message }}</p>

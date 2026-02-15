@@ -8,9 +8,11 @@ use App\Models\Branch;
 use App\Models\BranchModule;
 use App\Models\Module;
 use Livewire\Component;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class Compare extends Component
 {
+    use AuthorizesRequests;
     public ?int $branch1Id = null;
 
     public ?int $branch2Id = null;

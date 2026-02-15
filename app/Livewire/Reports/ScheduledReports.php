@@ -10,11 +10,11 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class ScheduledReports extends Component
 {
-    use WithPagination;
-
+    use AuthorizesRequests, WithPagination;
     protected ScheduledReportService $reportService;
 
     public function boot(ScheduledReportService $reportService): void
@@ -60,6 +60,7 @@ class ScheduledReports extends Component
 
     public function delete(int $id): void
     {
+        $this->authorize('reports.manage');
         DB::table('report_schedules')->where('id', $id)->delete();
         $this->dispatch('notify', type: 'success', message: __('Schedule deleted successfully'));
     }

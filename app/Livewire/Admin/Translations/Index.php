@@ -9,12 +9,12 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 #[Layout('layouts.app')]
 class Index extends Component
 {
-    use WithPagination;
-
+    use AuthorizesRequests, WithPagination;
     #[Url]
     public $search = '';
 
@@ -168,7 +168,8 @@ class Index extends Component
 
     public function deleteTranslation($key, $group)
     {
-        $this->authorize('translations.manage');
+        // Permissions are namespaced under settings.*
+        $this->authorize('settings.translations.manage');
 
         // Security: Validate inputs
         if (! is_string($key) || ! is_string($group)) {

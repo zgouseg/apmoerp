@@ -250,7 +250,7 @@ self.addEventListener('fetch', (event) => {
     }
 
     // Skip livewire internal requests (both URL and header-based detection)
-    if (url.pathname.includes('/livewire/') || request.headers.get('X-Livewire')) {
+    if (url.pathname.includes('/livewire/') || url.pathname.startsWith('/livewire-') || request.headers.get('X-Livewire')) {
         return;
     }
 

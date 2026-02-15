@@ -778,7 +778,11 @@
             
             return collect($section['items'])->flatMap(function($item) use ($section, $keywordMappings, $checkActive) {
                 // Get keywords for this item
-                $routeKey = strtolower(last(explode('.', $item['route'])));
+                // CRIT-SIDEBAR-01 FIX: Laravel no longer guarantees a global `last()` helper.
+                // Using it here can cause a fatal error (500) across the app because the sidebar
+                // renders on most screens.
+                // Use Arr::last() (framework-stable) instead.
+                $routeKey = strtolower((string) \Illuminate\Support\Arr::last(explode('.', (string) ($item['route'] ?? ''))));
                 $keywords = $keywordMappings[$routeKey] ?? [];
                 
                 $items = [[
@@ -791,7 +795,8 @@
                     'active' => $checkActive($item['route'])
                 ]];
                 foreach ($item['children'] ?? [] as $child) {
-                    $childRouteKey = strtolower(last(explode('.', $child['route'])));
+                    // CRIT-SIDEBAR-01 FIX: Avoid undefined `last()` helper.
+                    $childRouteKey = strtolower((string) \Illuminate\Support\Arr::last(explode('.', (string) ($child['route'] ?? ''))));
                     $childKeywords = $keywordMappings[$childRouteKey] ?? [];
 
                     $items[] = [

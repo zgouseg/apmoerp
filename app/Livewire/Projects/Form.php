@@ -54,16 +54,20 @@ class Form extends Component
 
     public bool $overrideCode = false;
 
-    public function mount(?int $id = null): void
+    /**
+     * NOTE: Route parameter name is {project} (see routes/web.php).
+     * Livewire injects route params into mount() by name.
+     */
+    public function mount(?int $project = null): void
     {
         $user = auth()->user();
         $allowedBranches = $this->getUserBranchIds();
 
-        if ($id) {
+        if ($project) {
             $this->authorize('projects.edit');
             $this->project = Project::query()
                 ->whereIn('branch_id', $allowedBranches)
-                ->find($id);
+                ->find($project);
 
             if (! $this->project) {
                 throw new HttpException(403);
@@ -73,7 +77,7 @@ class Form extends Component
                 throw new HttpException(403);
             }
 
-            $this->projectId = $id;
+            $this->projectId = (int) $project;
             $this->fill($this->project->only([
                 'branch_id', 'name', 'code', 'description',
                 'start_date', 'end_date', 'status', 'notes', 'currency',

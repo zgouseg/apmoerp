@@ -7,14 +7,16 @@ namespace App\Livewire\Inventory;
 use App\Models\Product;
 use App\Models\ProductStoreMapping;
 use App\Models\Store;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
 
+#[Layout('layouts.app')]
 class ProductStoreMappings extends Component
 {
     use WithPagination;
+    use AuthorizesRequests;
 
     protected string $paginationTheme = 'tailwind';
 
@@ -26,78 +28,50 @@ class ProductStoreMappings extends Component
 
     public ?int $storeFilter = null;
 
+    /**
+     * @var array<int, array{id:int,name:string,type:string}>
+     */
     public array $stores = [];
 
-    public function mount(?int $productId = null): void
+    /**
+     * IMPORTANT:
+     * Route parameter name is {product} (see routes/web.php).
+     * Livewire injects route params into mount() by name.
+     */
+    public function mount(?int $product = null): void
     {
-        $user = Auth::user();
+        $this->authorize('inventory.products.view');
 
-        if (! $user || ! $user->can('inventory.products.view')) {
-            abort(403);
+        if (! $product) {
+            abort(404);
         }
 
-        $this->productId = $productId;
-
-        if ($productId) {
-            $this->product = Product::findOrFail($productId);
-
-            // Enforce branch scoping: user must have access to product's branch
-            $this->authorizeProductBranch($this->product);
-        }
+        $this->productId = (int) $product;
+        $this->product = Product::with('category')->findOrFail($this->productId);
 
         $this->loadStores();
     }
 
-    /**
-     * Verify the user has a valid branch assignment.
-     */
-    protected function requireUserBranch(): int
-    {
-        $user = Auth::user();
-
-        if (! $user || ! $user->branch_id) {
-            abort(403, __('User must be assigned to a branch to perform this action'));
-        }
-
-        return $user->branch_id;
-    }
-
-    /**
-     * Verify the product belongs to the user's branch.
-     */
-    protected function authorizeProductBranch(Product $product): void
-    {
-        $userBranchId = $this->requireUserBranch();
-
-        if ($product->branch_id !== $userBranchId) {
-            abort(403, __('Access denied to product from another branch'));
-        }
-    }
-
-    /**
-     * Check if the user has the required permission.
-     */
-    protected function authorizeAction(string $permission): void
-    {
-        $user = Auth::user();
-
-        if (! $user || ! $user->can($permission)) {
-            abort(403, __('Unauthorized'));
-        }
-    }
-
     protected function loadStores(): void
     {
-        $query = Store::where('is_active', true);
+        if (! $this->product) {
+            $this->stores = [];
 
-        if ($this->product && $this->product->branch_id) {
-            $query->where(function ($q) {
-                $q->where('branch_id', $this->product->branch_id)
-                    ->orWhereNull('branch_id');
-            });
+            return;
         }
 
-        $this->stores = $query->orderBy('name')->get(['id', 'name', 'type'])->toArray();
+        // Stores are branch-owned. Only show stores for the product's branch.
+        $stores = Store::query()
+            ->where('branch_id', $this->product->branch_id)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'type']);
+
+        $this->stores = $stores->map(fn (Store $store): array => [
+            'id' => (int) $store->id,
+            'name' => (string) $store->name,
+            'type' => (string) ($store->type ?? ''),
+        ])->toArray();
     }
 
     public function updatingSearch(): void
@@ -105,34 +79,37 @@ class ProductStoreMappings extends Component
         $this->resetPage();
     }
 
-    public function delete(int $id): void
+    public function updatingStoreFilter(): void
     {
-        $this->authorizeAction('inventory.products.delete');
-
-        $mapping = ProductStoreMapping::with('product')->findOrFail($id);
-
-        // Verify branch ownership before delete
-        if ($mapping->product) {
-            $this->authorizeProductBranch($mapping->product);
-        }
-
-        $mapping->delete();
-        session()->flash('success', __('Mapping deleted successfully'));
+        $this->resetPage();
     }
 
-    #[Layout('layouts.app')]
+    public function delete(int $id): void
+    {
+        // Store mappings are edited as part of product updates
+        $this->authorize('inventory.products.update');
+
+        $mapping = ProductStoreMapping::query()
+            ->where('product_id', $this->productId)
+            ->findOrFail($id);
+
+        $mapping->delete();
+
+        session()->flash('success', __('Store mapping deleted successfully.'));
+    }
+
     public function render()
     {
-        $query = ProductStoreMapping::with('store');
+        $query = ProductStoreMapping::query()
+            ->with('store')
+            ->where('product_id', $this->productId);
 
-        if ($this->productId) {
-            $query->where('product_id', $this->productId);
-        }
+        if ($this->search !== '') {
+            $search = $this->search;
 
-        if ($this->search) {
-            $query->where(function ($q) {
-                $q->where('external_id', 'like', '%'.$this->search.'%')
-                    ->orWhere('external_sku', 'like', '%'.$this->search.'%');
+            $query->where(function ($q) use ($search) {
+                $q->where('external_id', 'like', '%'.$search.'%')
+                    ->orWhere('external_sku', 'like', '%'.$search.'%');
             });
         }
 
@@ -144,6 +121,9 @@ class ProductStoreMappings extends Component
 
         return view('livewire.inventory.product-store-mappings', [
             'mappings' => $mappings,
+            'product' => $this->product,
+            'productId' => $this->productId,
+            'stores' => $this->stores,
         ]);
     }
 }

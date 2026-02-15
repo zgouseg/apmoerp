@@ -10,11 +10,11 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class Index extends Component
 {
-    use WithPagination;
-
+    use AuthorizesRequests, WithPagination;
     #[Url]
     public string $search = '';
 
