@@ -219,6 +219,13 @@ class ManufacturingService
                     continue;
                 }
 
+                // Validate quantity is positive to prevent negative stock manipulation
+                if ($item->quantity_required <= 0) {
+                    throw new \InvalidArgumentException(
+                        "Material quantity must be positive for product #{$item->product_id}. Got: {$item->quantity_required}"
+                    );
+                }
+
                 // Create stock movement for material issue using repository
                 $this->stockMovementRepo->create([
                     'product_id' => $item->product_id,
@@ -253,6 +260,14 @@ class ManufacturingService
      */
     public function recordProduction(ProductionOrder $order, float $quantity, float $scrapQuantity = 0.0): void
     {
+        // Validate quantities are non-negative
+        if ($quantity <= 0) {
+            throw new \InvalidArgumentException('Production quantity must be positive');
+        }
+        if ($scrapQuantity < 0) {
+            throw new \InvalidArgumentException('Scrap quantity cannot be negative');
+        }
+
         DB::transaction(function () use ($order, $quantity, $scrapQuantity) {
             // Update production order
             $order->increment('produced_quantity', $quantity);
@@ -273,9 +288,9 @@ class ManufacturingService
             ]);
 
             // Update product cost based on actual manufacturing cost
-            if ($order->produced_quantity > 0) {
-                $unitCost = $order->actual_cost / $order->produced_quantity;
-                $order->product->update(['cost' => $unitCost]);
+            if ($order->produced_quantity > 0 && $order->actual_cost > 0) {
+                $unitCost = bcdiv((string) $order->actual_cost, (string) $order->produced_quantity, 4);
+                $order->product->update(['cost' => decimal_float($unitCost, 4)]);
             }
 
             // Create accounting entry

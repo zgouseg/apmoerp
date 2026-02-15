@@ -24,6 +24,11 @@ class StoreIntegration extends BaseModel
     ];
 
     protected $casts = [
+        'api_key' => 'encrypted',
+        'api_secret' => 'encrypted',
+        'access_token' => 'encrypted',
+        'refresh_token' => 'encrypted',
+        'webhook_secret' => 'encrypted',
         'token_expires_at' => 'datetime',
         'webhooks_registered' => 'boolean',
         'permissions' => 'array',
