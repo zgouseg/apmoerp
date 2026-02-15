@@ -65,10 +65,11 @@
                         <div class="flex gap-3 items-center">
                             <button type="button" @click="showIconPicker = !showIconPicker" 
                                     class="erp-input w-20 text-center text-2xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700"
-                                    title="{{ __('Click to select icon') }}">
+                                    title="{{ __('Click to select icon') }}"
+                                    aria-describedby="icon-help-text">
                                 {{ $icon }}
                             </button>
-                            <span class="text-sm text-slate-500 dark:text-slate-400">{{ __('Click to change icon') }}</span>
+                            <span id="icon-help-text" class="text-sm text-slate-500 dark:text-slate-400">{{ __('Click to change icon') }}</span>
                         </div>
                         
                         {{-- Icon Picker Dropdown --}}
@@ -221,7 +222,7 @@
                             </div>
                         </div>
                     </div>
-                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ __('Select an icon from the picker above') }}</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ __('Click the icon button to open the picker and select an icon') }}</p>
                 </div>
 
                 <div>

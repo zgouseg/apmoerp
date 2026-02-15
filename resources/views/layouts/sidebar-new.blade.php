@@ -996,7 +996,7 @@
     @click.away="showSearchResults = false"
 >
     {{-- Search Box (stays fixed at top) --}}
-    <div class="px-3 py-2 flex-shrink-0 border-block-end border-slate-700/30" style="border-bottom: 1px solid rgba(148, 163, 184, 0.1);">
+    <div class="px-3 py-2 flex-shrink-0" style="border-bottom: 1px solid rgba(148, 163, 184, 0.1);">
         <div class="relative">
             <input
                 type="text"
