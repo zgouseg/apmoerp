@@ -347,7 +347,9 @@ class ImportService
                             $rowData = [];
 
                             foreach ($headers as $colIndex => $header) {
-                                $rowData[$header] = isset($row[$colIndex]) ? trim((string) $row[$colIndex]) : null;
+                                $value = isset($row[$colIndex]) ? trim((string) $row[$colIndex]) : null;
+                                // Sanitize against CSV/formula injection
+                                $rowData[$header] = $this->sanitizeCsvValue($value);
                             }
 
                             // Skip empty rows
@@ -606,5 +608,32 @@ class ImportService
             'branch_id' => $branchId,
             'is_active' => true,
         ];
+    }
+
+    /**
+     * Sanitize a cell value to prevent CSV/formula injection.
+     *
+     * When data is later exported to CSV/Excel, values starting with =, +, -, or @
+     * can be interpreted as formulas and execute arbitrary commands on the user's machine.
+     * This method prefixes dangerous string values with a single quote to neutralize the threat.
+     * Numeric values (including negative numbers like -50.00) are left unchanged.
+     */
+    protected function sanitizeCsvValue(?string $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return $value;
+        }
+
+        // Allow legitimate numeric values (including negative numbers like -50.00)
+        if (is_numeric($value)) {
+            return $value;
+        }
+
+        $dangerousChars = ['=', '+', '-', '@', "\t", "\r", "\n"];
+        if (in_array($value[0], $dangerousChars, true)) {
+            return "'".$value;
+        }
+
+        return $value;
     }
 }

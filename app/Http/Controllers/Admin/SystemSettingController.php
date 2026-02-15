@@ -22,8 +22,14 @@ class SystemSettingController extends Controller
     {
         // V57-HIGH-01 FIX: Add authorization for system settings viewing
         $this->authorize('settings.view');
-        
-        $pairs = DB::table('system_settings')->pluck('value', 'key')->all();
+
+        // V59-CRIT-03 FIX: Use correct column name (setting_key, not key) and
+        // filter out encrypted/private settings to prevent sensitive data exposure
+        $pairs = DB::table('system_settings')
+            ->where('is_public', true)
+            ->where('is_encrypted', false)
+            ->pluck('value', 'setting_key')
+            ->all();
 
         return $this->ok(['settings' => $pairs]);
     }

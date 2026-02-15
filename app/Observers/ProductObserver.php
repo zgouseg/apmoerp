@@ -71,6 +71,9 @@ class ProductObserver
         // Media deletion is handled in forceDeleted() event only
         // This allows products to be restored without losing their images
         $this->audit('deleted', $product);
+
+        // Clean up search index to prevent stale "ghost" results (click → 404)
+        $this->removeFromSearchIndex($product);
     }
 
     /**
@@ -116,6 +119,24 @@ class ProductObserver
         } catch (\Exception $e) {
             // Log but don't fail the deletion
             \Illuminate\Support\Facades\Log::warning('Failed to delete product media files', [
+                'product_id' => $product->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Remove product from search index to prevent stale "ghost" results.
+     */
+    protected function removeFromSearchIndex(Product $product): void
+    {
+        try {
+            \App\Models\SearchIndex::where('searchable_type', Product::class)
+                ->where('searchable_id', $product->getKey())
+                ->delete();
+        } catch (\Throwable $e) {
+            // Log but don't fail the deletion
+            \Illuminate\Support\Facades\Log::warning('Failed to remove product from search index', [
                 'product_id' => $product->id,
                 'error' => $e->getMessage(),
             ]);

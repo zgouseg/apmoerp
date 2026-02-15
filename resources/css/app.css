@@ -40,7 +40,7 @@
     }
     
     .dark body {
-        @apply bg-slate-950 text-slate-100;
+        @apply bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100;
     }
 
     img, svg, video, canvas {
@@ -74,6 +74,10 @@
 
     .erp-card {
         @apply rounded-2xl border border-emerald-100/60 bg-gradient-to-br from-emerald-50 via-slate-50 to-white shadow-[0_18px_45px_-25px_rgba(16,185,129,0.65)];
+    }
+
+    .dark .erp-card {
+        @apply border-slate-700/60 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 shadow-[0_18px_45px_-25px_rgba(16,185,129,0.3)] text-slate-200;
     }
 
     .erp-card-dark {
@@ -533,7 +537,7 @@
     }
 }
 
-/* Sidebar header */
+/* Sidebar header - scrolls with content */
 .erp-sidebar-header {
     flex-shrink: 0;
     display: flex;
@@ -541,34 +545,36 @@
     justify-content: space-between;
     padding: 1rem;
     border-block-end: 1px solid rgba(148, 163, 184, 0.1);
-    background: rgba(15, 23, 42, 0.5);
-    backdrop-filter: blur(12px);
 }
 
-/* Sidebar navigation */
-.erp-sidebar-nav {
+/* Sidebar scrollable wrapper - contains header, nav, and footer */
+.erp-sidebar-scroll {
     flex: 1;
     overflow-y: auto;
-    padding: 0.75rem;
     scrollbar-width: thin;
     scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
 }
 
-.erp-sidebar-nav::-webkit-scrollbar {
+.erp-sidebar-scroll::-webkit-scrollbar {
     width: 6px;
 }
 
-.erp-sidebar-nav::-webkit-scrollbar-track {
+.erp-sidebar-scroll::-webkit-scrollbar-track {
     background: transparent;
 }
 
-.erp-sidebar-nav::-webkit-scrollbar-thumb {
+.erp-sidebar-scroll::-webkit-scrollbar-thumb {
     background: rgba(148, 163, 184, 0.3);
     border-radius: 3px;
 }
 
-.erp-sidebar-nav::-webkit-scrollbar-thumb:hover {
+.erp-sidebar-scroll::-webkit-scrollbar-thumb:hover {
     background: rgba(148, 163, 184, 0.5);
+}
+
+/* Sidebar navigation */
+.erp-sidebar-nav {
+    padding: 0.75rem;
 }
 
 /* Sidebar section */
@@ -723,12 +729,11 @@
     opacity: 1;
 }
 
-/* Sidebar footer */
+/* Sidebar footer - scrolls with content */
 .erp-sidebar-footer {
     flex-shrink: 0;
     padding: 0.75rem 1rem;
     border-block-start: 1px solid rgba(148, 163, 184, 0.1);
-    background: rgba(15, 23, 42, 0.5);
 }
 
 /* Mobile menu toggle button */

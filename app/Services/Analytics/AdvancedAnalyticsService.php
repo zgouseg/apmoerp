@@ -64,7 +64,7 @@ class AdvancedAnalyticsService
 
         $total = $sales->sum('total_amount');
         $count = $sales->count();
-        $avgTicket = $count > 0 ? $total / $count : 0;
+        $avgTicket = $count > 0 ? decimal_float(bcdiv((string) $total, (string) $count, 4)) : 0;
 
         return [
             'total_revenue' => $total,

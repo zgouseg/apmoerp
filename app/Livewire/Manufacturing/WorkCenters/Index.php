@@ -75,7 +75,7 @@ class Index extends Component
                 'total_centers' => (clone $baseQuery)->count(),
                 'active_centers' => (clone $baseQuery)->where('status', 'active')->count(),
                 'total_capacity' => (clone $baseQuery)->sum('capacity_per_hour'),
-                'avg_cost_per_hour' => (clone $baseQuery)->avg('cost_per_hour'),
+                'avg_cost_per_hour' => (clone $baseQuery)->avg('cost_per_hour') ?? 0,
             ];
         });
     }

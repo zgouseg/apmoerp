@@ -38,6 +38,10 @@ class PosCheckoutRequest extends FormRequest
             // Make it explicit at validation time so the UI gets a clear 422 validation response
             // instead of a later abort() inside the service.
             'warehouse_id' => ['required', 'integer', new BranchScopedExists('warehouses', 'id', $branchId, allowNull: true)],
+            // V59-CRIT-03 FIX: Validate payments to prevent negative amounts and unstructured data
+            'payments' => ['sometimes', 'array'],
+            'payments.*.amount' => ['required', 'numeric', 'gt:0'],
+            'payments.*.method' => ['required', 'string', 'in:cash,card,transfer,cheque'],
         ];
     }
 

@@ -91,6 +91,18 @@ class LoyaltyService
                 }
 
                 return DB::transaction(function () use ($customer, $points, $saleId, $userId, $settings) {
+                    // Lock customer row to prevent concurrent redemptions
+                    $customer = Customer::lockForUpdate()->findOrFail($customer->id);
+
+                    // Re-check balance after acquiring lock
+                    $currentPoints = (int) $customer->loyalty_points;
+                    if ($currentPoints < $points) {
+                        throw new InvalidArgumentException(__('Insufficient points. You have :current points but trying to redeem :requested', [
+                            'current' => $currentPoints,
+                            'requested' => $points,
+                        ]));
+                    }
+
                     $customer->decrement('loyalty_points', $points);
                     $customer->refresh();
 
@@ -282,9 +294,9 @@ class LoyaltyService
 
                 // Calculate points to reverse
                 if ($returnAmount !== null && $sale->grand_total > 0) {
-                    // Partial return - reverse proportional points
-                    $returnRatio = $returnAmount / $sale->grand_total;
-                    $pointsToReverse = (int) round($originalTransaction->points * $returnRatio);
+                    // Partial return - reverse proportional points using BCMath
+                    $returnRatio = bcdiv((string) $returnAmount, (string) $sale->grand_total, 6);
+                    $pointsToReverse = (int) floor(decimal_float(bcmul((string) $originalTransaction->points, $returnRatio, 6)));
                 } else {
                     // Full return - reverse all points from this sale
                     $pointsToReverse = $originalTransaction->points;

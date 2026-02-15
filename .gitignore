@@ -19,3 +19,7 @@ yarn-error.log
 /.vscode
 .env
 database/database.sqlite
+/storage/framework/views/*
+/storage/logs/*
+composer.lock
+public/build/

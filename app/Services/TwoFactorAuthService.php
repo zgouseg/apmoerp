@@ -153,11 +153,21 @@ class TwoFactorAuthService
             callback: function () use ($user, $code) {
                 $codes = $this->getRecoveryCodes($user);
 
-                if (! in_array($code, $codes)) {
+                // Use constant-time comparison to prevent timing attacks.
+                // Iterate ALL codes regardless of match to avoid early-exit timing leak.
+                $matched = false;
+                foreach ($codes as $storedCode) {
+                    if (hash_equals((string) $storedCode, $code)) {
+                        $matched = true;
+                    }
+                }
+
+                if (! $matched) {
                     return false;
                 }
 
-                $codes = array_values(array_filter($codes, fn ($c) => $c !== $code));
+                // Remove the used recovery code (constant-time filter)
+                $codes = array_values(array_filter($codes, fn ($c) => ! hash_equals((string) $c, $code)));
 
                 $user->two_factor_recovery_codes = Crypt::encryptString(json_encode($codes));
                 $user->save();

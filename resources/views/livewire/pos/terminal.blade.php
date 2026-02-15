@@ -3,8 +3,8 @@
         branchId: {{ $branchId }},
         warehouseId: {{ $warehouseId ?? 'null' }},
         baseCurrency: '{{ $baseCurrency }}',
-        currencyRates: @json($currencyRates),
-        currencySymbols: @json($currencySymbols)
+        currencyRates: @js($currencyRates),
+        currencySymbols: @js($currencySymbols)
     })"
     x-init="init()"
     class="space-y-4"
