@@ -24,18 +24,25 @@ class RepairUserPasswords extends Command
 
     public function handle(): int
     {
-        $query = User::query()
-            ->where(fn ($q) => $q->whereNull('password')->orWhere('password', ''));
+        $affected = $this->buildQuery()->count();
 
-        if ($this->option('admin-only')) {
-            $query->where('email', $this->option('email') ?? 'admin@ghanem-lvju-egypt.com');
-        } elseif ($this->option('email')) {
-            $query->where('email', $this->option('email'));
+        if ($affected === 0) {
+            $this->info('No users with missing passwords were found.');
+
+            return self::SUCCESS;
+        }
+
+        // Safety: require interactive confirmation to prevent accidental execution
+        if (! $this->confirm("This will reset passwords for {$affected} user(s). Continue?")) {
+            $this->info('Aborted.');
+
+            return self::SUCCESS;
         }
 
         $updated = 0;
 
-        $query->chunkById(50, function ($users) use (&$updated) {
+        // Re-run query after confirmation (state may have changed)
+        $this->buildQuery()->chunkById(50, function ($users) use (&$updated) {
             foreach ($users as $user) {
                 $temporaryPassword = Str::random(16);
 
@@ -55,14 +62,25 @@ class RepairUserPasswords extends Command
             }
         });
 
-        if ($updated === 0) {
-            $this->info('No users with missing passwords were found.');
-
-            return self::SUCCESS;
-        }
-
         $this->warn('Temporary passwords were generated. Ensure affected users reset their passwords immediately.');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Build the base query for users with missing passwords.
+     */
+    private function buildQuery()
+    {
+        $query = User::query()
+            ->where(fn ($q) => $q->whereNull('password')->orWhere('password', ''));
+
+        if ($this->option('admin-only')) {
+            $query->where('email', $this->option('email') ?? 'admin@ghanem-lvju-egypt.com');
+        } elseif ($this->option('email')) {
+            $query->where('email', $this->option('email'));
+        }
+
+        return $query;
     }
 }
