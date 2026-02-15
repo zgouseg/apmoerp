@@ -125,6 +125,11 @@ class UserService implements UserServiceInterface
     {
         $this->handleServiceOperation(
             callback: function () use ($user) {
+                // Prevent admin self-deletion to avoid system lockout
+                if (auth()->check() && $user->id === auth()->id()) {
+                    throw new \App\Exceptions\BusinessException(__('You cannot delete your own account. Please ask another administrator.'));
+                }
+
                 $this->logServiceInfo('deleteUser', 'User deleted', [
                     'user_id' => $user->id,
                     'email' => $user->email,

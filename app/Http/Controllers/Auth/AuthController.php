@@ -125,6 +125,10 @@ class AuthController extends Controller
         $user->password = Hash::make($validated['new_password']);
         $user->save();
 
+        // Revoke all other tokens to invalidate stolen/leaked sessions
+        $currentTokenId = $user->currentAccessToken()?->id;
+        $user->tokens()->where('id', '!=', $currentTokenId)->delete();
+
         return $this->ok(null, __('Password changed successfully'));
     }
 

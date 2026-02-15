@@ -52,6 +52,19 @@ class ImageOptimizationService
     }
 
     /**
+     * Maximum allowed pixel dimensions to prevent decompression bomb attacks.
+     * A malicious 50,000x50,000 pixel image (compressed to a small file) would
+     * consume ~10GB of RAM when decompressed. 4096px allows high-res images
+     * while keeping memory usage reasonable (~64MB for RGBA at 4096x4096).
+     */
+    protected const MAX_PIXEL_DIMENSION = 4096;
+
+    /**
+     * Maximum allowed total pixel count (width * height) to prevent memory exhaustion.
+     */
+    protected const MAX_PIXEL_COUNT = 4096 * 4096;
+
+    /**
      * Optimize an uploaded image using Imagick or GD (with automatic fallback)
      */
     public function optimizeUploadedFile(
@@ -60,6 +73,16 @@ class ImageOptimizationService
         ?string $disk = 'local'
     ): array {
         if (! $this->isImage($file)) {
+            return $this->storeWithoutOptimization($file, $disk);
+        }
+
+        // Validate image dimensions before loading to prevent decompression bomb attacks
+        if (! $this->validateImageDimensions($file)) {
+            Log::warning('Image rejected: dimensions exceed safety limits', [
+                'filename' => $file->getClientOriginalName(),
+                'max_dimension' => self::MAX_PIXEL_DIMENSION,
+            ]);
+
             return $this->storeWithoutOptimization($file, $disk);
         }
 
@@ -386,6 +409,38 @@ class ImageOptimizationService
             }
         } catch (\Exception $e) {
             Log::error('Failed to save image with GD: '.$e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
+     * Validate image dimensions to prevent decompression bomb attacks.
+     * Checks pixel dimensions without fully loading the image into memory.
+     */
+    protected function validateImageDimensions(UploadedFile $file): bool
+    {
+        try {
+            $imageInfo = @getimagesize($file->getRealPath());
+
+            if ($imageInfo === false) {
+                return false;
+            }
+
+            $width = $imageInfo[0];
+            $height = $imageInfo[1];
+
+            if ($width > self::MAX_PIXEL_DIMENSION || $height > self::MAX_PIXEL_DIMENSION) {
+                return false;
+            }
+
+            if ($width * $height > self::MAX_PIXEL_COUNT) {
+                return false;
+            }
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Failed to validate image dimensions: '.$e->getMessage());
 
             return false;
         }

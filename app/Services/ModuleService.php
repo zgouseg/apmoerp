@@ -113,6 +113,13 @@ class ModuleService implements ModuleServiceInterface
                     return;
                 }
 
+                // Prevent disabling core modules that other modules depend on
+                if ($module->is_core) {
+                    throw new \App\Exceptions\BusinessException(
+                        __('Cannot disable core module ":name". Other modules depend on it.', ['name' => $module->name])
+                    );
+                }
+
                 /** @var BranchModule|null $pivot */
                 $pivot = $branch->branchModules()
                     ->where('module_id', $module->id)
