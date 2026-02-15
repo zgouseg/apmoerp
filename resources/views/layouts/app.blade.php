@@ -41,7 +41,6 @@
         html { scroll-behavior: smooth; }
         body {
             min-height: 100vh;
-            background-color: #f8fafc;
             overflow-x: hidden;
             padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
         }
@@ -210,7 +209,7 @@
             </div>
         </main>
 
-        <footer class="border-t border-emerald-100/60 bg-white/80 backdrop-blur py-3 text-xs text-slate-500">
+        <footer class="border-t border-emerald-100/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur py-3 text-xs text-slate-500 dark:text-slate-400">
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-2 flex-wrap w-full">
                 <span>&copy; {{ date('Y') }} {{ config('app.name', 'Ghanem ERP') }}</span>
                 <span class="hidden sm:inline">
